@@ -1,52 +1,74 @@
-# 🌿 Git Workflow
+# 🌿 Git Workflow (Team)
 
-## 1. Luôn chuyển về main
-
-```bash
-git checkout main
-```
+Tài liệu này quy định cách sử dụng Git trong team để đảm bảo source code được quản lý thống nhất.
 
 ---
 
-## 2. Lấy code mới nhất
+# 1. Luôn cập nhật code mới nhất
+
+Trước khi bắt đầu làm chức năng mới:
 
 ```bash
+git checkout main
 git pull origin main
 ```
 
 ---
 
-## 3. Tạo branch mới cho chức năng
+# 2. Tạo branch mới
 
-Quy tắc đặt tên:
+## Quy tắc đặt tên
 
 ```
-feature/<ten-chuc-nang>
+<type>/<member-name>/<feature-name>
 ```
+
+Trong đó:
+
+- **type**: Loại công việc
+- **member-name**: Tên hoặc username của thành viên
+- **feature-name**: Tên chức năng đang thực hiện
 
 Ví dụ:
 
 ```bash
-git checkout -b feature/login
+git checkout -b feat/tracdinh/login
 ```
 
 ```bash
-git checkout -b feature/song
+git checkout -b feat/tracdinh/song-management
 ```
 
 ```bash
-git checkout -b feature/artist
+git checkout -b feat/tracdinh/upload-music
 ```
 
 ```bash
-git checkout -b feature/upload-song
+git checkout -b fix/tracdinh/login-bug
+```
+
+```bash
+git checkout -b refactor/tracdinh/song-service
 ```
 
 ---
 
-## 4. Code chức năng
+# 3. Các loại Branch
 
-Sau khi hoàn thành chức năng, kiểm tra trạng thái:
+| Prefix | Ý nghĩa |
+|---------|----------|
+| feat | Thêm tính năng mới |
+| fix | Sửa lỗi |
+| refactor | Cải thiện code |
+| docs | Cập nhật tài liệu |
+| style | Format code |
+| chore | Cập nhật cấu hình, dependency... |
+
+---
+
+# 4. Sau khi hoàn thành chức năng
+
+Kiểm tra trạng thái:
 
 ```bash
 git status
@@ -54,72 +76,51 @@ git status
 
 ---
 
-## 5. Thêm các file đã thay đổi
+# 5. Thêm file
 
 ```bash
 git add .
 ```
 
-Hoặc thêm từng file:
-
-```bash
-git add src/main/java/com/echobeat/controller/SongController.java
-```
-
 ---
 
-## 6. Commit
+# 6. Commit
 
-Quy tắc commit:
+## Quy tắc
 
 ```
 <type>: <mô tả ngắn>
 ```
 
-### Các loại commit
-
-| Type | Ý nghĩa |
-|------|----------|
-| feat | Thêm tính năng mới |
-| fix | Sửa lỗi |
-| refactor | Cải thiện code, không thay đổi chức năng |
-| docs | Cập nhật tài liệu |
-| style | Format code |
-| chore | Công việc khác (config, dependency...) |
-
 Ví dụ:
-
-```bash
-git commit -m "feat: create song api"
-```
 
 ```bash
 git commit -m "feat: implement login"
 ```
 
 ```bash
-git commit -m "fix: validate upload file"
+git commit -m "feat: create song api"
+```
+
+```bash
+git commit -m "fix: validate login"
 ```
 
 ```bash
 git commit -m "refactor: optimize song service"
 ```
 
-```bash
-git commit -m "docs: update readme"
-```
-
 ---
 
-## 7. Push lên GitHub
+# 7. Push lên GitHub
 
-Lần đầu tiên của branch:
+Lần đầu:
 
 ```bash
-git push -u origin feature/song
+git push -u origin feat/tracdinh/login
 ```
 
-Những lần sau:
+Các lần sau:
 
 ```bash
 git push
@@ -127,44 +128,32 @@ git push
 
 ---
 
-## 8. Tạo Pull Request
+# 8. Tạo Pull Request
 
-```
-feature/song
-        │
-        ▼
-       main
-```
+Sau khi Push thành công:
 
-Sau khi Pull Request được Merge.
+- Tạo Pull Request từ branch của mình vào `main`.
+- Chờ các thành viên khác review (nếu có).
+- Chỉ Merge khi Pull Request được chấp nhận.
 
 ---
 
-## 9. Quay về main
+# 9. Sau khi Merge
 
 ```bash
 git checkout main
-```
-
----
-
-## 10. Lấy code mới
-
-```bash
 git pull origin main
 ```
 
----
-
-## 11. Xóa branch cũ
+Xóa branch cũ:
 
 ```bash
-git branch -d feature/song
+git branch -d feat/tracdinh/login
 ```
 
 ---
 
-# Quy trình ngắn gọn
+# Quy trình làm việc
 
 ```text
 main
@@ -174,7 +163,7 @@ git pull
 
    │
    ▼
-git checkout -b feature/...
+git checkout -b feat/<member>/<feature>
 
    │
    ▼
@@ -190,11 +179,15 @@ git commit -m "feat: ..."
 
    │
    ▼
-git push -u origin feature/...
+git push -u origin feat/<member>/<feature>
 
    │
    ▼
-Pull Request
+Create Pull Request
+
+   │
+   ▼
+Review
 
    │
    ▼
@@ -210,12 +203,13 @@ git pull
 
    │
    ▼
-git branch -d feature/...
+git branch -d <branch>
 ```
 
 # Lưu ý
 
-- Luôn tạo **1 branch cho 1 chức năng**.
 - Không code trực tiếp trên `main`.
-- Commit rõ ràng, ngắn gọn bằng tiếng Anh.
-- Sau khi Merge, xóa branch cũ để giữ repository gọn gàng.
+- Mỗi branch chỉ thực hiện **một chức năng**.
+- Luôn `git pull` trước khi tạo branch mới.
+- Commit thường xuyên với nội dung rõ ràng.
+- Chỉ tạo Pull Request khi chức năng đã hoàn thành và đã tự kiểm tra.
