@@ -30,6 +30,11 @@ replay_pid*
 .vscode/
 *.iml
 
+# Frontend
+node_modules/
+frontend/node_modules/
+frontend/dist/
+
 # Keep upload directories but ignore uploaded content
 backend/uploads/songs/*
 !backend/uploads/songs/.gitkeep
