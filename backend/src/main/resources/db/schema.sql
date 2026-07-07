@@ -59,7 +59,7 @@ CREATE TABLE albums (
     deleted_at   DATETIME2 NULL,
     CONSTRAINT uk_albums_slug UNIQUE (slug),
     CONSTRAINT fk_albums_artist FOREIGN KEY (artist_id)
-        REFERENCES artists(id) ON DELETE NO ACTION   -- = RESTRICT bên MySQL
+        REFERENCES artists(id) ON DELETE NO ACTION   -- SQL Server equivalent to RESTRICT
 );
 CREATE INDEX idx_albums_artist ON albums(artist_id);
 
