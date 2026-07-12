@@ -1,0 +1,50 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: melodyhub-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-MelodyHubRoot!2026}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-music_app}
+      MYSQL_USER: ${MYSQL_USER:-melodyhub}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-melodyhub_password}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./backend/src/main/resources/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$${MYSQL_ROOT_PASSWORD} --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: melodyhub-backend
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      CATALINA_OPTS: >-
+        -Ddb.url=jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-music_app}?useUnicode=true&characterEncoding=utf8&connectionTimeZone=UTC&useSSL=false&allowPublicKeyRetrieval=true
+        -Ddb.username=${MYSQL_USER:-melodyhub}
+        -Ddb.password=${MYSQL_PASSWORD:-melodyhub_password}
+        -Ddb.driver-class-name=com.mysql.cj.jdbc.Driver
+        -Dupload.base-dir=/usr/local/tomcat/uploads
+        -Dcors.allowed-origin=${CORS_ALLOWED_ORIGIN:-*}
+        -Djwt.secret=${JWT_SECRET:-change-this-secret-for-local-dev}
+        -Djwt.expires-minutes=${JWT_EXPIRES_MINUTES:-1440}
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+    volumes:
+      - backend-uploads:/usr/local/tomcat/uploads
+
+volumes:
+  mysql-data:
+  backend-uploads:

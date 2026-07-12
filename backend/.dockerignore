@@ -1,0 +1,13 @@
+target/
+uploads/songs/*
+!uploads/songs/.gitkeep
+uploads/covers/*
+!uploads/covers/.gitkeep
+uploads/avatars/*
+!uploads/avatars/.gitkeep
+
+.git/
+.idea/
+.vscode/
+*.iml
+*.log

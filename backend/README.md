@@ -62,3 +62,33 @@ You can override a property with a JVM system property:
 ```bash
 -Dupload.base-dir=/absolute/path/to/uploads
 ```
+
+## Run With Docker Compose
+
+From the repo root:
+
+```bash
+cp .env.example .env
+docker compose up --build
+```
+
+Docker Compose starts:
+
+- MySQL 8.4 on `localhost:3306`
+- automatic first-run schema initialization from `backend/src/main/resources/db/schema.sql`
+- Tomcat 10.1 with the backend WAR deployed as `ROOT.war`
+
+The backend is available at:
+
+```text
+http://localhost:8080/api/auth/...
+```
+
+The backend receives database and runtime settings through `CATALINA_OPTS` JVM system properties, matching the existing `AppConfig` override behavior.
+
+If you change the schema after MySQL has already initialized, reset the Docker volume before starting again:
+
+```bash
+docker compose down -v
+docker compose up --build
+```
