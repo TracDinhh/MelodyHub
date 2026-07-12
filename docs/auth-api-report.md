@@ -11,7 +11,7 @@ Client/Postman/Frontend
 -> AuthServlet
 -> AuthService
 -> UserRepository / PasswordUtil / JwtUtil
--> SQL Server
+-> MySQL
 ```
 
 Vai trò từng lớp:
@@ -475,5 +475,5 @@ curl -X POST http://localhost:8080/melodyhub-backend/api/auth/logout \
 - Chưa có refresh token.
 - Chưa có blacklist token khi logout.
 - Chưa có frontend form đăng ký/đăng nhập.
-- Chưa test API thật với SQL Server đang chạy.
+- Chưa test API thật với MySQL đang chạy.
 - `db.password` và `jwt.secret` trong `application.properties` vẫn là giá trị local placeholder.
