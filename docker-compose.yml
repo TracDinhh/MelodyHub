@@ -32,14 +32,14 @@ services:
         condition: service_healthy
     environment:
       CATALINA_OPTS: >-
-        -Ddb.url=jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-music_app}?useUnicode=true&characterEncoding=utf8&connectionTimeZone=UTC&useSSL=false&allowPublicKeyRetrieval=true
-        -Ddb.username=${MYSQL_USER:-melodyhub}
-        -Ddb.password=${MYSQL_PASSWORD:-melodyhub_password}
-        -Ddb.driver-class-name=com.mysql.cj.jdbc.Driver
-        -Dupload.base-dir=/usr/local/tomcat/uploads
-        -Dcors.allowed-origin=${CORS_ALLOWED_ORIGIN:-*}
-        -Djwt.secret=${JWT_SECRET:-change-this-secret-for-local-dev}
-        -Djwt.expires-minutes=${JWT_EXPIRES_MINUTES:-1440}
+        -Ddb.url='jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-music_app}?useUnicode=true&characterEncoding=utf8&connectionTimeZone=UTC&useSSL=false&allowPublicKeyRetrieval=true'
+        -Ddb.username='${MYSQL_USER:-melodyhub}'
+        -Ddb.password='${MYSQL_PASSWORD:-melodyhub_password}'
+        -Ddb.driver-class-name='com.mysql.cj.jdbc.Driver'
+        -Dupload.base-dir='/usr/local/tomcat/uploads'
+        -Dcors.allowed-origin='${CORS_ALLOWED_ORIGIN:-*}'
+        -Djwt.secret='${JWT_SECRET:-change-this-secret-for-local-dev}'
+        -Djwt.expires-minutes='${JWT_EXPIRES_MINUTES:-1440}'
     ports:
       - "${BACKEND_PORT:-8080}:8080"
     volumes:
