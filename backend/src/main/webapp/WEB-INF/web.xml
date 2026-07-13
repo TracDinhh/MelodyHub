@@ -21,9 +21,19 @@
         <servlet-class>com.melodyHub.controller.AuthServlet</servlet-class>
     </servlet>
 
+    <servlet>
+        <servlet-name>SongServlet</servlet-name>
+        <servlet-class>com.melodyHub.controller.SongServlet</servlet-class>
+    </servlet>
+
     <servlet-mapping>
         <servlet-name>AuthServlet</servlet-name>
         <url-pattern>/api/auth/*</url-pattern>
+    </servlet-mapping>
+
+    <servlet-mapping>
+        <servlet-name>SongServlet</servlet-name>
+        <url-pattern>/api/songs/*</url-pattern>
     </servlet-mapping>
 
     <session-config>

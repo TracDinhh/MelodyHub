@@ -1,7 +1,9 @@
 package com.melodyHub.repository;
 
+import com.melodyHub.config.DatabaseConfig;
 import com.melodyHub.entity.Song;
 import com.melodyHub.entity.SongStatus;
+import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -31,6 +33,10 @@ public class SongRepository {
 
     private final DataSource dataSource;
 
+    public SongRepository() {
+        this.dataSource = null;
+    }
+
     public SongRepository(DataSource dataSource) {
         this.dataSource = Objects.requireNonNull(dataSource, "dataSource must not be null");
     }
@@ -43,7 +49,7 @@ public class SongRepository {
                  ORDER BY created_at DESC, id DESC
                 """;
 
-        try (var connection = dataSource.getConnection();
+        try (var connection = getConnection();
              var statement = connection.prepareStatement(sql)) {
             statement.setString(1, SongStatus.PUBLISHED.name());
 
@@ -56,6 +62,10 @@ public class SongRepository {
                 return songs;
             }
         }
+    }
+
+    private Connection getConnection() throws SQLException {
+        return dataSource == null ? DatabaseConfig.getConnection() : dataSource.getConnection();
     }
 
     private Song mapRow(ResultSet resultSet) throws SQLException {
