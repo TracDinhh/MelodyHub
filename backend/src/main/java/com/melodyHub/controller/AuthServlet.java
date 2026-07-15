@@ -7,7 +7,8 @@ import com.melodyHub.dto.request.LoginRequest;
 import com.melodyHub.dto.request.RegisterRequest;
 import com.melodyHub.dto.response.ErrorResponse;
 import com.melodyHub.exception.AuthException;
-import com.melodyHub.service.AuthService;
+import com.melodyHub.service.auth.AuthService;
+
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;

@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import javax.sql.DataSource;
 
 public class SongRepository {
@@ -41,17 +42,20 @@ public class SongRepository {
         this.dataSource = Objects.requireNonNull(dataSource, "dataSource must not be null");
     }
 
-    public List<Song> getAll() throws SQLException {
+    public List<Song> getPage(int size, int offset) throws SQLException {
         String sql = "SELECT " + SONG_COLUMNS + """
                  FROM songs
                  WHERE status = ?
                    AND deleted_at IS NULL
                  ORDER BY created_at DESC, id DESC
+                 LIMIT ? OFFSET ?
                 """;
 
         try (var connection = getConnection();
              var statement = connection.prepareStatement(sql)) {
             statement.setString(1, SongStatus.PUBLISHED.name());
+            statement.setInt(2, size);
+            statement.setInt(3, offset);
 
             try (var resultSet = statement.executeQuery()) {
                 List<Song> songs = new ArrayList<>();
@@ -60,6 +64,51 @@ public class SongRepository {
                 }
 
                 return songs;
+            }
+        }
+    }
+
+    public long count() throws SQLException {
+        String sql = """
+                SELECT COUNT(*)
+                FROM songs
+                WHERE status = ?
+                  AND deleted_at IS NULL
+                """;
+
+        try (var connection = getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            statement.setString(1, SongStatus.PUBLISHED.name());
+
+            try (var resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    return resultSet.getLong(1);
+                }
+
+                return 0L;
+            }
+        }
+    }
+
+    public Optional<Song> findBySlug(String slug) throws SQLException {
+        String sql = "SELECT " + SONG_COLUMNS + """
+                 FROM songs
+                 WHERE slug = ?
+                   AND status = ?
+                   AND deleted_at IS NULL
+                """;
+
+        try (var connection = getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            statement.setString(1, slug);
+            statement.setString(2, SongStatus.PUBLISHED.name());
+
+            try (var resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    return Optional.of(mapRow(resultSet));
+                }
+
+                return Optional.empty();
             }
         }
     }

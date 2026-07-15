@@ -187,30 +187,40 @@ verifiable at the HTTP seam. Dependencies are called out per task.
 > Smallest self-contained slice; reuses the existing repository columns, row
 > mapper, and DTO with no contract change to the list endpoint.
 
-- **Task 1.1 — Repository: find one Published Song by slug.** Add a read that
+- **[x] Task 1.1 — Repository: find one Published Song by slug.** Add a read that
   selects a single Song by `slug` with the same `PUBLISHED` + `deleted_at IS NULL`
   filter as the list. Purpose: the data access for a detail page. *Depends on:*
-  nothing (reuses `SONG_COLUMNS` / `mapRow`).
-- **Task 1.2 — Service: get Song by slug.** Add a service method that returns the
+  nothing (reuses `SONG_COLUMNS` / `mapRow`). — Done: `SongRepository.findBySlug`
+  returns `Optional<Song>`.
+- **[x] Task 1.2 — Service: get Song by slug.** Add a service method that returns the
   detail response or signals not-found. Purpose: give the not-found decision a
-  home in the service layer. *Depends on:* 1.1.
-- **Task 1.3 — Servlet: route `GET /api/songs/{slug}` and add `SONG_NOT_FOUND`.**
+  home in the service layer. *Depends on:* 1.1. — Done: `SongService.getBySlug`
+  returns `Optional<SongResponse>` (empty = not-found, for the servlet to map).
+- **[x] Task 1.3 — Servlet: route `GET /api/songs/{slug}` and add `SONG_NOT_FOUND`.**
   Treat a single-segment path as a slug lookup; map not-found to 404. Purpose:
-  expose detail at the HTTP seam. *Depends on:* 1.2.
+  expose detail at the HTTP seam. *Depends on:* 1.2. — Done: `doGet` routes a
+  single-segment path to `handleGetBySlug`, which returns 200 with the
+  `SongResponse` or 404 `SONG_NOT_FOUND`.
 
 ### Phase 2 — Catalog scaling (do before expansion changes the list shape)
 
 > Settles the list response contract (wrapper + metadata + limit) before Artist
 > and Album fields are added, so the shape changes only once.
 
-- **Task 2.1 — Enforce a default limit on the list query.** Cap the existing
+- **[x] Task 2.1 — Enforce a default limit on the list query.** Cap the existing
   `getAll` so it can never return an unbounded catalog even with no parameters.
-  Purpose: remove the current unbounded-result risk. *Depends on:* nothing.
-- **Task 2.2 — Add `page` / `size` with validation and a response wrapper.**
+  Purpose: remove the current unbounded-result risk. *Depends on:* nothing. —
+  Done: list query applies `LIMIT ?` (default 20); this bound was folded into the
+  paged query in Task 2.2.
+- **[x] Task 2.2 — Add `page` / `size` with validation and a response wrapper.**
   Parse and validate pagination params (`INVALID_QUERY_PARAM` on bad input,
   enforced max size), return the `{ items, total, page, size }` wrapper. Purpose:
   pageable browsing and a stable list contract. *Depends on:* 2.1. **Contract
-  change:** list response goes from array to wrapper.
+  change:** list response goes from array to wrapper. — Done: `SongRepository`
+  now has `getPage(size, offset)` + `count()`; `SongService.getPage(page, size)`
+  assembles `PagedResponse<SongResponse>`; `SongServlet` parses/validates `page`
+  (default 1) and `size` (default 20, max 50), returning `400 INVALID_QUERY_PARAM`
+  on non-numeric, zero, negative, or over-cap input.
 - **Task 2.3 — Title search (`q`) and genre filter (`genre`).** Add optional
   case-insensitive title match and genre-slug filter that compose with paging and
   the visibility rule in one query. Purpose: make the catalog browsable at scale.

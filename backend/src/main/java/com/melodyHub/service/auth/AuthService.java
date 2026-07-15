@@ -1,4 +1,4 @@
-package com.melodyHub.service;
+package com.melodyHub.service.auth;
 
 import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.melodyHub.dto.request.LoginRequest;
