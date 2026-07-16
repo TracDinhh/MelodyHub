@@ -1,4 +1,4 @@
-package com.melodyHub.controller;
+package com.melodyHub.controller.auth;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;

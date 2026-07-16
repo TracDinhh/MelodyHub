@@ -19,16 +19,26 @@ public class SongService {
         this.songRepository = Objects.requireNonNull(songRepository, "songRepository must not be null");
     }
 
-    public PagedResponse<SongResponse> getPage(int page, int size) throws SQLException {
+    public PagedResponse<SongResponse> getPage(int page, int size, String titleQuery, String genreSlug)
+            throws SQLException {
         int offset = (page - 1) * size;
+        String normalizedTitle = normalize(titleQuery);
+        String normalizedGenre = normalize(genreSlug);
 
-        List<SongResponse> items = songRepository.getPage(size, offset)
+        List<SongResponse> items = songRepository.getPage(size, offset, normalizedTitle, normalizedGenre)
                 .stream()
                 .map(SongResponse::fromEntity)
                 .toList();
-        long total = songRepository.count();
+        long total = songRepository.count(normalizedTitle, normalizedGenre);
 
         return new PagedResponse<>(items, total, page, size);
+    }
+
+    private String normalize(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim();
     }
 
     public Optional<SongResponse> getBySlug(String slug) throws SQLException {

@@ -1,4 +1,4 @@
-package com.melodyHub.controller;
+package com.melodyHub.controller.song;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -77,7 +77,9 @@ public class SongServlet extends HttpServlet {
             throw new InvalidQueryParamException("size must not exceed " + MAX_SIZE);
         }
 
-        writeJson(response, HttpServletResponse.SC_OK, songService.getPage(page, size));
+        String titleQuery = request.getParameter("q");
+        String genreSlug = request.getParameter("genre");
+        writeJson(response, HttpServletResponse.SC_OK, songService.getPage(page, size, titleQuery, genreSlug));
     }
 
     private int parsePositiveInt(String value, String name, int defaultValue) throws InvalidQueryParamException {

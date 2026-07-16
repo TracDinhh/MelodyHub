@@ -4,6 +4,7 @@ import com.melodyHub.config.DatabaseConfig;
 import com.melodyHub.entity.Song;
 import com.melodyHub.entity.SongStatus;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -42,20 +43,17 @@ public class SongRepository {
         this.dataSource = Objects.requireNonNull(dataSource, "dataSource must not be null");
     }
 
-    public List<Song> getPage(int size, int offset) throws SQLException {
-        String sql = "SELECT " + SONG_COLUMNS + """
-                 FROM songs
-                 WHERE status = ?
-                   AND deleted_at IS NULL
-                 ORDER BY created_at DESC, id DESC
-                 LIMIT ? OFFSET ?
-                """;
+    public List<Song> getPage(int size, int offset, String titleQuery, String genreSlug) throws SQLException {
+        List<Object> parameters = new ArrayList<>();
+        String sql = "SELECT " + SONG_COLUMNS + " FROM songs"
+                + buildFilterClause(titleQuery, genreSlug, parameters)
+                + " ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?";
+        parameters.add(size);
+        parameters.add(offset);
 
         try (var connection = getConnection();
              var statement = connection.prepareStatement(sql)) {
-            statement.setString(1, SongStatus.PUBLISHED.name());
-            statement.setInt(2, size);
-            statement.setInt(3, offset);
+            bindParameters(statement, parameters);
 
             try (var resultSet = statement.executeQuery()) {
                 List<Song> songs = new ArrayList<>();
@@ -68,17 +66,14 @@ public class SongRepository {
         }
     }
 
-    public long count() throws SQLException {
-        String sql = """
-                SELECT COUNT(*)
-                FROM songs
-                WHERE status = ?
-                  AND deleted_at IS NULL
-                """;
+    public long count(String titleQuery, String genreSlug) throws SQLException {
+        List<Object> parameters = new ArrayList<>();
+        String sql = "SELECT COUNT(*) FROM songs"
+                + buildFilterClause(titleQuery, genreSlug, parameters);
 
         try (var connection = getConnection();
              var statement = connection.prepareStatement(sql)) {
-            statement.setString(1, SongStatus.PUBLISHED.name());
+            bindParameters(statement, parameters);
 
             try (var resultSet = statement.executeQuery()) {
                 if (resultSet.next()) {
@@ -87,6 +82,43 @@ public class SongRepository {
 
                 return 0L;
             }
+        }
+    }
+
+    private String buildFilterClause(String titleQuery, String genreSlug, List<Object> parameters) {
+        StringBuilder clause = new StringBuilder(" WHERE status = ? AND deleted_at IS NULL");
+        parameters.add(SongStatus.PUBLISHED.name());
+
+        if (titleQuery != null) {
+            clause.append(" AND title LIKE ?");
+            parameters.add("%" + escapeLike(titleQuery) + "%");
+        }
+
+        if (genreSlug != null) {
+            clause.append("""
+                     AND EXISTS (
+                         SELECT 1
+                         FROM song_genres sg
+                         JOIN genres g ON g.id = sg.genre_id
+                         WHERE sg.song_id = songs.id
+                           AND g.slug = ?
+                     )""");
+            parameters.add(genreSlug);
+        }
+
+        return clause.toString();
+    }
+
+    private String escapeLike(String value) {
+        return value
+                .replace("\\", "\\\\")
+                .replace("%", "\\%")
+                .replace("_", "\\_");
+    }
+
+    private void bindParameters(PreparedStatement statement, List<Object> parameters) throws SQLException {
+        for (int i = 0; i < parameters.size(); i++) {
+            statement.setObject(i + 1, parameters.get(i));
         }
     }
 
