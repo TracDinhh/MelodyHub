@@ -90,7 +90,7 @@ public class SongRepository {
         parameters.add(SongStatus.PUBLISHED.name());
 
         if (titleQuery != null) {
-            clause.append(" AND title LIKE ?");
+            clause.append(" AND LOWER(title) LIKE LOWER(?) ESCAPE '!'");
             parameters.add("%" + escapeLike(titleQuery) + "%");
         }
 
@@ -111,9 +111,9 @@ public class SongRepository {
 
     private String escapeLike(String value) {
         return value
-                .replace("\\", "\\\\")
-                .replace("%", "\\%")
-                .replace("_", "\\_");
+                .replace("!", "!!")
+                .replace("%", "!%")
+                .replace("_", "!_");
     }
 
     private void bindParameters(PreparedStatement statement, List<Object> parameters) throws SQLException {
