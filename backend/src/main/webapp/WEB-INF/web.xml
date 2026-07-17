@@ -23,7 +23,7 @@
 
     <servlet>
         <servlet-name>SongServlet</servlet-name>
-        <servlet-class>com.melodyHub.controller.SongServlet</servlet-class>
+        <servlet-class>com.melodyHub.controller.song.SongServlet</servlet-class>
     </servlet>
 
     <servlet-mapping>

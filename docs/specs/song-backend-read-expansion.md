@@ -221,10 +221,13 @@ verifiable at the HTTP seam. Dependencies are called out per task.
   assembles `PagedResponse<SongResponse>`; `SongServlet` parses/validates `page`
   (default 1) and `size` (default 20, max 50), returning `400 INVALID_QUERY_PARAM`
   on non-numeric, zero, negative, or over-cap input.
-- **Task 2.3 — Title search (`q`) and genre filter (`genre`).** Add optional
+- **[x] Task 2.3 — Title search (`q`) and genre filter (`genre`).** Add optional
   case-insensitive title match and genre-slug filter that compose with paging and
   the visibility rule in one query. Purpose: make the catalog browsable at scale.
-  *Depends on:* 2.2.
+  *Depends on:* 2.2. — Done: `SongServlet` passes optional `q` and `genre`
+  parameters through the paged list route; `SongRepository` composes title search
+  and genre-slug filtering into both the page query and total-count query while
+  preserving Published/non-deleted visibility.
 
 ### Phase 3 — Artist expansion
 
