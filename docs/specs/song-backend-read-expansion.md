@@ -182,6 +182,33 @@ exists in `songs`, `artists`, `song_artists`, `albums`, `genres`, and
 Tasks are grouped into phases. Each task is independently implementable and
 verifiable at the HTTP seam. Dependencies are called out per task.
 
+This roadmap preserves the completed Song Catalog read work, then changes the
+future direction from a read-only catalog expansion into a role-based music
+platform. From Phase 3 onward, MelodyHub has three account roles: `USER`,
+`ARTIST`, and `ADMIN`. The old read-only Artist expansion phase is replaced by
+an Artist Dashboard backend phase.
+
+Primary test seams for future tasks:
+
+- Public listener read APIs continue through `/api/songs/*`.
+- Authenticated user identity continues through the existing auth/JWT seam.
+- Artist Dashboard APIs are verified as an `ARTIST` account and must only expose
+  that Artist's own profile and Songs.
+- Admin Dashboard APIs are verified as an `ADMIN` account and may manage platform
+  resources across Users, Artists, Songs, Albums, and Genres.
+
+### Phase 0 - Authentication baseline
+
+> Already implemented before this roadmap expansion. Keep this work as the
+> identity foundation for role-aware dashboard APIs.
+
+- **[x] Task 0.1 - Register account.** Keep the existing registration endpoint as
+  the way a new account enters MelodyHub. Purpose: preserve the completed auth
+  work. *Depends on:* nothing.
+- **[x] Task 0.2 - Login account.** Keep the existing login endpoint and token
+  response as the way a client starts an authenticated session. Purpose: preserve
+  the completed auth work. *Depends on:* 0.1.
+
 ### Phase 1 — Song detail read path
 
 > Smallest self-contained slice; reuses the existing repository columns, row
@@ -229,42 +256,184 @@ verifiable at the HTTP seam. Dependencies are called out per task.
   and genre-slug filtering into both the page query and total-count query while
   preserving Published/non-deleted visibility.
 
-### Phase 3 — Artist expansion
+### Phase 3 - Role and Artist account foundation
 
-> Applies to both list and detail responses. Introduces the first read-only
-> Artist entity/repository and the batched-load pattern.
+> Introduces the platform identity model required before any dashboard write API.
+> This is the next phase to implement.
 
-- **Task 3.1 — Artist entity + read-only Artist repository.** Map the `artists`
-  table and add a batched read of Artists for a set of Song ids via `song_artists`,
-  excluding soft-deleted Artists, ordered MAIN-then-position. Purpose: the data
-  access for attribution, N+1-safe from the start. *Depends on:* nothing (can run
-  parallel to Phases 1–2).
-- **Task 3.2 — Attach Artists to the Song response.** Add the ordered nested
-  artist view to `SongResponse` and populate it for both the paged list (batched)
-  and the single detail Song. Purpose: performers appear everywhere a Song does.
-  *Depends on:* 3.1, and on 1.3 + 2.2 existing so both response paths are present.
+- **[x] Task 3.1 - Schema: add the `ARTIST` role.** Update the account role design so
+  the allowed roles are exactly `USER`, `ARTIST`, and `ADMIN`, preserving existing
+  `USER` and `ADMIN` accounts. Purpose: make Artist accounts first-class without
+  breaking current auth. *Depends on:* Phase 0. — Done: the schema and backend
+  role enum both include `ARTIST`.
+- **[x] Task 3.2 - Schema: link Artist accounts to Artist profiles.** Add an
+  account-to-Artist-profile relationship so an authenticated `ARTIST` user maps
+  to exactly one Artist profile for the MVP. Existing Artist rows may remain
+  unlinked until an Admin connects them. Purpose: define ownership for dashboard
+  reads and writes. *Depends on:* 3.1 and the existing `artists` table. — Done:
+  Artist profiles can optionally link to one `ARTIST` User account through
+  `user_id`, with database checks preventing non-Artist account links.
+- **[x] Task 3.3 - Auth response: expose role consistently.** Ensure login/current-user
+  responses expose the authenticated user's role so clients can route to listener,
+  artist, or admin experiences. Purpose: support dashboard navigation without
+  extra lookup calls. *Depends on:* 3.1. — Done: auth responses already expose
+  `UserResponse.role`, and the role model now supports `ARTIST`.
+- **[x] Task 3.4 - Authorization seam: protect role-based APIs.** Add a reusable
+  authorization check for authenticated routes, including `ARTIST`-only and
+  `ADMIN`-only access. Purpose: avoid duplicating token/role checks in every
+  dashboard servlet. *Depends on:* 3.1 and Phase 0. — Done: a reusable
+  authorization service validates tokens, banned users, and required roles.
+- **[x] Task 3.5 - Artist account lookup.** Add the read path that resolves the
+  current authenticated `ARTIST` user to their linked Artist profile, returning a
+  stable not-found or forbidden error when the link is missing. Purpose: give all
+  Artist Dashboard tasks one ownership source. *Depends on:* 3.2 and 3.4. —
+  Done: the Artist account service resolves the authenticated Artist profile from
+  the current token.
 
-### Phase 4 — Album expansion
+### Phase 4 - Artist Dashboard: profile and own catalog
 
-> Mirrors Phase 3 for the optional Album relationship.
+> First authenticated Artist Dashboard slice. It gives an Artist their identity
+> and a private view of their own Songs before write actions are added.
 
-- **Task 4.1 — Album entity + read-only Album repository.** Map the `albums`
-  table and add a batched read of Albums for a set of non-null `album_id`s,
-  excluding soft-deleted Albums. Purpose: the data access for release metadata.
-  *Depends on:* nothing (parallelizable with Phase 3).
-- **Task 4.2 — Attach Album to the Song response.** Add the nullable nested album
-  view to `SongResponse`, populated only for Songs with a present, non-deleted
-  Album; null for standalone singles. Purpose: releases appear on Songs that have
-  them. *Depends on:* 4.1, and on the same list + detail response paths as 3.2.
+- **Task 4.1 - View own Artist profile.** Add an `ARTIST`-only API to retrieve the
+  current Artist profile. Purpose: the dashboard can show the Artist name, slug,
+  bio, and image metadata. *Depends on:* 3.5.
+- **Task 4.2 - Update own Artist profile metadata.** Add an `ARTIST`-only API to
+  update safe profile fields such as name, slug, bio, and image URL metadata.
+  Purpose: Artists can maintain their public profile information. *Depends on:*
+  4.1.
+- **Task 4.3 - List own Songs.** Add an `ARTIST`-only API that returns only Songs
+  owned by the current Artist, including Draft, Published, and Hidden Songs but
+  excluding soft-deleted Songs by default. Ownership for the MVP is the linked
+  Artist appearing as the Song's `MAIN` Artist. Purpose: Artists can manage only
+  their own catalog. *Depends on:* 3.5 and Phase 2 paging conventions.
+- **Task 4.4 - View one own Song by id or slug.** Add an `ARTIST`-only detail API
+  for a single own Song, including non-public statuses. Purpose: the edit screen
+  can load one Song without leaking another Artist's Song. *Depends on:* 4.3.
 
-### Recommended next task after `GET /api/songs`
+### Phase 5 - Artist Dashboard: Song metadata writes
 
-**Task 1.1 → 1.3 (the Song detail endpoint, `GET /api/songs/{slug}`).** It is the
-smallest independent slice: it reuses `SONG_COLUMNS`, `mapRow`, and the existing
-`SongResponse` unchanged, adds exactly one repository method, one service method,
-one servlet route, and one error code — and it proves the single-resource read
-path and the slug contract without touching the list response shape. Do Phase 2
-(scaling) next so the list contract settles before Phases 3–4 add fields to it.
+> Adds create, update, and soft-delete behavior without file upload complexity.
+
+- **Task 5.1 - Schema: allow draft Songs before audio upload.** Adjust the Song
+  storage design so an Artist can create a Draft Song before an audio file exists,
+  while public list/detail APIs still only expose Published, non-deleted Songs.
+  Purpose: support incremental Song creation. *Depends on:* Phase 2 and 3.5.
+- **Task 5.2 - Create own Song metadata.** Add an `ARTIST`-only API to create a
+  Draft Song with title, slug, optional album, track number, duration metadata,
+  cover metadata, and lyrics text where available. The creating Artist is attached
+  as the `MAIN` Artist. Purpose: Artists can start a Song draft. *Depends on:*
+  5.1 and 3.5.
+- **Task 5.3 - Update own Song metadata.** Add an `ARTIST`-only API to update
+  editable metadata for the current Artist's own Song. Purpose: Artists can revise
+  Song details before or after publishing. *Depends on:* 4.4 and 5.2.
+- **Task 5.4 - Soft-delete own Song.** Add an `ARTIST`-only API that sets the
+  Song's soft-delete timestamp instead of physically deleting it. Purpose: Artists
+  can remove a Song from their dashboard/public catalog without destroying data.
+  *Depends on:* 4.4.
+- **Task 5.5 - Preserve public visibility rules after writes.** Ensure Artist
+  write actions cannot accidentally expose Draft, Hidden, or soft-deleted Songs
+  through the public `/api/songs/*` APIs. Purpose: keep listener catalog behavior
+  stable while dashboard writes are introduced. *Depends on:* 5.2, 5.3, and 5.4.
+
+### Phase 6 - Artist Dashboard: file and lyrics uploads
+
+> Adds the media upload surfaces after ownership and Song metadata writes exist.
+
+- **Task 6.1 - Upload storage configuration.** Define backend storage settings for
+  cover images, audio files, and lyric uploads, including allowed directories,
+  URL/path persistence, and maximum file sizes. Purpose: keep upload behavior
+  predictable across local Docker and future deployment. *Depends on:* 5.1.
+- **Task 6.2 - Upload cover image for own Song.** Add an `ARTIST`-only upload API
+  for Song cover images that updates the Song's cover metadata. Purpose: Artists
+  can provide artwork for their own Songs. *Depends on:* 6.1 and 4.4.
+- **Task 6.3 - Upload audio file for own Song.** Add an `ARTIST`-only upload API
+  for audio files that persists the file location on the Song. Purpose: a Draft
+  Song can become playable once audio exists. *Depends on:* 6.1 and 5.2.
+- **Task 6.4 - Upload synchronized lyrics file.** Add an `ARTIST`-only upload API
+  for `.lrc` files, parse timestamped lyric lines, and replace that Song's
+  synchronized lyric rows transactionally. Purpose: Artists can attach timed
+  lyrics to their own Songs. *Depends on:* 4.4 and the existing synchronized
+  lyrics table.
+- **Task 6.5 - Validate upload access and content.** Reject unsupported file
+  types, oversized files, malformed `.lrc` content, and attempts to upload to
+  another Artist's Song with stable JSON errors. Purpose: make uploads testable
+  and safe enough for the dashboard MVP. *Depends on:* 6.2, 6.3, and 6.4.
+
+### Phase 7 - Admin Dashboard foundation
+
+> Adds the `ADMIN` backend surface before individual resource management screens.
+
+- **Task 7.1 - Admin route and authorization pattern.** Establish the admin API
+  route pattern and require `ADMIN` authorization for every endpoint under it.
+  Purpose: give Admin Dashboard work one protected seam. *Depends on:* 3.4.
+- **Task 7.2 - Admin pagination and filter conventions.** Reuse the existing
+  paged response style for admin lists, with clear validation errors for bad
+  query parameters. Purpose: keep Admin Dashboard lists consistent with Song
+  Catalog pagination. *Depends on:* 7.1 and Phase 2.
+- **Task 7.3 - Admin error contract.** Define stable admin error codes for
+  forbidden access, missing resources, invalid input, duplicate slugs/emails, and
+  database failures. Purpose: make management APIs predictable for the frontend.
+  *Depends on:* 7.1.
+
+### Phase 8 - Admin Dashboard: Users and Artists
+
+> Gives administrators control over accounts and Artist profiles, including the
+> Artist account linkage introduced in Phase 3.
+
+- **Task 8.1 - Admin list Users.** Add an `ADMIN`-only paged API to list Users
+  with search/filter support for role and status. Purpose: administrators can
+  review accounts. *Depends on:* 7.2.
+- **Task 8.2 - Admin update User role/status.** Add an `ADMIN`-only API to change
+  a User's role among `USER`, `ARTIST`, and `ADMIN`, and to activate or ban an
+  account. Purpose: administrators can grant Artist access and moderate accounts.
+  *Depends on:* 8.1 and 3.1.
+- **Task 8.3 - Admin list Artist profiles.** Add an `ADMIN`-only paged API to list
+  Artist profiles, including whether each profile is linked to an Artist account.
+  Purpose: administrators can audit platform Artists. *Depends on:* 7.2 and 3.2.
+- **Task 8.4 - Admin create/update Artist profile.** Add `ADMIN`-only APIs to
+  create and update Artist profile metadata. Purpose: administrators can manage
+  Artist records even before an Artist account is linked. *Depends on:* 8.3.
+- **Task 8.5 - Admin link/unlink Artist account.** Add an `ADMIN`-only API to
+  connect or disconnect an `ARTIST` User from an Artist profile. Purpose:
+  administrators control which account owns each Artist Dashboard. *Depends on:*
+  8.2 and 8.4.
+- **Task 8.6 - Admin soft-delete or restore Artist profile.** Add `ADMIN`-only
+  APIs to hide or restore Artist profiles using soft-delete behavior. Purpose:
+  administrators can moderate Artists without losing historical data. *Depends
+  on:* 8.4.
+
+### Phase 9 - Admin Dashboard: Songs, Albums, and Genres
+
+> Completes Admin management for music catalog resources.
+
+- **Task 9.1 - Admin list Songs across all Artists.** Add an `ADMIN`-only paged API
+  to list Songs across all statuses and Artists, with search/filter support.
+  Purpose: administrators can audit the full catalog. *Depends on:* 7.2 and
+  Phase 5.
+- **Task 9.2 - Admin update Song metadata/status.** Add an `ADMIN`-only API to
+  update Song metadata and status, including hiding or publishing Songs. Purpose:
+  administrators can moderate catalog visibility. *Depends on:* 9.1.
+- **Task 9.3 - Admin soft-delete or restore Song.** Add `ADMIN`-only APIs to remove
+  or restore Songs with soft-delete behavior. Purpose: administrators can reverse
+  moderation mistakes without physical deletes. *Depends on:* 9.1.
+- **Task 9.4 - Admin manage Albums.** Add `ADMIN`-only create, update, list, and
+  soft-delete APIs for Albums, preserving the Album-to-Artist relationship.
+  Purpose: administrators can manage releases. *Depends on:* 8.3.
+- **Task 9.5 - Admin manage Genres.** Add `ADMIN`-only create, update, list, and
+  delete APIs for Genres, including duplicate-slug validation. Purpose:
+  administrators can maintain browse filters. *Depends on:* 7.2.
+- **Task 9.6 - Keep public catalog stable after admin actions.** Verify that Admin
+  changes to Songs, Albums, Artists, and Genres do not leak Draft, Hidden,
+  soft-deleted, or invalidly linked data through public listener APIs. Purpose:
+  preserve the completed Song Catalog contract. *Depends on:* 9.2, 9.3, 9.4, and
+  9.5.
+
+### Recommended next task
+
+**Task 4.1 - View own Artist profile.** Phase 3 is complete, so the next smallest
+slice is the first Artist Dashboard read endpoint using the authenticated Artist
+lookup seam.
 
 ## Out of Scope
 

@@ -1,6 +1,5 @@
 package com.melodyHub.service.auth;
 
-import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.melodyHub.dto.request.LoginRequest;
 import com.melodyHub.dto.request.RegisterRequest;
 import com.melodyHub.dto.response.AuthResponse;
@@ -27,13 +26,22 @@ public class AuthService {
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$");
 
     private final UserRepository userRepository;
+    private final AuthorizationService authorizationService;
 
     public AuthService() {
         this(new UserRepository());
     }
 
     public AuthService(UserRepository userRepository) {
+        this(userRepository, new AuthorizationService(userRepository));
+    }
+
+    public AuthService(UserRepository userRepository, AuthorizationService authorizationService) {
         this.userRepository = Objects.requireNonNull(userRepository, "userRepository must not be null");
+        this.authorizationService = Objects.requireNonNull(
+                authorizationService,
+                "authorizationService must not be null"
+        );
     }
 
     public AuthResponse register(RegisterRequest request) throws AuthException, SQLException {
@@ -85,26 +93,7 @@ public class AuthService {
     }
 
     public UserResponse getCurrentUser(String token) throws AuthException, SQLException {
-        String safeToken = normalize(token);
-        if (safeToken == null) {
-            throw new AuthException("MISSING_TOKEN", "Token is required");
-        }
-
-        int userId;
-        try {
-            userId = JwtUtil.getUserIdFromToken(safeToken);
-        } catch (JWTVerificationException | IllegalArgumentException exception) {
-            throw new AuthException("INVALID_TOKEN", "Token is invalid or expired");
-        }
-
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new AuthException("USER_NOT_FOUND", "User was not found"));
-
-        if (user.getStatus() == UserStatus.BANNED) {
-            throw new AuthException("USER_BANNED", "User account is banned");
-        }
-
-        return UserResponse.fromEntity(user);
+        return UserResponse.fromEntity(authorizationService.requireAuthenticated(token));
     }
 
     private AuthResponse buildAuthResponse(User user) {
