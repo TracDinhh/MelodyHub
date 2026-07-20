@@ -135,9 +135,11 @@ public class AuthServlet extends HttpServlet {
                     "MISSING_TOKEN",
                     "INVALID_TOKEN" -> HttpServletResponse.SC_UNAUTHORIZED;
             case "USER_BANNED" -> HttpServletResponse.SC_FORBIDDEN;
+            case "FORBIDDEN" -> HttpServletResponse.SC_FORBIDDEN;
             case "USERNAME_EXISTS",
                     "EMAIL_EXISTS" -> HttpServletResponse.SC_CONFLICT;
-            case "USER_NOT_FOUND" -> HttpServletResponse.SC_NOT_FOUND;
+            case "USER_NOT_FOUND",
+                    "ARTIST_PROFILE_NOT_FOUND" -> HttpServletResponse.SC_NOT_FOUND;
             default -> HttpServletResponse.SC_BAD_REQUEST;
         };
     }

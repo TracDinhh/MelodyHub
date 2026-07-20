@@ -8,7 +8,7 @@ CREATE DATABASE IF NOT EXISTS music_app
 USE music_app;
 
 -- =====================================================
--- 1. NGUOI DUNG (co role ADMIN)
+-- 1. NGUOI DUNG (USER / ARTIST / ADMIN)
 -- =====================================================
 CREATE TABLE users (
     id            INT AUTO_INCREMENT PRIMARY KEY,
@@ -18,7 +18,7 @@ CREATE TABLE users (
     display_name  VARCHAR(100),
     avatar_url    VARCHAR(500),
     role          VARCHAR(10) NOT NULL DEFAULT 'USER'
-                  CHECK (role IN ('USER','ADMIN')),
+                  CHECK (role IN ('USER','ARTIST','ADMIN')),
     status        VARCHAR(10) NOT NULL DEFAULT 'ACTIVE'
                   CHECK (status IN ('ACTIVE','BANNED')),
     created_at    DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
@@ -32,6 +32,7 @@ CREATE TABLE users (
 -- =====================================================
 CREATE TABLE artists (
     id          INT AUTO_INCREMENT PRIMARY KEY,
+    user_id     INT NULL,                           -- NULL = artist profile chua lien ket tai khoan
     name        VARCHAR(200) NOT NULL,
     slug        VARCHAR(220) NOT NULL,              -- URL: /artist/son-tung-mtp
     bio         TEXT,
@@ -39,9 +40,64 @@ CREATE TABLE artists (
     created_at  DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
     updated_at  DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
     deleted_at  DATETIME(6) NULL,                   -- soft delete: admin an thay vi xoa
-    CONSTRAINT uk_artists_slug UNIQUE (slug)
+    CONSTRAINT uk_artists_slug UNIQUE (slug),
+    CONSTRAINT uk_artists_user UNIQUE (user_id),
+    CONSTRAINT fk_artists_user FOREIGN KEY (user_id)
+        REFERENCES users(id) ON DELETE SET NULL
 );
 CREATE INDEX idx_artists_name ON artists(name);
+
+DELIMITER //
+
+CREATE TRIGGER trg_artists_user_must_be_artist_before_insert
+BEFORE INSERT ON artists
+FOR EACH ROW
+BEGIN
+    IF NEW.user_id IS NOT NULL
+       AND NOT EXISTS (
+           SELECT 1
+           FROM users
+           WHERE id = NEW.user_id
+             AND role = 'ARTIST'
+       ) THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Artist profile user_id must reference an ARTIST user';
+    END IF;
+END//
+
+CREATE TRIGGER trg_artists_user_must_be_artist_before_update
+BEFORE UPDATE ON artists
+FOR EACH ROW
+BEGIN
+    IF NEW.user_id IS NOT NULL
+       AND NOT EXISTS (
+           SELECT 1
+           FROM users
+           WHERE id = NEW.user_id
+             AND role = 'ARTIST'
+       ) THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Artist profile user_id must reference an ARTIST user';
+    END IF;
+END//
+
+CREATE TRIGGER trg_users_artist_link_role_before_update
+BEFORE UPDATE ON users
+FOR EACH ROW
+BEGIN
+    IF OLD.role = 'ARTIST'
+       AND NEW.role <> 'ARTIST'
+       AND EXISTS (
+           SELECT 1
+           FROM artists
+           WHERE user_id = OLD.id
+       ) THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Linked Artist accounts must keep the ARTIST role';
+    END IF;
+END//
+
+DELIMITER ;
 
 -- =====================================================
 -- 3. ALBUM
