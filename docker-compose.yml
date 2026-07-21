@@ -31,6 +31,9 @@ services:
       mysql:
         condition: service_healthy
     environment:
+      IMAGEKIT_PUBLIC_KEY: ${IMAGEKIT_PUBLIC_KEY:-}
+      IMAGEKIT_PRIVATE_KEY: ${IMAGEKIT_PRIVATE_KEY:-}
+      IMAGEKIT_URL_ENDPOINT: ${IMAGEKIT_URL_ENDPOINT:-}
       CATALINA_OPTS: >-
         -Ddb.url='jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-music_app}?useUnicode=true&characterEncoding=utf8&connectionTimeZone=UTC&useSSL=false&allowPublicKeyRetrieval=true'
         -Ddb.username='${MYSQL_USER:-melodyhub}'
