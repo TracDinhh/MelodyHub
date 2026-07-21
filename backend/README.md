@@ -86,6 +86,19 @@ http://localhost:8080/api/auth/...
 
 The backend receives database and runtime settings through `CATALINA_OPTS` JVM system properties, matching the existing `AppConfig` override behavior.
 
+ImageKit cover storage reads these environment variables directly:
+
+```text
+IMAGEKIT_PUBLIC_KEY
+IMAGEKIT_PRIVATE_KEY
+IMAGEKIT_URL_ENDPOINT
+```
+
+Set all three before using `ImageKitStorageService`. Keep the private key out of
+source control and application logs. Cover uploads are stored under
+`/artists/{artistSlug}/covers/`; ImageKit creates a missing folder when the first
+file is uploaded to that path.
+
 If you change the schema after MySQL has already initialized, reset the Docker volume before starting again:
 
 ```bash

@@ -98,6 +98,16 @@ exists in `songs`, `artists`, `song_artists`, `albums`, `genres`, and
 32. As a backend developer, I want every new endpoint to route through the existing Song servlet, so that there is a single seam to test and reason about.
 33. As a tester, I want to verify every capability through HTTP requests against the Docker stack, so that I test the user-visible contract, not private methods.
 
+### Image storage infrastructure
+
+34. As an Artist, I want every Song cover stored under my Artist slug, so that my media is organized separately from other Artists' media.
+35. As an Artist, I want my cover folder created automatically, so that my first upload does not require manual ImageKit setup.
+36. As a backend developer, I want Artist Dashboard code to use one image-storage abstraction, so that provider details do not spread across servlets and services.
+37. As a backend developer, I want ImageKit isolated behind the storage abstraction, so that later cover-upload tasks do not call the ImageKit SDK directly.
+38. As a deployment operator, I want ImageKit credentials supplied through environment variables, so that secrets are not committed to the repository or baked into the application image.
+39. As a backend developer, I want each successful image upload to return its URL, ImageKit file id, and ImageKit file path, so that later tasks can display and manage the stored image.
+40. As a tester, I want the image-storage contract verified independently from an Artist HTTP endpoint, so that the infrastructure can be completed before upload APIs exist.
+
 ## Implementation Decisions
 
 ### Overall
@@ -161,6 +171,35 @@ exists in `songs`, `artists`, `song_artists`, `albums`, `genres`, and
 - `INVALID_QUERY_PARAM` → 400
 - (existing) `DATABASE_ERROR` → 500, `NOT_FOUND` → 404 for unmatched routes.
 
+### Image storage infrastructure
+
+- ImageKit is the image storage provider for cover images. Artist Dashboard
+  servlets, services, and repositories must not depend on the ImageKit SDK or
+  ImageKit-specific request types directly.
+- Add a reusable, provider-neutral `ImageStorageService` abstraction. Its upload
+  operation receives the owning Artist's slug plus the image content and required
+  file metadata, and returns a storage result containing exactly `imageUrl`,
+  `fileId`, and `filePath`.
+- Add an `ImageKitStorageService` implementation of that abstraction. All
+  ImageKit authentication, folder preparation, upload calls, and provider response
+  mapping belong inside this implementation.
+- ImageKit credentials are configuration only and are read from environment
+  variables: `IMAGEKIT_PUBLIC_KEY`, `IMAGEKIT_PRIVATE_KEY`, and
+  `IMAGEKIT_URL_ENDPOINT`. They must not have committed secret defaults and must
+  never be written to application logs or API responses.
+- Cover images use the exact folder structure
+  `/artists/{artistSlug}/covers/`. For example, the Artist slug `son-tung-mtp`
+  resolves to `/artists/son-tung-mtp/covers/`.
+- The Artist slug comes from the authenticated Artist profile established in
+  Phase 3. It must be non-blank and valid before any provider call. Clients do not
+  supply an arbitrary destination folder.
+- Folder preparation is idempotent: `ImageKitStorageService` includes the Artist
+  cover folder in every upload request. ImageKit's upload API creates missing
+  nested folders automatically and reuses an already-existing folder.
+- Task 3.6 introduces infrastructure only. It does not add an HTTP endpoint,
+  mutate a Song, or permit a cover upload by itself. The later Artist cover-upload
+  task composes authorization, Song ownership, and `ImageStorageService`.
+
 ## Testing Decisions
 
 - **The single test seam is the HTTP contract at `GET /api/songs/*`.** Every capability is verified by making a request against the running Docker Compose stack (MySQL + backend) and asserting the externally visible response. This matches both prior Song specs and the project's current reality of no automated test harness.
@@ -176,6 +215,19 @@ exists in `songs`, `artists`, `song_artists`, `albums`, `genres`, and
   - Search/filter: `q` matching a subset → only matches returned; `genre` slug → only that genre; unknown `genre` → empty result, 200; `q` + `genre` + `page` combined → correctly narrowed and paged.
   - Ordering: newest `created_at` first, `id DESC` tie-break, preserved under paging.
 - If an automated harness is introduced later, the natural choice is JUnit 5 driving HTTP against a Testcontainers MySQL — but that is explicitly **not** required by this spec and should not block the tasks below.
+- The ImageKit infrastructure is the one exception to the HTTP-only test seam
+  because it intentionally exists before an upload endpoint. Test it at the
+  `ImageStorageService` contract: given an Artist slug and valid image input, the
+  result contains non-blank `imageUrl`, `fileId`, and `filePath`, and the path is
+  under `/artists/{artistSlug}/covers/`.
+- Storage contract tests should use a fake or stubbed provider boundary and assert
+  externally visible results rather than ImageKit SDK internals. A separate,
+  opt-in smoke test may use ImageKit test credentials to verify folder creation,
+  the already-existing-folder case, and one real upload without making live
+  credentials a normal build requirement.
+- Configuration verification must prove that missing required ImageKit environment
+  variables fail with a clear configuration error and that no credential value is
+  included in logs or returned errors.
 
 ## Roadmap
 
@@ -289,15 +341,26 @@ Primary test seams for future tasks:
   Artist Dashboard tasks one ownership source. *Depends on:* 3.2 and 3.4. —
   Done: the Artist account service resolves the authenticated Artist profile from
   the current token.
+- **[x] Task 3.6 - ImageKit cover storage infrastructure.** Configure ImageKit through
+  `IMAGEKIT_PUBLIC_KEY`, `IMAGEKIT_PRIVATE_KEY`, and `IMAGEKIT_URL_ENDPOINT`; add
+  the reusable `ImageStorageService` abstraction and its `ImageKitStorageService`
+  implementation; upload to `/artists/{artistSlug}/covers/` so ImageKit creates
+  missing folders automatically; and return `imageUrl`, `fileId`, and `filePath` for every successful
+  upload. Purpose: establish one reusable storage seam before any Artist upload
+  endpoint is implemented. This task adds no servlet or Song mutation. *Depends
+  on:* 3.2. *Blocks:* Phase 4 and Task 6.2. - Done: environment-backed ImageKit
+  configuration, the provider-neutral storage contract, the ImageKit adapter,
+  Artist cover-folder routing, and required upload result metadata are implemented.
 
 ### Phase 4 - Artist Dashboard: profile and own catalog
 
 > First authenticated Artist Dashboard slice. It gives an Artist their identity
-> and a private view of their own Songs before write actions are added.
+> and a private view of their own Songs before write actions are added. Start this
+> phase only after the ImageKit cover storage foundation in Task 3.6 is complete.
 
 - **Task 4.1 - View own Artist profile.** Add an `ARTIST`-only API to retrieve the
   current Artist profile. Purpose: the dashboard can show the Artist name, slug,
-  bio, and image metadata. *Depends on:* 3.5.
+  bio, and image metadata. *Depends on:* 3.5 and 3.6.
 - **Task 4.2 - Update own Artist profile metadata.** Add an `ARTIST`-only API to
   update safe profile fields such as name, slug, bio, and image URL metadata.
   Purpose: Artists can maintain their public profile information. *Depends on:*
@@ -340,13 +403,18 @@ Primary test seams for future tasks:
 
 > Adds the media upload surfaces after ownership and Song metadata writes exist.
 
-- **Task 6.1 - Upload storage configuration.** Define backend storage settings for
-  cover images, audio files, and lyric uploads, including allowed directories,
-  URL/path persistence, and maximum file sizes. Purpose: keep upload behavior
-  predictable across local Docker and future deployment. *Depends on:* 5.1.
+- **Task 6.1 - Audio and lyrics upload configuration.** Define the remaining
+  backend storage and request limits for audio files and `.lrc` uploads. Cover
+  image provider configuration is already owned by Task 3.6. Purpose: keep
+  non-image upload behavior predictable across local Docker and future
+  deployment. *Depends on:* 5.1.
 - **Task 6.2 - Upload cover image for own Song.** Add an `ARTIST`-only upload API
-  for Song cover images that updates the Song's cover metadata. Purpose: Artists
-  can provide artwork for their own Songs. *Depends on:* 6.1 and 4.4.
+  for Song cover images. Resolve the Artist slug from the authenticated profile,
+  verify Song ownership, call `ImageStorageService`, update the Song's cover
+  metadata, and return `imageUrl`, `fileId`, and `filePath`. The endpoint must not
+  call ImageKit directly. Purpose: Artists can provide artwork for their own Songs
+  while all files remain under `/artists/{artistSlug}/covers/`. *Depends on:* 3.6
+  and 4.4.
 - **Task 6.3 - Upload audio file for own Song.** Add an `ARTIST`-only upload API
   for audio files that persists the file location on the Song. Purpose: a Draft
   Song can become playable once audio exists. *Depends on:* 6.1 and 5.2.
@@ -431,14 +499,15 @@ Primary test seams for future tasks:
 
 ### Recommended next task
 
-**Task 4.1 - View own Artist profile.** Phase 3 is complete, so the next smallest
+**Task 4.1 - View own Artist profile.** Task 3.6 is complete, so the next smallest
 slice is the first Artist Dashboard read endpoint using the authenticated Artist
 lookup seam.
 
 ## Out of Scope
 
 - Any write operation: creating, updating, hiding, or soft-deleting Songs, Artists, or Albums.
-- Song upload, cover upload, avatar upload.
+- Artist upload HTTP endpoints, including Song cover, audio, lyrics, and avatar
+  uploads, are not part of Task 3.6; they remain later roadmap tasks.
 - Admin-only endpoints, moderation, or approval workflows.
 - Authentication or role/permission changes; every endpoint here stays public.
 - Play-count incrementing and listen history.
@@ -471,3 +540,6 @@ lookup seam.
 - MelodyHub runs backend + MySQL through Docker Compose, so real API verification
   should prefer the Docker stack; reset the volume (`docker compose down -v`) when
   the schema seed changes.
+- ImageKit credentials remain deployment secrets. Local Docker and deployed
+  environments must inject the three ImageKit environment variables; the spec
+  must never contain real credential values.

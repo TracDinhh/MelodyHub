@@ -29,6 +29,15 @@ public final class AppConfig {
         return value;
     }
 
+    public static String getRequiredEnvironment(String key) {
+        String value = System.getenv(key);
+        if (value == null || value.isBlank()) {
+            throw new IllegalStateException("Missing required environment variable: " + key);
+        }
+
+        return value.trim();
+    }
+
     public static int getInt(String key, int defaultValue) {
         String value = get(key);
         if (value == null || value.isBlank()) {

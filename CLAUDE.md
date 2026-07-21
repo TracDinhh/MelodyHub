@@ -76,6 +76,9 @@ Defaults live in `backend/src/main/resources/application.properties`; Docker
 overrides them via `CATALINA_OPTS` system properties. Keys: `db.url`,
 `db.username`, `db.password`, `db.driver-class-name`, `upload.base-dir`,
 `cors.allowed-origin`, `jwt.secret`, `jwt.expires-minutes`, `app.name`.
+ImageKit secrets are the exception: `ImageKitConfig` reads
+`IMAGEKIT_PUBLIC_KEY`, `IMAGEKIT_PRIVATE_KEY`, and `IMAGEKIT_URL_ENDPOINT`
+through the shared `AppConfig` environment-variable seam.
 
 ## Database
 
