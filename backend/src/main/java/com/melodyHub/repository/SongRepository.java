@@ -16,6 +16,7 @@ import java.util.Optional;
 import javax.sql.DataSource;
 
 public class SongRepository {
+    private static final String MAIN_ARTIST_ROLE = "MAIN";
     private static final String SONG_COLUMNS = """
             id,
             title,
@@ -83,6 +84,81 @@ public class SongRepository {
                 return 0L;
             }
         }
+    }
+
+    public List<Song> getOwnedPage(int artistId, int size, int offset) throws SQLException {
+        String sql = "SELECT " + SONG_COLUMNS + " FROM songs s"
+                + ownedByMainArtistClause()
+                + " ORDER BY s.created_at DESC, s.id DESC LIMIT ? OFFSET ?";
+
+        try (var connection = getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, artistId);
+            statement.setString(2, MAIN_ARTIST_ROLE);
+            statement.setInt(3, size);
+            statement.setInt(4, offset);
+
+            try (var resultSet = statement.executeQuery()) {
+                List<Song> songs = new ArrayList<>();
+                while (resultSet.next()) {
+                    songs.add(mapRow(resultSet));
+                }
+
+                return songs;
+            }
+        }
+    }
+
+    public long countOwned(int artistId) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM songs s" + ownedByMainArtistClause();
+
+        try (var connection = getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, artistId);
+            statement.setString(2, MAIN_ARTIST_ROLE);
+
+            try (var resultSet = statement.executeQuery()) {
+                return resultSet.next() ? resultSet.getLong(1) : 0L;
+            }
+        }
+    }
+
+    public Optional<Song> findOwnedById(int artistId, int songId) throws SQLException {
+        return findOwned(artistId, "s.id = ?", songId);
+    }
+
+    public Optional<Song> findOwnedBySlug(int artistId, String slug) throws SQLException {
+        return findOwned(artistId, "s.slug = ?", slug);
+    }
+
+    private Optional<Song> findOwned(int artistId, String lookupClause, Object lookupValue) throws SQLException {
+        String sql = "SELECT " + SONG_COLUMNS + " FROM songs s"
+                + ownedByMainArtistClause()
+                + " AND " + lookupClause;
+
+        try (var connection = getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, artistId);
+            statement.setString(2, MAIN_ARTIST_ROLE);
+            statement.setObject(3, lookupValue);
+
+            try (var resultSet = statement.executeQuery()) {
+                return resultSet.next() ? Optional.of(mapRow(resultSet)) : Optional.empty();
+            }
+        }
+    }
+
+    private String ownedByMainArtistClause() {
+        return """
+                 WHERE s.deleted_at IS NULL
+                   AND EXISTS (
+                       SELECT 1
+                       FROM song_artists sa
+                       WHERE sa.song_id = s.id
+                         AND sa.artist_id = ?
+                         AND sa.role = ?
+                   )
+                """;
     }
 
     private String buildFilterClause(String titleQuery, String genreSlug, List<Object> parameters) {

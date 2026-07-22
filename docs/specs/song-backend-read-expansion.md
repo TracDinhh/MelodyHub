@@ -358,21 +358,31 @@ Primary test seams for future tasks:
 > and a private view of their own Songs before write actions are added. Start this
 > phase only after the ImageKit cover storage foundation in Task 3.6 is complete.
 
-- **Task 4.1 - View own Artist profile.** Add an `ARTIST`-only API to retrieve the
+- **[x] Task 4.1 - View own Artist profile.** Add an `ARTIST`-only API to retrieve the
   current Artist profile. Purpose: the dashboard can show the Artist name, slug,
-  bio, and image metadata. *Depends on:* 3.5 and 3.6.
-- **Task 4.2 - Update own Artist profile metadata.** Add an `ARTIST`-only API to
+  bio, and image metadata. *Depends on:* 3.5 and 3.6. - Done: `GET
+  /api/artist/profile` resolves the authenticated `ARTIST` account to its active
+  Artist profile and returns profile metadata without ownership or soft-delete
+  internals.
+- **[x] Task 4.2 - Update own Artist profile metadata.** Add an `ARTIST`-only API to
   update safe profile fields such as name, slug, bio, and image URL metadata.
   Purpose: Artists can maintain their public profile information. *Depends on:*
-  4.1.
-- **Task 4.3 - List own Songs.** Add an `ARTIST`-only API that returns only Songs
+  4.1. - Done: `PUT /api/artist/profile` validates and updates only the current
+  authenticated Artist's name, slug, bio, and image URL, returns the refreshed
+  profile, and reports stable validation and duplicate-slug errors.
+- **[x] Task 4.3 - List own Songs.** Add an `ARTIST`-only API that returns only Songs
   owned by the current Artist, including Draft, Published, and Hidden Songs but
   excluding soft-deleted Songs by default. Ownership for the MVP is the linked
   Artist appearing as the Song's `MAIN` Artist. Purpose: Artists can manage only
-  their own catalog. *Depends on:* 3.5 and Phase 2 paging conventions.
-- **Task 4.4 - View one own Song by id or slug.** Add an `ARTIST`-only detail API
+  their own catalog. *Depends on:* 3.5 and Phase 2 paging conventions. - Done:
+  `GET /api/artist/songs` returns the current Artist's newest-first private Song
+  page with the existing default, maximum, and response-wrapper conventions.
+- **[x] Task 4.4 - View one own Song by id or slug.** Add an `ARTIST`-only detail API
   for a single own Song, including non-public statuses. Purpose: the edit screen
-  can load one Song without leaking another Artist's Song. *Depends on:* 4.3.
+  can load one Song without leaking another Artist's Song. *Depends on:* 4.3. -
+  Done: `GET /api/artist/songs/{id-or-slug}` resolves an owned Song by positive
+  numeric id or slug and returns `SONG_NOT_FOUND` for missing, deleted, or
+  non-owned Songs.
 
 ### Phase 5 - Artist Dashboard: Song metadata writes
 
@@ -499,9 +509,9 @@ Primary test seams for future tasks:
 
 ### Recommended next task
 
-**Task 4.1 - View own Artist profile.** Task 3.6 is complete, so the next smallest
-slice is the first Artist Dashboard read endpoint using the authenticated Artist
-lookup seam.
+**Task 5.1 - Schema: allow draft Songs before audio upload.** Phase 4 is complete,
+so the next slice prepares Song storage for incremental Artist Dashboard writes
+without changing the completed public or private read contracts.
 
 ## Out of Scope
 
