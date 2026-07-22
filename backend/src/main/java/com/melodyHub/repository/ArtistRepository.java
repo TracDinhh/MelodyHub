@@ -2,6 +2,7 @@ package com.melodyHub.repository;
 
 import com.melodyHub.config.DatabaseConfig;
 import com.melodyHub.entity.Artist;
+import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -31,6 +32,60 @@ public class ArtistRepository {
         try (var connection = DatabaseConfig.getConnection();
              var statement = connection.prepareStatement(sql)) {
             statement.setInt(1, userId);
+
+            try (var resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    return Optional.of(mapRow(resultSet));
+                }
+
+                return Optional.empty();
+            }
+        }
+    }
+
+    public Optional<Artist> updateProfile(
+            int artistId,
+            String name,
+            String slug,
+            String bio,
+            String imageUrl
+    ) throws SQLException {
+        String sql = """
+                UPDATE artists
+                SET name = ?,
+                    slug = ?,
+                    bio = ?,
+                    image_url = ?,
+                    updated_at = CURRENT_TIMESTAMP(6)
+                WHERE id = ?
+                  AND deleted_at IS NULL
+                """;
+
+        try (var connection = DatabaseConfig.getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            statement.setString(1, name);
+            statement.setString(2, slug);
+            statement.setString(3, bio);
+            statement.setString(4, imageUrl);
+            statement.setInt(5, artistId);
+
+            if (statement.executeUpdate() == 0) {
+                return Optional.empty();
+            }
+
+            return findActiveById(connection, artistId);
+        }
+    }
+
+    private Optional<Artist> findActiveById(Connection connection, int artistId) throws SQLException {
+        String sql = "SELECT " + ARTIST_COLUMNS + """
+                 FROM artists
+                 WHERE id = ?
+                   AND deleted_at IS NULL
+                """;
+
+        try (var statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, artistId);
 
             try (var resultSet = statement.executeQuery()) {
                 if (resultSet.next()) {
