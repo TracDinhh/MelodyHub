@@ -1,18 +1,15 @@
-import { request } from './http';
+import { apiClient } from './http';
 
 export const userService = {
   getCurrent() {
-    return request('/api/auth/me');
+    return apiClient.get('/api/auth/me');
   },
 
   getArtistProfile() {
-    return request('/api/artist/profile');
+    return apiClient.get('/api/artist/profile');
   },
 
   updateArtistProfile(profile) {
-    return request('/api/artist/profile', {
-      method: 'PUT',
-      body: profile
-    });
+    return apiClient.put('/api/artist/profile', profile);
   }
 };

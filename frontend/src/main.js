@@ -1,7 +1,5 @@
 import { createPinia } from 'pinia';
 import { createApp } from 'vue';
-import 'bootstrap/dist/css/bootstrap.min.css';
-import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 import './assets/styles/main.css';
 import App from './App.vue';
 import router from './router';
@@ -14,6 +12,17 @@ async function bootstrap() {
   app.use(pinia);
   await useAuthStore(pinia).initialize();
   app.use(router);
+  window.addEventListener('melodyhub:unauthorized', () => {
+    const currentRoute = router.currentRoute.value;
+    if (currentRoute.name === 'login') return;
+
+    router.push({
+      name: 'login',
+      query: {
+        redirect: currentRoute.fullPath || '/'
+      }
+    });
+  });
   app.mount('#app');
 }
 

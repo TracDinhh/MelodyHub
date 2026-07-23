@@ -1,19 +1,23 @@
-import { request } from './http';
+import { apiClient } from './http';
 
 export const authService = {
+  register(account) {
+    return apiClient.post('/api/auth/register', account, {
+      authenticated: false
+    });
+  },
+
   login(credentials) {
-    return request('/api/auth/login', {
-      method: 'POST',
-      body: credentials,
+    return apiClient.post('/api/auth/login', credentials, {
       authenticated: false
     });
   },
 
   getCurrentUser() {
-    return request('/api/auth/me');
+    return apiClient.get('/api/auth/me');
   },
 
   logout() {
-    return request('/api/auth/logout', { method: 'POST' });
+    return apiClient.post('/api/auth/logout');
   }
 };

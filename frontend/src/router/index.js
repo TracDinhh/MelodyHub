@@ -9,8 +9,72 @@ const router = createRouter({
       name: 'home',
       component: () => import('../views/HomeView.vue'),
       meta: {
+        title: 'Home',
+        breadcrumb: 'Home'
+      }
+    },
+    {
+      path: '/explore',
+      name: 'explore',
+      component: () => import('../views/HomeView.vue'),
+      meta: {
+        title: 'Explore',
+        breadcrumb: 'Home / Explore'
+      }
+    },
+    {
+      path: '/radio',
+      name: 'radio',
+      component: () => import('../views/HomeView.vue'),
+      meta: {
+        title: 'Radio',
+        breadcrumb: 'Home / Radio'
+      }
+    },
+    {
+      path: '/artists',
+      name: 'artists',
+      component: () => import('../views/HomeView.vue'),
+      meta: {
+        title: 'Artists',
+        breadcrumb: 'Home / Artists'
+      }
+    },
+    {
+      path: '/albums',
+      name: 'albums',
+      component: () => import('../views/HomeView.vue'),
+      meta: {
+        title: 'Albums',
+        breadcrumb: 'Home / Albums'
+      }
+    },
+    {
+      path: '/podcasts',
+      name: 'podcasts',
+      component: () => import('../views/HomeView.vue'),
+      meta: {
+        title: 'Podcasts',
+        breadcrumb: 'Home / Podcasts'
+      }
+    },
+    {
+      path: '/artist/:slug',
+      name: 'artist-detail',
+      component: () => import('../views/ArtistView.vue'),
+      meta: {
+        title: 'Featured Artist',
+        breadcrumb: 'Home / Featured Artists'
+      }
+    },
+    {
+      path: '/library',
+      name: 'library',
+      component: () => import('../views/LibraryView.vue'),
+      meta: {
         requiresAuth: true,
-        title: 'Dashboard'
+        title: 'My Library',
+        breadcrumb: 'Home / My Library'
       }
     },
     {
@@ -42,7 +106,9 @@ router.beforeEach((to) => {
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     return {
       name: 'login',
-      query: { redirect: to.fullPath }
+      query: {
+        redirect: to.fullPath
+      }
     };
   }
 

@@ -1,24 +1,24 @@
-import { request } from './http';
+import { apiClient } from './http';
 
 export const songService = {
   listPublic(params) {
-    return request('/api/songs', {
-      query: params,
+    return apiClient.get('/api/songs', {
+      params,
       authenticated: false
     });
   },
 
   getPublic(slug) {
-    return request(`/api/songs/${encodeURIComponent(slug)}`, {
+    return apiClient.get(`/api/songs/${encodeURIComponent(slug)}`, {
       authenticated: false
     });
   },
 
   listMine(params) {
-    return request('/api/artist/songs', { query: params });
+    return apiClient.get('/api/artist/songs', { params });
   },
 
   getMine(identifier) {
-    return request(`/api/artist/songs/${encodeURIComponent(identifier)}`);
+    return apiClient.get(`/api/artist/songs/${encodeURIComponent(identifier)}`);
   }
 };

@@ -1,5 +1,12 @@
+import axios from 'axios';
+
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
-const TOKEN_KEY = 'melodyhub.token';
+const TOKEN_KEY = 'access_token';
+const USER_KEY = 'user';
+
+// Authentication is tab-scoped. Remove credentials left by older builds.
+localStorage.removeItem(TOKEN_KEY);
+localStorage.removeItem(USER_KEY);
 
 export class HttpError extends Error {
   constructor(message, status, code, payload) {
@@ -11,64 +18,62 @@ export class HttpError extends Error {
   }
 }
 
-function createUrl(path, query) {
-  const search = new URLSearchParams();
-  Object.entries(query || {}).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== '') {
-      search.set(key, String(value));
-    }
-  });
-  const queryString = search.toString();
-  return `${API_BASE_URL}${path}${queryString ? `?${queryString}` : ''}`;
-}
-
-export async function request(path, options = {}) {
-  const {
-    method = 'GET',
-    body,
-    query,
-    headers = {},
-    signal,
-    authenticated = true
-  } = options;
-  const requestHeaders = { Accept: 'application/json', ...headers };
-  const token = localStorage.getItem(TOKEN_KEY);
-
-  if (authenticated && token) {
-    requestHeaders.Authorization = `Bearer ${token}`;
-  }
-
-  let requestBody = body;
-  if (body !== undefined && !(body instanceof FormData)) {
-    requestHeaders['Content-Type'] = 'application/json';
-    requestBody = JSON.stringify(body);
-  }
-
-  const response = await fetch(createUrl(path, query), {
-    method,
-    headers: requestHeaders,
-    body: requestBody,
-    signal
-  });
-
-  const contentType = response.headers.get('content-type') || '';
-  const payload = contentType.includes('application/json') ? await response.json() : null;
-
-  if (!response.ok) {
-    throw new HttpError(
-      payload?.message || `Request failed with status ${response.status}`,
-      response.status,
-      payload?.code || 'REQUEST_FAILED',
-      payload
-    );
-  }
-
-  return response.status === 204 ? null : payload;
-}
-
 export const tokenStorage = {
   key: TOKEN_KEY,
-  get: () => localStorage.getItem(TOKEN_KEY),
-  set: (token) => localStorage.setItem(TOKEN_KEY, token),
-  clear: () => localStorage.removeItem(TOKEN_KEY)
+  get: () => sessionStorage.getItem(TOKEN_KEY),
+  set: (token) => sessionStorage.setItem(TOKEN_KEY, token),
+  clear: () => sessionStorage.removeItem(TOKEN_KEY)
 };
+
+export const apiClient = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: 15_000,
+  headers: {
+    Accept: 'application/json'
+  },
+  paramsSerializer: {
+    serialize(params) {
+      const search = new URLSearchParams();
+      Object.entries(params || {}).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          search.set(key, String(value));
+        }
+      });
+      return search.toString();
+    }
+  }
+});
+
+apiClient.interceptors.request.use((config) => {
+  const token = tokenStorage.get();
+  if (config.authenticated !== false && token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+apiClient.interceptors.response.use(
+  (response) => (response.status === 204 ? null : response.data),
+  (error) => {
+    if (axios.isCancel(error)) {
+      return Promise.reject(error);
+    }
+
+    const status = error.response?.status || 0;
+    const payload = error.response?.data;
+    const code = payload?.code || (status === 0 ? 'NETWORK_ERROR' : 'REQUEST_FAILED');
+    const message =
+      payload?.message ||
+      (status === 0
+        ? 'Unable to connect to the MelodyHub API'
+        : `Request failed with status ${status}`);
+
+    if (status === 401 && error.config?.authenticated !== false) {
+      tokenStorage.clear();
+      sessionStorage.removeItem(USER_KEY);
+      window.dispatchEvent(new CustomEvent('melodyhub:unauthorized'));
+    }
+
+    return Promise.reject(new HttpError(message, status, code, payload));
+  }
+);
