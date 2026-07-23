@@ -18,6 +18,7 @@ export function useAuth() {
     isArtist,
     displayName,
     login: store.login,
+    register: store.register,
     logout: store.logout
   };
 }

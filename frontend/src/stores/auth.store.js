@@ -7,9 +7,9 @@ const USER_KEY = 'melodyhub.user';
 
 function readStoredUser() {
   try {
-    return JSON.parse(localStorage.getItem(USER_KEY));
+    return JSON.parse(sessionStorage.getItem(USER_KEY));
   } catch {
-    localStorage.removeItem(USER_KEY);
+    sessionStorage.removeItem(USER_KEY);
     return null;
   }
 }
@@ -30,20 +30,33 @@ export const useAuthStore = defineStore('auth', () => {
     token.value = authResponse.token;
     user.value = authResponse.user;
     tokenStorage.set(authResponse.token);
-    localStorage.setItem(USER_KEY, JSON.stringify(authResponse.user));
+    sessionStorage.setItem(USER_KEY, JSON.stringify(authResponse.user));
   }
 
   function clearSession() {
     token.value = null;
     user.value = null;
     tokenStorage.clear();
-    localStorage.removeItem(USER_KEY);
+    sessionStorage.removeItem(USER_KEY);
   }
+
+  window.addEventListener('melodyhub:unauthorized', clearSession);
 
   async function login(credentials) {
     isLoading.value = true;
     try {
       const authResponse = await authService.login(credentials);
+      saveSession(authResponse);
+      return authResponse.user;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  async function register(account) {
+    isLoading.value = true;
+    try {
+      const authResponse = await authService.register(account);
       saveSession(authResponse);
       return authResponse.user;
     } finally {
@@ -67,7 +80,7 @@ export const useAuthStore = defineStore('auth', () => {
     if (token.value) {
       try {
         user.value = await authService.getCurrentUser();
-        localStorage.setItem(USER_KEY, JSON.stringify(user.value));
+        sessionStorage.setItem(USER_KEY, JSON.stringify(user.value));
       } catch {
         clearSession();
       }
@@ -84,6 +97,7 @@ export const useAuthStore = defineStore('auth', () => {
     isArtist,
     displayName,
     login,
+    register,
     logout,
     initialize,
     clearSession

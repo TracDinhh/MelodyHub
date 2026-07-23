@@ -1,0 +1,114 @@
+<script setup>
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import {
+  AudioLines,
+  ChevronDown,
+  Crown,
+  Library,
+  LogIn,
+  LogOut,
+  Menu,
+  PanelRightOpen,
+  Settings2,
+  UserRound
+} from '@lucide/vue';
+import { useAuthStore } from '../../stores/auth.store';
+import { featuredArtist } from '../../data/music';
+
+const emit = defineEmits(['toggle-nav', 'toggle-info']);
+const route = useRoute();
+const router = useRouter();
+const authStore = useAuthStore();
+const dropdownOpen = ref(false);
+const dropdown = ref(null);
+
+const user = computed(() => authStore.user || {});
+const displayName = computed(() => authStore.displayName);
+const email = computed(() =>
+  authStore.isAuthenticated
+    ? user.value.email || user.value.username || ''
+    : 'Sign in to sync your library'
+);
+const badgeLabel = computed(() => {
+  if (!authStore.isAuthenticated) return 'GUEST';
+  return authStore.isArtist ? 'ARTIST' : 'SONIX VIP';
+});
+const avatarUrl = computed(() => user.value.avatarUrl || featuredArtist.avatar);
+
+function closeOnOutsideClick(event) {
+  if (!dropdown.value?.contains(event.target)) dropdownOpen.value = false;
+}
+
+async function signOut() {
+  dropdownOpen.value = false;
+  if (authStore.isAuthenticated) await authStore.logout();
+  await router.push({ name: 'login' });
+}
+
+onMounted(() => document.addEventListener('click', closeOnOutsideClick));
+onBeforeUnmount(() => document.removeEventListener('click', closeOnOutsideClick));
+</script>
+
+<template>
+  <header class="sticky top-0 z-30 flex h-18 items-center justify-between border-b border-white/5 bg-[#0d0d0d]/90 px-4 backdrop-blur-xl sm:px-6">
+    <div class="flex min-w-0 items-center gap-3">
+      <button class="sonix-icon-btn lg:hidden" title="Open navigation" @click="emit('toggle-nav')">
+        <Menu :size="20" />
+      </button>
+      <p class="min-w-0 truncate text-xs text-[#747474] sm:text-sm">
+        {{ route.meta.breadcrumb || route.meta.title }}
+      </p>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <button class="sonix-icon-btn xl:hidden" title="Open track information" @click="emit('toggle-info')">
+        <PanelRightOpen :size="19" />
+      </button>
+      <div ref="dropdown" class="relative">
+        <button
+          class="flex items-center gap-2 rounded-full p-1 pr-2 text-left transition hover:bg-white/5"
+          aria-haspopup="menu"
+          :aria-expanded="dropdownOpen"
+          @click.stop="dropdownOpen = !dropdownOpen"
+        >
+          <span class="relative">
+            <img :src="avatarUrl" alt="" class="size-9 rounded-full object-cover ring-2 ring-white/10" />
+            <span class="absolute -right-1 -bottom-0.5 grid size-4 place-items-center rounded-full bg-[#1DB954] text-black ring-2 ring-[#0d0d0d]">
+              <Crown :size="9" :stroke-width="3" />
+            </span>
+          </span>
+          <span class="hidden max-w-28 sm:block">
+            <span class="block truncate text-xs font-bold text-white">{{ displayName }}</span>
+            <span class="block text-[9px] font-black tracking-wider text-[#1DB954]">{{ badgeLabel }}</span>
+          </span>
+          <ChevronDown :size="14" class="hidden text-[#777] sm:block" />
+        </button>
+
+        <div
+          v-if="dropdownOpen"
+          class="absolute right-0 mt-2 w-64 overflow-hidden rounded-lg border border-white/10 bg-[#171717]/95 p-2 shadow-2xl shadow-black/60 backdrop-blur-xl"
+          role="menu"
+        >
+          <div class="border-b border-white/5 px-3 py-3">
+            <p class="text-sm font-bold text-white">{{ displayName }}</p>
+            <p class="mt-0.5 truncate text-xs text-[#777]">{{ email }}</p>
+            <span class="mt-2 inline-flex items-center gap-1 rounded-full bg-[#1DB954]/10 px-2 py-1 text-[10px] font-black text-[#1DB954]">
+              <Crown :size="11" /> {{ badgeLabel }}
+            </span>
+          </div>
+          <RouterLink :to="{ name: 'library' }" class="sonix-menu-item" @click="dropdownOpen = false">
+            <Library :size="16" /> Library
+          </RouterLink>
+          <button class="sonix-menu-item"><UserRound :size="16" /> Profile</button>
+          <button class="sonix-menu-item"><AudioLines :size="16" /> Audio settings</button>
+          <button class="sonix-menu-item"><Settings2 :size="16" /> Preferences</button>
+          <button class="sonix-menu-item mt-1 border-t border-white/5 pt-3" @click="signOut">
+            <component :is="authStore.isAuthenticated ? LogOut : LogIn" :size="16" />
+            {{ authStore.isAuthenticated ? 'Log out' : 'Log in' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+</template>

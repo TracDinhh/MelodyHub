@@ -1,57 +1,26 @@
 <script setup>
-import { computed } from 'vue';
-import { useRouter, RouterLink } from 'vue-router';
-import { Disc3, LayoutDashboard, LogOut } from '@lucide/vue';
-import { useAuth } from '../composables/useAuth';
+import { ref } from 'vue';
+import BottomPlayer from '../components/player/BottomPlayer.vue';
+import LeftSidebar from '../components/navigation/LeftSidebar.vue';
+import RightSidebar from '../components/player/RightSidebar.vue';
+import TopHeader from '../components/navigation/TopHeader.vue';
 
-const router = useRouter();
-const { user, displayName, logout } = useAuth();
-const initials = computed(() =>
-  displayName.value
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part.charAt(0).toUpperCase())
-    .join('')
-);
-
-async function signOut() {
-  await logout();
-  await router.push({ name: 'login' });
-}
+const navOpen = ref(false);
+const infoOpen = ref(false);
 </script>
 
 <template>
-  <div class="app-shell">
-    <header class="app-header">
-      <div class="app-header__inner">
-        <RouterLink class="brand" :to="{ name: 'home' }">
-          <span class="brand__mark"><Disc3 :size="22" aria-hidden="true" /></span>
-          <span>MelodyHub</span>
-        </RouterLink>
-
-        <nav class="primary-nav" aria-label="Main navigation">
-          <RouterLink :to="{ name: 'home' }">
-            <LayoutDashboard :size="17" aria-hidden="true" />
-            <span>Overview</span>
-          </RouterLink>
-        </nav>
-
-        <div class="account-menu">
-          <div class="account-menu__avatar" aria-hidden="true">{{ initials }}</div>
-          <div class="account-menu__copy">
-            <strong>{{ displayName }}</strong>
-            <span>{{ user?.role || 'USER' }}</span>
-          </div>
-          <button type="button" class="icon-button" title="Sign out" @click="signOut">
-            <LogOut :size="19" aria-hidden="true" />
-            <span class="visually-hidden">Sign out</span>
-          </button>
-        </div>
-      </div>
-    </header>
-
-    <main class="app-main">
-      <slot />
-    </main>
+  <div class="h-screen overflow-hidden bg-[#090909] text-white">
+    <div class="grid h-[calc(100vh-6rem)] grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1fr)_320px]">
+      <LeftSidebar :mobile-open="navOpen" @close="navOpen = false" />
+      <section class="min-w-0 overflow-hidden bg-[#0d0d0d]">
+        <TopHeader @toggle-nav="navOpen = true" @toggle-info="infoOpen = true" />
+        <main class="h-[calc(100%-4.5rem)] overflow-y-auto">
+          <slot />
+        </main>
+      </section>
+      <RightSidebar :mobile-open="infoOpen" @close="infoOpen = false" />
+    </div>
+    <BottomPlayer />
   </div>
 </template>
