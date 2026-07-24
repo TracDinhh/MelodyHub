@@ -42,7 +42,8 @@ services:
         -Dupload.base-dir='/usr/local/tomcat/uploads'
         -Dcors.allowed-origin='${CORS_ALLOWED_ORIGIN:-*}'
         -Djwt.secret='${JWT_SECRET:-change-this-secret-for-local-dev}'
-        -Djwt.expires-minutes='${JWT_EXPIRES_MINUTES:-1440}'
+        -Djwt.expires-minutes='${JWT_EXPIRES_MINUTES:-15}'
+        -Drefresh-token.expires-days='${REFRESH_TOKEN_EXPIRES_DAYS:-7}'
     ports:
       - "${BACKEND_PORT:-8080}:8080"
     volumes:

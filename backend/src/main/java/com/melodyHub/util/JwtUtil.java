@@ -12,7 +12,7 @@ public final class JwtUtil {
     private static final String JWT_SECRET = "jwt.secret";
     private static final String JWT_EXPIRES_MINUTES = "jwt.expires-minutes";
     private static final String ISSUER = "melodyhub";
-    private static final int DEFAULT_EXPIRES_MINUTES = 1440;
+    private static final int DEFAULT_EXPIRES_MINUTES = 15;
 
     private JwtUtil() {
     }

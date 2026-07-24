@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.melodyHub.dto.request.LoginRequest;
+import com.melodyHub.dto.request.RefreshTokenRequest;
 import com.melodyHub.dto.request.RegisterRequest;
 import com.melodyHub.dto.response.ErrorResponse;
 import com.melodyHub.exception.AuthException;
@@ -40,7 +41,8 @@ public class AuthServlet extends HttpServlet {
             switch (getPath(request)) {
                 case "/register" -> handleRegister(request, response);
                 case "/login" -> handleLogin(request, response);
-                case "/logout" -> response.setStatus(HttpServletResponse.SC_NO_CONTENT);
+                case "/refresh" -> handleRefresh(request, response);
+                case "/logout" -> handleLogout(request, response);
                 default -> writeError(
                         response,
                         HttpServletResponse.SC_NOT_FOUND,
@@ -105,6 +107,28 @@ public class AuthServlet extends HttpServlet {
         writeJson(response, HttpServletResponse.SC_OK, authService.login(loginRequest));
     }
 
+    private void handleRefresh(HttpServletRequest request, HttpServletResponse response)
+            throws IOException, AuthException, SQLException {
+        RefreshTokenRequest refreshTokenRequest = objectMapper.readValue(
+                request.getInputStream(),
+                RefreshTokenRequest.class
+        );
+        writeJson(response, HttpServletResponse.SC_OK, authService.refresh(refreshTokenRequest));
+    }
+
+    private void handleLogout(HttpServletRequest request, HttpServletResponse response)
+            throws IOException, SQLException {
+        if (request.getContentLengthLong() > 0) {
+            RefreshTokenRequest refreshTokenRequest = objectMapper.readValue(
+                    request.getInputStream(),
+                    RefreshTokenRequest.class
+            );
+            authService.logout(refreshTokenRequest);
+        }
+
+        response.setStatus(HttpServletResponse.SC_NO_CONTENT);
+    }
+
     private void handleMe(HttpServletRequest request, HttpServletResponse response)
             throws IOException, AuthException, SQLException {
         writeJson(response, HttpServletResponse.SC_OK, authService.getCurrentUser(getBearerToken(request)));
@@ -133,7 +157,8 @@ public class AuthServlet extends HttpServlet {
                     "INVALID_DISPLAY_NAME" -> HttpServletResponse.SC_BAD_REQUEST;
             case "INVALID_CREDENTIALS",
                     "MISSING_TOKEN",
-                    "INVALID_TOKEN" -> HttpServletResponse.SC_UNAUTHORIZED;
+                    "INVALID_TOKEN",
+                    "INVALID_REFRESH_TOKEN" -> HttpServletResponse.SC_UNAUTHORIZED;
             case "USER_BANNED" -> HttpServletResponse.SC_FORBIDDEN;
             case "FORBIDDEN" -> HttpServletResponse.SC_FORBIDDEN;
             case "USERNAME_EXISTS",
