@@ -47,6 +47,19 @@ CREATE TABLE artists (
 );
 CREATE INDEX idx_artists_name ON artists(name);
 
+CREATE TABLE refresh_tokens (
+    id           BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id      INT NOT NULL,
+    token_hash   CHAR(64) NOT NULL,
+    expires_at   DATETIME(6) NOT NULL,
+    revoked_at   DATETIME(6) NULL,
+    created_at   DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    CONSTRAINT uk_refresh_tokens_hash UNIQUE (token_hash),
+    CONSTRAINT fk_refresh_tokens_user FOREIGN KEY (user_id)
+        REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE INDEX idx_refresh_tokens_user ON refresh_tokens(user_id, expires_at);
+
 DELIMITER //
 
 CREATE TRIGGER trg_artists_user_must_be_artist_before_insert

@@ -1,4 +1,4 @@
-import { apiClient } from './http';
+import { apiClient, refreshTokenStorage } from './http';
 
 export const authService = {
   register(account) {
@@ -18,6 +18,8 @@ export const authService = {
   },
 
   logout() {
-    return apiClient.post('/api/auth/logout');
+    return apiClient.post('/api/auth/logout', {
+      refreshToken: refreshTokenStorage.get()
+    });
   }
 };

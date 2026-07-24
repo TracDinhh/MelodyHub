@@ -1,7 +1,7 @@
 import { computed, ref } from 'vue';
 import { defineStore } from 'pinia';
 import { authService } from '../services/authService';
-import { tokenStorage } from '../services/http';
+import { refreshTokenStorage, tokenStorage } from '../services/http';
 
 const USER_KEY = 'melodyhub.user';
 
@@ -30,6 +30,7 @@ export const useAuthStore = defineStore('auth', () => {
     token.value = authResponse.token;
     user.value = authResponse.user;
     tokenStorage.set(authResponse.token);
+    refreshTokenStorage.set(authResponse.refreshToken);
     sessionStorage.setItem(USER_KEY, JSON.stringify(authResponse.user));
   }
 
@@ -37,10 +38,15 @@ export const useAuthStore = defineStore('auth', () => {
     token.value = null;
     user.value = null;
     tokenStorage.clear();
+    refreshTokenStorage.clear();
     sessionStorage.removeItem(USER_KEY);
   }
 
   window.addEventListener('melodyhub:unauthorized', clearSession);
+  window.addEventListener('melodyhub:token-refreshed', (event) => {
+    token.value = event.detail.token;
+    user.value = event.detail.user;
+  });
 
   async function login(credentials) {
     isLoading.value = true;

@@ -2,10 +2,12 @@ import axios from 'axios';
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 const TOKEN_KEY = 'access_token';
-const USER_KEY = 'user';
+const REFRESH_TOKEN_KEY = 'refresh_token';
+const USER_KEY = 'melodyhub.user';
 
 // Authentication is tab-scoped. Remove credentials left by older builds.
 localStorage.removeItem(TOKEN_KEY);
+localStorage.removeItem(REFRESH_TOKEN_KEY);
 localStorage.removeItem(USER_KEY);
 
 export class HttpError extends Error {
@@ -23,6 +25,13 @@ export const tokenStorage = {
   get: () => sessionStorage.getItem(TOKEN_KEY),
   set: (token) => sessionStorage.setItem(TOKEN_KEY, token),
   clear: () => sessionStorage.removeItem(TOKEN_KEY)
+};
+
+export const refreshTokenStorage = {
+  key: REFRESH_TOKEN_KEY,
+  get: () => sessionStorage.getItem(REFRESH_TOKEN_KEY),
+  set: (token) => sessionStorage.setItem(REFRESH_TOKEN_KEY, token),
+  clear: () => sessionStorage.removeItem(REFRESH_TOKEN_KEY)
 };
 
 export const apiClient = axios.create({
@@ -44,6 +53,63 @@ export const apiClient = axios.create({
   }
 });
 
+const refreshClient = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: 15_000,
+  headers: {
+    Accept: 'application/json',
+    'Content-Type': 'application/json'
+  }
+});
+
+let refreshPromise = null;
+
+function clearSession() {
+  tokenStorage.clear();
+  refreshTokenStorage.clear();
+  sessionStorage.removeItem(USER_KEY);
+}
+
+function toHttpError(error) {
+  const status = error.response?.status || 0;
+  const payload = error.response?.data;
+  const code = payload?.code || (status === 0 ? 'NETWORK_ERROR' : 'REQUEST_FAILED');
+  const message =
+    payload?.message ||
+    (status === 0
+      ? 'Unable to connect to the MelodyHub API'
+      : `Request failed with status ${status}`);
+
+  return new HttpError(message, status, code, payload);
+}
+
+async function refreshSession() {
+  if (!refreshPromise) {
+    refreshPromise = refreshClient
+      .post('/api/auth/refresh', {
+        refreshToken: refreshTokenStorage.get()
+      })
+      .then((response) => {
+        const authResponse = response.data;
+        tokenStorage.set(authResponse.token);
+        refreshTokenStorage.set(authResponse.refreshToken);
+        sessionStorage.setItem(USER_KEY, JSON.stringify(authResponse.user));
+        window.dispatchEvent(new CustomEvent('melodyhub:token-refreshed', { detail: authResponse }));
+        return authResponse.token;
+      })
+      .catch((error) => {
+        clearSession();
+        window.dispatchEvent(new CustomEvent('melodyhub:unauthorized'));
+        throw toHttpError(error);
+      })
+      .finally(() => {
+        refreshPromise = null;
+      });
+  }
+
+  return refreshPromise;
+}
+
 apiClient.interceptors.request.use((config) => {
   const token = tokenStorage.get();
   if (config.authenticated !== false && token) {
@@ -54,26 +120,32 @@ apiClient.interceptors.request.use((config) => {
 
 apiClient.interceptors.response.use(
   (response) => (response.status === 204 ? null : response.data),
-  (error) => {
+  async (error) => {
     if (axios.isCancel(error)) {
       return Promise.reject(error);
     }
 
     const status = error.response?.status || 0;
-    const payload = error.response?.data;
-    const code = payload?.code || (status === 0 ? 'NETWORK_ERROR' : 'REQUEST_FAILED');
-    const message =
-      payload?.message ||
-      (status === 0
-        ? 'Unable to connect to the MelodyHub API'
-        : `Request failed with status ${status}`);
+    const originalRequest = error.config || {};
 
-    if (status === 401 && error.config?.authenticated !== false) {
-      tokenStorage.clear();
-      sessionStorage.removeItem(USER_KEY);
+    if (
+      status === 401 &&
+      originalRequest.authenticated !== false &&
+      !originalRequest._retry &&
+      refreshTokenStorage.get()
+    ) {
+      originalRequest._retry = true;
+      const token = await refreshSession();
+      originalRequest.headers = originalRequest.headers || {};
+      originalRequest.headers.Authorization = `Bearer ${token}`;
+      return apiClient(originalRequest);
+    }
+
+    if (status === 401 && originalRequest.authenticated !== false) {
+      clearSession();
       window.dispatchEvent(new CustomEvent('melodyhub:unauthorized'));
     }
 
-    return Promise.reject(new HttpError(message, status, code, payload));
+    return Promise.reject(toHttpError(error));
   }
 );

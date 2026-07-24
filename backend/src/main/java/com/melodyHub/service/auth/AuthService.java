@@ -1,6 +1,7 @@
 package com.melodyHub.service.auth;
 
 import com.melodyHub.dto.request.LoginRequest;
+import com.melodyHub.dto.request.RefreshTokenRequest;
 import com.melodyHub.dto.request.RegisterRequest;
 import com.melodyHub.dto.response.AuthResponse;
 import com.melodyHub.dto.response.UserResponse;
@@ -27,20 +28,29 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final AuthorizationService authorizationService;
+    private final RefreshTokenService refreshTokenService;
 
     public AuthService() {
         this(new UserRepository());
     }
 
     public AuthService(UserRepository userRepository) {
-        this(userRepository, new AuthorizationService(userRepository));
+        this(userRepository, new AuthorizationService(userRepository), new RefreshTokenService());
     }
 
-    public AuthService(UserRepository userRepository, AuthorizationService authorizationService) {
+    public AuthService(
+            UserRepository userRepository,
+            AuthorizationService authorizationService,
+            RefreshTokenService refreshTokenService
+    ) {
         this.userRepository = Objects.requireNonNull(userRepository, "userRepository must not be null");
         this.authorizationService = Objects.requireNonNull(
                 authorizationService,
                 "authorizationService must not be null"
+        );
+        this.refreshTokenService = Objects.requireNonNull(
+                refreshTokenService,
+                "refreshTokenService must not be null"
         );
     }
 
@@ -96,12 +106,45 @@ public class AuthService {
         return UserResponse.fromEntity(authorizationService.requireAuthenticated(token));
     }
 
-    private AuthResponse buildAuthResponse(User user) {
+    public AuthResponse refresh(RefreshTokenRequest request) throws AuthException, SQLException {
+        String refreshToken = normalize(request == null ? null : request.getRefreshToken());
+        if (refreshToken == null) {
+            throw new AuthException("INVALID_REFRESH_TOKEN", "Refresh token is required");
+        }
+
+        int userId = refreshTokenService.findActiveUserId(refreshToken)
+                .orElseThrow(() -> new AuthException(
+                        "INVALID_REFRESH_TOKEN",
+                        "Refresh token is invalid or expired"
+                ));
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AuthException("USER_NOT_FOUND", "User was not found"));
+
+        if (user.getStatus() == UserStatus.BANNED) {
+            throw new AuthException("USER_BANNED", "User account is banned");
+        }
+
+        refreshTokenService.revoke(refreshToken);
+        return buildAuthResponse(user);
+    }
+
+    public void logout(RefreshTokenRequest request) throws SQLException {
+        if (request == null) {
+            return;
+        }
+
+        refreshTokenService.revoke(request.getRefreshToken());
+    }
+
+    private AuthResponse buildAuthResponse(User user) throws SQLException {
+        var issuedRefreshToken = refreshTokenService.issue(user.getId());
         return new AuthResponse(
+                UserResponse.fromEntity(user),
                 JwtUtil.generateToken(user),
                 TOKEN_TYPE,
                 JwtUtil.getExpiresInSeconds(),
-                UserResponse.fromEntity(user)
+                issuedRefreshToken.token(),
+                issuedRefreshToken.expiresInSeconds()
         );
     }
 
