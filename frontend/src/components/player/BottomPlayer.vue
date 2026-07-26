@@ -5,6 +5,7 @@ import {
   Heart,
   ListMusic,
   Maximize2,
+  Music2,
   Pause,
   Play,
   Repeat2,
@@ -35,7 +36,8 @@ onBeforeUnmount(() => window.clearInterval(timer));
   <footer class="fixed inset-x-0 bottom-0 z-[60] h-24 border-t border-white/10 bg-[#0a0a0a]/95 px-3 backdrop-blur-2xl sm:px-5">
     <div class="grid h-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 lg:grid-cols-[minmax(210px,1fr)_minmax(360px,1.4fr)_minmax(220px,1fr)]">
       <div class="flex min-w-0 items-center gap-3">
-        <img :src="player.currentTrack.cover" :alt="`${player.currentTrack.title} cover`" class="size-13 rounded-md object-cover sm:size-14" />
+        <img v-if="player.currentTrack.cover" :src="player.currentTrack.cover" :alt="`${player.currentTrack.title} cover`" class="size-13 rounded-md object-cover sm:size-14" />
+        <span v-else class="grid size-13 shrink-0 place-items-center rounded-md bg-white/[0.06] text-[#555] sm:size-14"><Music2 :size="20" /></span>
         <div class="min-w-0 flex-1">
           <p class="truncate text-xs font-bold text-white sm:text-sm">{{ player.currentTrack.title }}</p>
           <p class="truncate text-[10px] text-[#818181] sm:text-xs">{{ player.currentTrack.artist }}</p>
@@ -143,9 +145,10 @@ onBeforeUnmount(() => window.clearInterval(timer));
         <button class="sonix-icon-btn" title="Close fullscreen lyrics" @click="player.fullscreenLyrics = false"><X :size="22" /></button>
       </header>
       <div class="m-auto max-w-3xl space-y-5 text-center">
-        <p v-for="(line, index) in player.currentTrack.lyrics" :key="index" class="text-2xl font-black sm:text-4xl" :class="index === Math.min(player.currentTrack.lyrics.length - 1, Math.floor((player.currentTime / player.duration) * player.currentTrack.lyrics.length)) ? 'text-[#1DB954]' : 'text-white/25'">
+        <p v-for="(line, index) in (player.currentTrack.lyrics || [])" :key="index" class="text-2xl font-black sm:text-4xl" :class="index === Math.min((player.currentTrack.lyrics || []).length - 1, Math.floor((player.currentTime / player.duration) * (player.currentTrack.lyrics || []).length)) ? 'text-[#1DB954]' : 'text-white/25'">
           {{ line }}
         </p>
+        <p v-if="!(player.currentTrack.lyrics || []).length" class="text-lg text-white/40">No lyrics available.</p>
       </div>
     </div>
   </Teleport>

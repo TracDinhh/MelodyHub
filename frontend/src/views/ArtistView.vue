@@ -1,92 +1,113 @@
 <script setup>
-import { ref } from 'vue';
-import { Check, CheckCircle2, MoreHorizontal, Play } from '@lucide/vue';
+import { computed, onMounted, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
+import { LoaderCircle, Play } from '@lucide/vue';
 import TrackRow from '../components/music/TrackRow.vue';
-import { featuredArtist, playlists, tracks } from '../data/music';
+import { artistBrowseService } from '../services/artistBrowseService';
 import { usePlayerStore } from '../stores/player.store';
 
+const route = useRoute();
 const player = usePlayerStore();
-const following = ref(true);
-const activeTab = ref('Popular');
-const tabs = ['Popular', 'Albums', 'Songs', 'Fans Also Like', 'About'];
+
+const artist = ref(null);
+const songs = ref([]);
+const isLoading = ref(true);
+const notFound = ref(false);
+
+const playerTracks = computed(() =>
+  songs.value.map((song) => ({
+    id: song.id,
+    title: song.title,
+    artist: artist.value?.name || '',
+    cover: song.coverUrl,
+    plays: (song.playCount ?? 0).toLocaleString(),
+    duration: song.durationSec || 0,
+    audioUrl: song.audioUrl
+  }))
+);
+
+async function load(slug) {
+  isLoading.value = true;
+  notFound.value = false;
+  artist.value = null;
+  songs.value = [];
+  try {
+    artist.value = await artistBrowseService.getBySlug(slug);
+    const paged = await artistBrowseService.getSongs(slug, { page: 1, size: 50 });
+    songs.value = paged?.items || [];
+  } catch (error) {
+    if (error.status === 404) notFound.value = true;
+  } finally {
+    isLoading.value = false;
+  }
+}
+
+function playAll() {
+  if (playerTracks.value.length) {
+    player.playTrack(playerTracks.value[0], playerTracks.value);
+  }
+}
+
+onMounted(() => load(route.params.slug));
+watch(() => route.params.slug, (slug) => slug && load(slug));
 </script>
 
 <template>
   <div class="pb-10">
-    <section
-      class="relative min-h-[330px] overflow-hidden bg-cover bg-center"
-      :style="{ backgroundImage: `url(${featuredArtist.hero})` }"
-    >
-      <div class="absolute inset-0 bg-gradient-to-t from-[#0d0d0d] via-black/45 to-black/20" />
-      <div class="relative flex min-h-[330px] items-end px-5 pb-7 sm:px-8">
-        <div class="w-full">
-          <div class="flex items-center gap-2 text-xs font-bold text-white/80">
-            <CheckCircle2 :size="18" class="fill-[#1DB954] text-black" /> Verified artist
-          </div>
-          <h1 class="mt-2 text-5xl font-black text-white sm:text-7xl">{{ featuredArtist.name }}</h1>
-          <p class="mt-3 text-sm text-white/70">{{ featuredArtist.monthlyListeners }} monthly listeners</p>
-          <div class="mt-5 flex flex-wrap items-center gap-3">
-            <button class="inline-flex h-11 items-center gap-2 rounded-full bg-[#1DB954] px-6 text-xs font-black text-black transition hover:scale-[1.03]" @click="player.playTrack(tracks[0])">
-              <Play :size="17" class="fill-current" /> PLAY ALL
-            </button>
-            <button class="inline-flex h-11 items-center gap-2 rounded-full border border-white/25 px-5 text-xs font-bold text-white transition hover:border-white">
-              <Check v-if="following" :size="15" /> {{ following ? 'Following' : 'Follow' }}
-            </button>
-            <button class="sonix-icon-btn !border !border-white/20" title="Artist options"><MoreHorizontal :size="19" /></button>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <nav class="no-scrollbar flex overflow-x-auto border-b border-white/5 px-5 sm:px-8">
-      <button
-        v-for="tab in tabs"
-        :key="tab"
-        class="relative h-13 shrink-0 px-4 text-xs font-bold transition"
-        :class="activeTab === tab ? 'text-white after:absolute after:inset-x-4 after:bottom-0 after:h-0.5 after:bg-[#1DB954]' : 'text-[#707070] hover:text-white'"
-        @click="activeTab = tab"
-      >
-        {{ tab }}
-      </button>
-    </nav>
-
-    <div class="px-4 py-7 sm:px-7">
-      <section v-if="activeTab === 'Popular' || activeTab === 'Songs'">
-        <div class="mb-3 flex items-end justify-between px-3">
-          <div><p class="sonix-kicker">ESSENTIALS</p><h2 class="sonix-section-title">Popular</h2></div>
-          <p class="text-[10px] font-bold text-[#666]">MONTHLY PLAYS</p>
-        </div>
-        <div class="overflow-x-auto">
-          <TrackRow v-for="(track, index) in tracks.slice(0, 5)" :key="track.id" :track="track" :index="index" />
-        </div>
-      </section>
-
-      <section v-else-if="activeTab === 'Albums'" class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-        <article v-for="playlist in playlists" :key="playlist.id">
-          <img :src="playlist.cover" :alt="playlist.title" class="aspect-square w-full rounded-lg object-cover" />
-          <h3 class="mt-3 text-sm font-bold text-white">{{ playlist.title }}</h3>
-          <p class="mt-1 text-xs text-[#777]">Album · 2026</p>
-        </article>
-      </section>
-
-      <section v-else-if="activeTab === 'About'" class="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-        <img :src="featuredArtist.avatar" :alt="featuredArtist.name" class="max-h-[420px] w-full rounded-lg object-cover" />
-        <div>
-          <p class="sonix-kicker">ABOUT</p>
-          <h2 class="sonix-section-title">{{ featuredArtist.name }}</h2>
-          <p class="mt-5 text-sm leading-7 text-[#999]">{{ featuredArtist.bio }}</p>
-          <div class="mt-6 grid grid-cols-2 gap-3">
-            <div class="rounded-lg bg-white/5 p-4"><p class="text-xl font-black text-white">{{ featuredArtist.followers }}</p><p class="text-xs text-[#777]">Followers</p></div>
-            <div class="rounded-lg bg-white/5 p-4"><p class="text-xl font-black text-white">{{ featuredArtist.monthlyListeners }}</p><p class="text-xs text-[#777]">Monthly listeners</p></div>
-          </div>
-        </div>
-      </section>
-
-      <section v-else>
-        <p class="sonix-kicker">DISCOVER</p>
-        <h2 class="sonix-section-title">{{ activeTab }}</h2>
-        <p class="mt-4 max-w-xl text-sm leading-6 text-[#777]">More artists selected from the same late-night alternative R&B scene.</p>
-      </section>
+    <div v-if="isLoading" class="flex min-h-[60vh] items-center justify-center text-sm text-[#888]">
+      <LoaderCircle :size="22" class="mr-3 animate-spin text-[#1DB954]" /> Loading artist
     </div>
+
+    <div v-else-if="notFound || !artist" class="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-center">
+      <p class="text-lg font-black text-white">Artist not found</p>
+      <RouterLink :to="{ name: 'home' }" class="text-xs font-bold text-[#1DB954]">Back to Home</RouterLink>
+    </div>
+
+    <template v-else>
+      <section class="relative min-h-[300px] overflow-hidden bg-cover bg-center" :style="artist.imageUrl ? { backgroundImage: `url(${artist.imageUrl})` } : {}">
+        <div class="absolute inset-0 bg-gradient-to-t from-[#0d0d0d] via-black/50 to-black/30" />
+        <div class="relative flex min-h-[300px] items-end px-5 pb-7 sm:px-8">
+          <div class="w-full">
+            <p class="sonix-kicker">ARTIST</p>
+            <h1 class="mt-2 text-5xl font-black text-white sm:text-7xl">{{ artist.name }}</h1>
+            <p class="mt-3 text-sm text-white/70">{{ songs.length }} song{{ songs.length === 1 ? '' : 's' }}</p>
+            <div class="mt-5 flex flex-wrap items-center gap-3">
+              <button
+                class="inline-flex h-11 items-center gap-2 rounded-full bg-[#1DB954] px-6 text-xs font-black text-black transition hover:scale-[1.03] disabled:opacity-50"
+                :disabled="!songs.length"
+                @click="playAll"
+              >
+                <Play :size="17" class="fill-current" /> PLAY ALL
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="px-4 py-7 sm:px-7">
+        <section>
+          <div class="mb-3 flex items-end justify-between px-3">
+            <div><p class="sonix-kicker">ESSENTIALS</p><h2 class="sonix-section-title">Popular</h2></div>
+            <p class="text-[10px] font-bold text-[#666]">PLAYS</p>
+          </div>
+
+          <div v-if="!songs.length" class="px-3 py-8 text-sm text-[#777]">
+            This artist hasn't published any songs yet.
+          </div>
+          <div v-else class="overflow-x-auto">
+            <TrackRow v-for="(track, index) in playerTracks" :key="track.id" :track="track" :index="index" />
+          </div>
+        </section>
+
+        <section v-if="artist.bio" class="mt-10 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+          <img v-if="artist.imageUrl" :src="artist.imageUrl" :alt="artist.name" class="max-h-[420px] w-full rounded-lg object-cover" />
+          <div>
+            <p class="sonix-kicker">ABOUT</p>
+            <h2 class="sonix-section-title">{{ artist.name }}</h2>
+            <p class="mt-5 whitespace-pre-line text-sm leading-7 text-[#999]">{{ artist.bio }}</p>
+          </div>
+        </section>
+      </div>
+    </template>
   </div>
 </template>

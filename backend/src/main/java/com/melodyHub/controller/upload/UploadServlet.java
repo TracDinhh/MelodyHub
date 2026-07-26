@@ -36,7 +36,10 @@ public class UploadServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
         try {
-            if (!"/image".equals(getPath(request))) {
+            String path = getPath(request);
+            boolean isImage = "/image".equals(path);
+            boolean isAudio = "/audio".equals(path);
+            if (!isImage && !isAudio) {
                 writeError(response, HttpServletResponse.SC_NOT_FOUND, "NOT_FOUND", "Upload endpoint was not found");
                 return;
             }
@@ -53,13 +56,19 @@ public class UploadServlet extends HttpServlet {
             }
 
             byte[] content = readAllBytes(filePart);
-            var uploadResponse = mediaUploadService.uploadImageForCurrentUser(
-                    getBearerToken(request),
-                    content,
-                    filePart.getSubmittedFileName(),
-                    filePart.getContentType(),
-                    filePart.getSize()
-            );
+            var uploadResponse = isImage
+                    ? mediaUploadService.uploadImageForCurrentUser(
+                            getBearerToken(request),
+                            content,
+                            filePart.getSubmittedFileName(),
+                            filePart.getContentType(),
+                            filePart.getSize())
+                    : mediaUploadService.uploadAudioForCurrentUser(
+                            getBearerToken(request),
+                            content,
+                            filePart.getSubmittedFileName(),
+                            filePart.getContentType(),
+                            filePart.getSize());
 
             writeJson(response, HttpServletResponse.SC_CREATED, uploadResponse);
         } catch (AuthException exception) {

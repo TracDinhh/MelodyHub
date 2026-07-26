@@ -14,8 +14,13 @@ const tabs = [
   { id: 'recommended', label: 'Recommended' }
 ];
 
+const lyrics = computed(() =>
+  Array.isArray(player.currentTrack?.lyrics) ? player.currentTrack.lyrics : []
+);
+
 const activeLine = computed(() => {
-  const count = player.currentTrack.lyrics.length;
+  const count = lyrics.value.length;
+  if (!count || !player.duration) return 0;
   return Math.min(count - 1, Math.floor((player.currentTime / player.duration) * count));
 });
 
@@ -46,9 +51,10 @@ watch(activeLine, async (index) => {
     </header>
 
     <div class="flex items-center gap-3 px-5 pb-4">
-      <img :src="player.currentTrack.cover" :alt="`${player.currentTrack.title} cover`" class="size-14 rounded-lg object-cover" />
+      <img v-if="player.currentTrack.cover" :src="player.currentTrack.cover" :alt="`${player.currentTrack.title} cover`" class="size-14 rounded-lg object-cover" />
+      <span v-else class="grid size-14 place-items-center rounded-lg bg-white/[0.06] text-[#555]"><Play :size="18" /></span>
       <div class="min-w-0">
-        <p class="truncate text-sm font-bold text-white">{{ player.currentTrack.title }}</p>
+        <p class="truncate text-sm font-bold text-white">{{ player.currentTrack.title || 'Nothing playing' }}</p>
         <p class="truncate text-xs text-[#858585]">{{ player.currentTrack.artist }}</p>
       </div>
     </div>
@@ -68,7 +74,7 @@ watch(activeLine, async (index) => {
     <div class="min-h-0 flex-1 overflow-y-auto">
       <div v-if="activeTab === 'lyrics'" class="space-y-5 px-6 py-8">
         <p
-          v-for="(line, index) in player.currentTrack.lyrics"
+          v-for="(line, index) in lyrics"
           :key="`${player.currentTrack.id}-${index}`"
           :data-lyric="index"
           class="origin-left transition-all duration-500"
@@ -76,6 +82,7 @@ watch(activeLine, async (index) => {
         >
           {{ line }}
         </p>
+        <p v-if="!lyrics.length" class="text-sm text-[#6d6d6d]">No lyrics available.</p>
       </div>
 
       <div v-else-if="activeTab === 'bio'" class="p-5">

@@ -1,83 +1,138 @@
 import { computed, ref } from 'vue';
 import { defineStore } from 'pinia';
-import { tracks } from '../data/music';
+
+const EMPTY_TRACK = { id: null, title: '', artist: '', cover: '', duration: 0, audioUrl: null };
 
 export const usePlayerStore = defineStore('player', () => {
-  const currentTrack = ref(tracks[0]);
+  // Single real audio element that actually plays sound.
+  const audio = typeof Audio !== 'undefined' ? new Audio() : null;
+
+  const currentTrack = ref({ ...EMPTY_TRACK });
+  const queue = ref([]);
   const isPlaying = ref(false);
-  const currentTime = ref(72);
+  const currentTime = ref(0);
+  const durationSec = ref(0);
   const volume = ref(72);
   const previousVolume = ref(72);
   const shuffle = ref(false);
   const repeat = ref(false);
   const queueOpen = ref(false);
   const fullscreenLyrics = ref(false);
-  const likedIds = ref(new Set([1, 3]));
+  const likedIds = ref(new Set());
   const downloadedIds = ref(new Set());
 
-  const duration = computed(() => currentTrack.value.duration);
-  const progress = computed(() => (currentTime.value / duration.value) * 100);
+  const duration = computed(() => durationSec.value || currentTrack.value?.duration || 0);
+  const progress = computed(() => (duration.value ? (currentTime.value / duration.value) * 100 : 0));
   const muted = computed(() => volume.value === 0);
+  const hasTrack = computed(() => Boolean(currentTrack.value?.id));
   const currentIndex = computed(() =>
-    tracks.findIndex((track) => track.id === currentTrack.value.id)
+    queue.value.findIndex((track) => track.id === currentTrack.value.id)
   );
 
-  function playTrack(track) {
-    if (currentTrack.value.id === track.id) {
-      isPlaying.value = !isPlaying.value;
+  if (audio) {
+    audio.volume = volume.value / 100;
+    audio.addEventListener('timeupdate', () => {
+      currentTime.value = Math.floor(audio.currentTime);
+    });
+    audio.addEventListener('loadedmetadata', () => {
+      if (Number.isFinite(audio.duration)) durationSec.value = Math.round(audio.duration);
+    });
+    audio.addEventListener('play', () => {
+      isPlaying.value = true;
+    });
+    audio.addEventListener('pause', () => {
+      isPlaying.value = false;
+    });
+    audio.addEventListener('ended', () => {
+      if (repeat.value) {
+        audio.currentTime = 0;
+        audio.play().catch(() => {});
+      } else {
+        next();
+      }
+    });
+  }
+
+  function load(track) {
+    currentTrack.value = { ...EMPTY_TRACK, ...track };
+    currentTime.value = 0;
+    durationSec.value = track?.duration || 0;
+
+    if (!audio) return;
+    if (track?.audioUrl) {
+      audio.src = track.audioUrl;
+      audio.play().catch(() => {});
+    } else {
+      // Mock/legacy track without a real audio URL.
+      audio.pause();
+      audio.removeAttribute('src');
+      audio.load();
+      isPlaying.value = false;
+    }
+  }
+
+  function playTrack(track, list = null) {
+    if (Array.isArray(list) && list.length) {
+      queue.value = list;
+    } else if (!queue.value.some((item) => item.id === track.id)) {
+      queue.value = [track];
+    }
+
+    if (currentTrack.value?.id === track.id) {
+      togglePlayback();
       return;
     }
-    currentTrack.value = track;
-    currentTime.value = 0;
-    isPlaying.value = true;
+    load(track);
   }
 
   function togglePlayback() {
-    isPlaying.value = !isPlaying.value;
+    if (!audio || !hasTrack.value) return;
+    if (audio.paused) {
+      if (currentTrack.value.audioUrl) audio.play().catch(() => {});
+    } else {
+      audio.pause();
+    }
   }
 
   function next() {
+    if (!queue.value.length) return;
     const index = shuffle.value
-      ? Math.floor(Math.random() * tracks.length)
-      : (currentIndex.value + 1) % tracks.length;
-    currentTrack.value = tracks[index];
-    currentTime.value = 0;
+      ? Math.floor(Math.random() * queue.value.length)
+      : (currentIndex.value + 1) % queue.value.length;
+    load(queue.value[index]);
   }
 
   function previous() {
     if (currentTime.value > 5) {
-      currentTime.value = 0;
+      seek(0);
       return;
     }
-    const index = (currentIndex.value - 1 + tracks.length) % tracks.length;
-    currentTrack.value = tracks[index];
-    currentTime.value = 0;
+    if (!queue.value.length) return;
+    const index = (currentIndex.value - 1 + queue.value.length) % queue.value.length;
+    load(queue.value[index]);
   }
 
   function seek(value) {
-    currentTime.value = Number(value);
+    const seconds = Number(value);
+    currentTime.value = seconds;
+    if (audio && currentTrack.value?.audioUrl) audio.currentTime = seconds;
   }
 
-  function tick() {
-    if (!isPlaying.value) return;
-    if (currentTime.value >= duration.value) {
-      if (repeat.value) currentTime.value = 0;
-      else next();
-      return;
-    }
-    currentTime.value += 1;
-  }
+  // Kept for compatibility with the interval in BottomPlayer; real time comes
+  // from the audio element's timeupdate event, so this is a no-op.
+  function tick() {}
 
   function setVolume(value) {
     volume.value = Number(value);
     if (volume.value > 0) previousVolume.value = volume.value;
+    if (audio) audio.volume = volume.value / 100;
   }
 
   function toggleMute() {
-    if (volume.value === 0) volume.value = previousVolume.value || 70;
+    if (volume.value === 0) setVolume(previousVolume.value || 70);
     else {
       previousVolume.value = volume.value;
-      volume.value = 0;
+      setVolume(0);
     }
   }
 
@@ -90,6 +145,7 @@ export const usePlayerStore = defineStore('player', () => {
 
   return {
     currentTrack,
+    queue,
     isPlaying,
     currentTime,
     volume,
@@ -102,6 +158,7 @@ export const usePlayerStore = defineStore('player', () => {
     duration,
     progress,
     muted,
+    hasTrack,
     playTrack,
     togglePlayback,
     next,

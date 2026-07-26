@@ -5,10 +5,13 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.melodyHub.dto.request.ArtistProfileUpdateRequest;
 import com.melodyHub.dto.request.BecomeArtistRequest;
+import com.melodyHub.dto.request.SongCreateRequest;
+import com.melodyHub.dto.request.SongUpdateRequest;
 import com.melodyHub.dto.response.ErrorResponse;
 import com.melodyHub.entity.Artist;
 import com.melodyHub.exception.ArtistException;
 import com.melodyHub.exception.AuthException;
+import com.melodyHub.exception.SongException;
 import com.melodyHub.service.artist.ArtistAccountService;
 import com.melodyHub.service.artist.ArtistRegistrationService;
 import com.melodyHub.service.artist.ArtistSongService;
@@ -152,7 +155,8 @@ public class ArtistServlet extends HttpServlet {
         request.setCharacterEncoding(StandardCharsets.UTF_8.name());
 
         try {
-            if ("/become".equals(getPath(request))) {
+            String path = getPath(request);
+            if ("/become".equals(path)) {
                 BecomeArtistRequest becomeRequest = objectMapper.readValue(
                         request.getInputStream(),
                         BecomeArtistRequest.class
@@ -161,6 +165,20 @@ public class ArtistServlet extends HttpServlet {
                         response,
                         HttpServletResponse.SC_CREATED,
                         artistRegistrationService.submitRequest(getBearerToken(request), becomeRequest)
+                );
+                return;
+            }
+
+            if ("/songs".equals(path) || "/songs/".equals(path)) {
+                Artist currentArtist = artistAccountService.getCurrentArtist(getBearerToken(request));
+                SongCreateRequest songRequest = objectMapper.readValue(
+                        request.getInputStream(),
+                        SongCreateRequest.class
+                );
+                writeJson(
+                        response,
+                        HttpServletResponse.SC_CREATED,
+                        artistSongService.createOwnSong(currentArtist.getId(), songRequest)
                 );
                 return;
             }
@@ -174,6 +192,8 @@ public class ArtistServlet extends HttpServlet {
         } catch (AuthException exception) {
             writeError(response, getStatusCode(exception), exception.getCode(), exception.getMessage());
         } catch (ArtistException exception) {
+            writeError(response, getStatusCode(exception), exception.getCode(), exception.getMessage());
+        } catch (SongException exception) {
             writeError(response, getStatusCode(exception), exception.getCode(), exception.getMessage());
         } catch (SQLException exception) {
             writeError(
@@ -197,7 +217,8 @@ public class ArtistServlet extends HttpServlet {
         request.setCharacterEncoding(StandardCharsets.UTF_8.name());
 
         try {
-            if ("/profile".equals(getPath(request))) {
+            String path = getPath(request);
+            if ("/profile".equals(path)) {
                 Artist currentArtist = artistAccountService.getCurrentArtist(getBearerToken(request));
                 ArtistProfileUpdateRequest updateRequest = objectMapper.readValue(
                         request.getInputStream(),
@@ -214,6 +235,21 @@ public class ArtistServlet extends HttpServlet {
                 return;
             }
 
+            Integer songId = parseSongId(path);
+            if (songId != null) {
+                Artist currentArtist = artistAccountService.getCurrentArtist(getBearerToken(request));
+                SongUpdateRequest updateRequest = objectMapper.readValue(
+                        request.getInputStream(),
+                        SongUpdateRequest.class
+                );
+                writeJson(
+                        response,
+                        HttpServletResponse.SC_OK,
+                        artistSongService.updateOwnSong(currentArtist.getId(), songId, updateRequest)
+                );
+                return;
+            }
+
             writeError(
                     response,
                     HttpServletResponse.SC_NOT_FOUND,
@@ -223,6 +259,8 @@ public class ArtistServlet extends HttpServlet {
         } catch (AuthException exception) {
             writeError(response, getStatusCode(exception), exception.getCode(), exception.getMessage());
         } catch (ArtistException exception) {
+            writeError(response, getStatusCode(exception), exception.getCode(), exception.getMessage());
+        } catch (SongException exception) {
             writeError(response, getStatusCode(exception), exception.getCode(), exception.getMessage());
         } catch (SQLException exception) {
             writeError(
@@ -238,6 +276,19 @@ public class ArtistServlet extends HttpServlet {
                     "INVALID_JSON",
                     "Request body is invalid"
             );
+        }
+    }
+
+    private Integer parseSongId(String path) {
+        String identifier = getSongIdentifier(path);
+        if (identifier == null) {
+            return null;
+        }
+        try {
+            int id = Integer.parseInt(identifier);
+            return id > 0 ? id : null;
+        } catch (NumberFormatException exception) {
+            return null;
         }
     }
 
@@ -292,6 +343,14 @@ public class ArtistServlet extends HttpServlet {
             case "MISSING_TOKEN", "INVALID_TOKEN" -> HttpServletResponse.SC_UNAUTHORIZED;
             case "USER_BANNED", "FORBIDDEN" -> HttpServletResponse.SC_FORBIDDEN;
             case "USER_NOT_FOUND", "ARTIST_PROFILE_NOT_FOUND" -> HttpServletResponse.SC_NOT_FOUND;
+            default -> HttpServletResponse.SC_BAD_REQUEST;
+        };
+    }
+
+    private int getStatusCode(SongException exception) {
+        return switch (exception.getCode()) {
+            case "SONG_SLUG_EXISTS" -> HttpServletResponse.SC_CONFLICT;
+            case "SONG_NOT_FOUND" -> HttpServletResponse.SC_NOT_FOUND;
             default -> HttpServletResponse.SC_BAD_REQUEST;
         };
     }

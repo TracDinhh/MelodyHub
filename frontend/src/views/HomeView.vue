@@ -1,8 +1,10 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
-import { ArrowRight, CheckCircle2, ChevronLeft, ChevronRight, Play } from '@lucide/vue';
-import { artists, playlists, podcasts, tracks } from '../data/music';
+import { ArrowRight, CheckCircle2, ChevronLeft, ChevronRight, Music2, Play } from '@lucide/vue';
+import { playlists, podcasts, tracks } from '../data/music';
+import { artistBrowseService } from '../services/artistBrowseService';
+import { songService } from '../services/songService';
 import { useAuthStore } from '../stores/auth.store';
 import { usePlayerStore } from '../stores/player.store';
 
@@ -10,6 +12,66 @@ const route = useRoute();
 const authStore = useAuthStore();
 const player = usePlayerStore();
 const artistScroller = ref(null);
+
+// Newest published songs from the real API (ordered created_at DESC by the backend).
+const newReleases = ref([]);
+const newReleasesLoading = ref(true);
+
+// Real artists from the public API.
+const topArtists = ref([]);
+const topArtistsLoading = ref(true);
+
+async function loadTopArtists() {
+  topArtistsLoading.value = true;
+  try {
+    const response = await artistBrowseService.list({ page: 1, size: 12 });
+    topArtists.value = response?.items || [];
+  } catch {
+    topArtists.value = [];
+  } finally {
+    topArtistsLoading.value = false;
+  }
+}
+
+function formatReleaseDate(value) {
+  if (!value) return '';
+  return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(new Date(value));
+}
+
+async function loadNewReleases() {
+  newReleasesLoading.value = true;
+  try {
+    const response = await songService.listPublic({ page: 1, size: 8 });
+    newReleases.value = response?.items || [];
+  } catch {
+    newReleases.value = [];
+  } finally {
+    newReleasesLoading.value = false;
+  }
+}
+
+function toPlayerTrack(song) {
+  return {
+    id: song.id,
+    title: song.title,
+    cover: song.coverUrl,
+    artist: '',
+    album: '',
+    duration: song.durationSec || 0,
+    audioUrl: song.audioUrl
+  };
+}
+
+function playNewRelease(song) {
+  // Play the real audio and queue the whole new-releases list for next/prev.
+  const list = newReleases.value.map(toPlayerTrack);
+  player.playTrack(toPlayerTrack(song), list);
+}
+
+onMounted(() => {
+  loadNewReleases();
+  loadTopArtists();
+});
 
 const displayName = computed(
   () => authStore.user?.displayName || authStore.user?.username || 'Alex'
@@ -89,44 +151,74 @@ function scrollArtists(direction) {
           <button class="sonix-icon-btn" title="Next artists" @click="scrollArtists(1)"><ChevronRight :size="18" /></button>
         </div>
       </div>
-      <div ref="artistScroller" class="no-scrollbar flex snap-x gap-4 overflow-x-auto">
+      <div v-if="topArtistsLoading" class="flex gap-4 overflow-hidden">
+        <div v-for="n in 6" :key="n" class="w-32 shrink-0 text-center sm:w-40">
+          <span class="mx-auto block aspect-square animate-pulse rounded-full bg-white/5" />
+          <span class="mx-auto mt-3 block h-4 w-20 animate-pulse rounded bg-white/5" />
+        </div>
+      </div>
+
+      <div v-else-if="topArtists.length === 0" class="rounded-lg border border-white/10 bg-white/[0.02] px-4 py-8 text-center text-sm text-[#777]">
+        No artists yet.
+      </div>
+
+      <div v-else ref="artistScroller" class="no-scrollbar flex snap-x gap-4 overflow-x-auto">
         <RouterLink
-          v-for="artist in artists"
+          v-for="artist in topArtists"
           :key="artist.id"
           :to="{ name: 'artist-detail', params: { slug: artist.slug } }"
           class="group w-32 shrink-0 snap-start text-center sm:w-40"
         >
           <span class="relative mx-auto block aspect-square overflow-hidden rounded-full bg-[#181818] ring-1 ring-white/5">
-            <img :src="artist.avatar" :alt="artist.name" class="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+            <img v-if="artist.imageUrl" :src="artist.imageUrl" :alt="artist.name" class="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+            <span v-else class="grid h-full w-full place-items-center text-[#555]"><CheckCircle2 :size="26" /></span>
           </span>
-          <span class="mt-3 flex items-center justify-center gap-1 truncate text-sm font-bold text-white">
-            {{ artist.name }} <CheckCircle2 v-if="artist.verified" :size="13" class="fill-[#1DB954] text-black" />
-          </span>
-          <span class="mt-1 block text-xs text-[#777]">{{ artist.genre }}</span>
+          <span class="mt-3 block truncate text-sm font-bold text-white">{{ artist.name }}</span>
+          <span class="mt-1 block truncate text-xs text-[#777]">Artist</span>
         </RouterLink>
       </div>
     </section>
 
     <section>
       <div class="mb-4"><p class="sonix-kicker">JUST LANDED</p><h2 class="sonix-section-title">New releases</h2></div>
-      <div class="grid gap-2 sm:grid-cols-2">
+
+      <div v-if="newReleasesLoading" class="grid gap-2 sm:grid-cols-2">
+        <div v-for="n in 4" :key="n" class="flex items-center gap-3 rounded-lg p-2">
+          <span class="size-13 shrink-0 animate-pulse rounded-md bg-white/5" />
+          <span class="h-4 w-40 animate-pulse rounded bg-white/5" />
+        </div>
+      </div>
+
+      <div v-else-if="newReleases.length === 0" class="rounded-lg border border-white/10 bg-white/[0.02] px-4 py-8 text-center text-sm text-[#777]">
+        No songs have been published yet.
+      </div>
+
+      <div v-else class="grid gap-2 sm:grid-cols-2">
         <button
-          v-for="track in tracks.slice(0, 6)"
-          :key="track.id"
+          v-for="song in newReleases"
+          :key="song.id"
           class="group flex min-w-0 items-center gap-3 rounded-lg p-2 text-left transition hover:bg-white/5"
-          @click="player.playTrack(track)"
+          @click="playNewRelease(song)"
         >
           <span class="relative shrink-0">
-            <img :src="track.cover" :alt="`${track.title} cover`" class="size-13 rounded-md object-cover" />
+            <img
+              v-if="song.coverUrl"
+              :src="song.coverUrl"
+              :alt="`${song.title} cover`"
+              class="size-13 rounded-md object-cover"
+            />
+            <span v-else class="grid size-13 place-items-center rounded-md bg-white/[0.06] text-[#555]">
+              <Music2 :size="20" />
+            </span>
             <span class="absolute inset-0 grid place-items-center rounded-md bg-black/50 opacity-0 transition group-hover:opacity-100">
               <Play :size="17" class="fill-white text-white" />
             </span>
           </span>
           <span class="min-w-0 flex-1">
-            <span class="block truncate text-sm font-bold text-white">{{ track.title }}</span>
-            <span class="mt-1 block truncate text-xs text-[#777]">{{ track.artist }} · {{ track.album }}</span>
+            <span class="block truncate text-sm font-bold text-white">{{ song.title }}</span>
+            <span class="mt-1 block truncate text-xs text-[#777]">/songs/{{ song.slug }}</span>
           </span>
-          <span class="text-[10px] font-bold text-[#666]">{{ track.released }}</span>
+          <span class="text-[10px] font-bold text-[#666]">{{ formatReleaseDate(song.createdAt) }}</span>
         </button>
       </div>
     </section>
