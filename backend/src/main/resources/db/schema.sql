@@ -336,3 +336,49 @@ VALUES (
     'ADMIN',
     'ACTIVE'
 );
+
+-- -----------------------------------------------------
+-- Tai khoan ARTIST mau (password = Admin@123456)
+-- -----------------------------------------------------
+INSERT INTO users (username, email, password_hash, display_name, role, status) VALUES
+('lena', 'lena@melodyhub.local', '$2a$12$OH.JXdKvdtxZ6SC5JY908uJzOmylnn/6vUIrQKvY3ZGB8jvqWV9hS', 'Lena Rivers', 'ARTIST', 'ACTIVE'),
+('eli',  'eli@melodyhub.local',  '$2a$12$OH.JXdKvdtxZ6SC5JY908uJzOmylnn/6vUIrQKvY3ZGB8jvqWV9hS', 'Eli Vale',    'ARTIST', 'ACTIVE');
+
+-- Ho so nghe si (user_id lay theo username de khong phu thuoc AUTO_INCREMENT)
+INSERT INTO artists (user_id, name, slug, bio, image_url) VALUES
+((SELECT id FROM users WHERE username = 'lena'),
+ 'Lena Rivers', 'lena-rivers',
+ 'Lena Rivers uon alternative R&B quanh synth dem, day dan song va giong hat mong.',
+ 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=600&q=85'),
+((SELECT id FROM users WHERE username = 'eli'),
+ 'Eli Vale', 'eli-vale',
+ 'Eli Vale mang mau indie pop tuoi sang, giai dieu de nghe.',
+ 'https://images.unsplash.com/photo-1521337581100-8ca9a73a5f79?auto=format&fit=crop&w=600&q=85');
+
+-- -----------------------------------------------------
+-- 10 bai hat mau (audio dung file mp3 cong khai cua SoundHelix)
+-- -----------------------------------------------------
+INSERT INTO songs (title, slug, duration_sec, file_path, cover_url, status, play_count) VALUES
+('Velvet Hours',  'velvet-hours',  238, 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',  'https://images.unsplash.com/photo-1516280440614-37939bbacd81?auto=format&fit=crop&w=500&q=85', 'PUBLISHED', 84291),
+('Afterglow',     'afterglow',     214, 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',  'https://images.unsplash.com/photo-1506157786151-b8491531f063?auto=format&fit=crop&w=500&q=85', 'PUBLISHED', 61830),
+('Slow Motion',   'slow-motion',   201, 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3',  'https://images.unsplash.com/photo-1524368535928-5b5e00ddc76b?auto=format&fit=crop&w=500&q=85', 'PUBLISHED', 44105),
+('No Signal',     'no-signal',     189, 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3',  'https://images.unsplash.com/photo-1511379938547-c1f69419868d?auto=format&fit=crop&w=500&q=85', 'PUBLISHED', 37826),
+('Open Water',    'open-water',    246, 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3',  'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=500&q=85', 'PUBLISHED', 29313),
+('Midnight Bloom','midnight-bloom',220, 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3',  'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=500&q=85', 'PUBLISHED', 25110),
+('Paper Moons',   'paper-moons',   226, 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3',  'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=500&q=85', 'PUBLISHED', 22108),
+('Sunroom',       'sunroom',       196, 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3',  'https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=500&q=85', 'PUBLISHED', 19912),
+('Frequency',     'frequency',     232, 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3',  'https://images.unsplash.com/photo-1524650359799-842906ca1c06?auto=format&fit=crop&w=500&q=85', 'PUBLISHED', 16709),
+('Low Light',     'low-light',     208, 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3', 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=500&q=85', 'PUBLISHED', 12044);
+
+-- Gan nghe si cho tung bai (MAIN). Dung slug de khong phu thuoc ID.
+INSERT INTO song_artists (song_id, artist_id, role, position) VALUES
+((SELECT id FROM songs WHERE slug = 'velvet-hours'),   (SELECT id FROM artists WHERE slug = 'lena-rivers'), 'MAIN', 0),
+((SELECT id FROM songs WHERE slug = 'afterglow'),       (SELECT id FROM artists WHERE slug = 'lena-rivers'), 'MAIN', 0),
+((SELECT id FROM songs WHERE slug = 'slow-motion'),     (SELECT id FROM artists WHERE slug = 'lena-rivers'), 'MAIN', 0),
+((SELECT id FROM songs WHERE slug = 'no-signal'),       (SELECT id FROM artists WHERE slug = 'lena-rivers'), 'MAIN', 0),
+((SELECT id FROM songs WHERE slug = 'open-water'),      (SELECT id FROM artists WHERE slug = 'lena-rivers'), 'MAIN', 0),
+((SELECT id FROM songs WHERE slug = 'midnight-bloom'),  (SELECT id FROM artists WHERE slug = 'lena-rivers'), 'MAIN', 0),
+((SELECT id FROM songs WHERE slug = 'paper-moons'),     (SELECT id FROM artists WHERE slug = 'eli-vale'),    'MAIN', 0),
+((SELECT id FROM songs WHERE slug = 'sunroom'),         (SELECT id FROM artists WHERE slug = 'eli-vale'),    'MAIN', 0),
+((SELECT id FROM songs WHERE slug = 'frequency'),       (SELECT id FROM artists WHERE slug = 'eli-vale'),    'MAIN', 0),
+((SELECT id FROM songs WHERE slug = 'low-light'),       (SELECT id FROM artists WHERE slug = 'eli-vale'),    'MAIN', 0);

@@ -32,6 +32,11 @@
     </servlet>
 
     <servlet>
+        <servlet-name>PublicArtistServlet</servlet-name>
+        <servlet-class>com.melodyHub.controller.artist.PublicArtistServlet</servlet-class>
+    </servlet>
+
+    <servlet>
         <servlet-name>AdminServlet</servlet-name>
         <servlet-class>com.melodyHub.controller.admin.AdminServlet</servlet-class>
     </servlet>
@@ -40,8 +45,8 @@
         <servlet-name>UploadServlet</servlet-name>
         <servlet-class>com.melodyHub.controller.upload.UploadServlet</servlet-class>
         <multipart-config>
-            <max-file-size>5242880</max-file-size>
-            <max-request-size>6291456</max-request-size>
+            <max-file-size>31457280</max-file-size>
+            <max-request-size>33554432</max-request-size>
             <file-size-threshold>262144</file-size-threshold>
         </multipart-config>
     </servlet>
@@ -59,6 +64,11 @@
     <servlet-mapping>
         <servlet-name>ArtistServlet</servlet-name>
         <url-pattern>/api/artist/*</url-pattern>
+    </servlet-mapping>
+
+    <servlet-mapping>
+        <servlet-name>PublicArtistServlet</servlet-name>
+        <url-pattern>/api/artists/*</url-pattern>
     </servlet-mapping>
 
     <servlet-mapping>

@@ -92,13 +92,37 @@ const router = createRouter({
     {
       path: '/artist/dashboard',
       name: 'artist-dashboard',
-      component: () => import('../views/RoleWorkspaceView.vue'),
+      component: () => import('../views/artist/ArtistDashboardView.vue'),
       meta: {
         requiresAuth: true,
         allowedRoles: ['ARTIST'],
         workspace: 'artist',
         title: 'Artist Dashboard',
         breadcrumb: 'Artist Dashboard'
+      }
+    },
+    {
+      path: '/artist/songs/new',
+      name: 'artist-song-upload',
+      component: () => import('../views/artist/ArtistSongUploadView.vue'),
+      meta: {
+        requiresAuth: true,
+        allowedRoles: ['ARTIST'],
+        workspace: 'artist',
+        title: 'Upload Song',
+        breadcrumb: 'Artist / Upload Song'
+      }
+    },
+    {
+      path: '/artist/songs/:id/edit',
+      name: 'artist-song-edit',
+      component: () => import('../views/artist/ArtistSongEditView.vue'),
+      meta: {
+        requiresAuth: true,
+        allowedRoles: ['ARTIST'],
+        workspace: 'artist',
+        title: 'Edit Song',
+        breadcrumb: 'Artist / Edit Song'
       }
     },
     {

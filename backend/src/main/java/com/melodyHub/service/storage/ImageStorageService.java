@@ -16,4 +16,13 @@ public interface ImageStorageService {
             byte[] imageContent,
             String fileName
     ) throws ImageStorageException;
+
+    /**
+     * Uploads an audio file scoped to a user. Stored under {@code /users/{userId}/audio/}.
+     */
+    ImageUploadResult uploadUserAudio(
+            int userId,
+            byte[] audioContent,
+            String fileName
+    ) throws ImageStorageException;
 }

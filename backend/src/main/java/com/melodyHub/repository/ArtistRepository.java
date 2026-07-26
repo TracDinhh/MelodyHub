@@ -119,6 +119,22 @@ public class ArtistRepository {
     public record AdminRow(Artist artist, String linkedUsername, String linkedEmail) {
     }
 
+    public Optional<Artist> findActiveBySlug(String slug) throws SQLException {
+        String sql = "SELECT " + ARTIST_COLUMNS + """
+                 FROM artists
+                 WHERE slug = ?
+                   AND deleted_at IS NULL
+                """;
+
+        try (var connection = DatabaseConfig.getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            statement.setString(1, slug);
+            try (var resultSet = statement.executeQuery()) {
+                return resultSet.next() ? Optional.of(mapRow(resultSet)) : Optional.empty();
+            }
+        }
+    }
+
     public Optional<Artist> findActiveByUserId(int userId) throws SQLException {
         String sql = "SELECT " + ARTIST_COLUMNS + """
                  FROM artists

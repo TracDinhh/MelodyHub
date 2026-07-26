@@ -1,14 +1,28 @@
 package com.melodyHub.service.artist;
 
+import com.melodyHub.dto.request.SongCreateRequest;
+import com.melodyHub.dto.request.SongUpdateRequest;
 import com.melodyHub.dto.response.PagedResponse;
 import com.melodyHub.dto.response.SongResponse;
+import com.melodyHub.entity.Song;
+import com.melodyHub.entity.SongStatus;
+import com.melodyHub.exception.SongException;
 import com.melodyHub.repository.SongRepository;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 public class ArtistSongService {
+    private static final int MAX_TITLE_LENGTH = 255;
+    private static final int MAX_SLUG_LENGTH = 280;
+    private static final int MAX_URL_LENGTH = 500;
+    private static final int DUPLICATE_KEY_ERROR_CODE = 1062;
+    private static final Pattern SLUG_PATTERN = Pattern.compile("[a-z0-9]+(?:-[a-z0-9]+)*");
+
     private final SongRepository songRepository;
 
     public ArtistSongService() {
@@ -17,6 +31,110 @@ public class ArtistSongService {
 
     public ArtistSongService(SongRepository songRepository) {
         this.songRepository = Objects.requireNonNull(songRepository, "songRepository must not be null");
+    }
+
+    public SongResponse createOwnSong(int artistId, SongCreateRequest request)
+            throws SongException, SQLException {
+        validateCreateRequest(request);
+
+        Song song = new Song();
+        song.setTitle(request.getTitle().trim());
+        song.setSlug(request.getSlug().trim());
+        song.setFilePath(request.getAudioUrl().trim());
+        song.setCoverUrl(normalizeOptional(request.getCoverUrl()));
+        song.setDurationSec(request.getDurationSec() == null ? 0 : Math.max(0, request.getDurationSec()));
+        song.setLyrics(normalizeOptional(request.getLyrics()));
+        song.setStatus(SongStatus.PUBLISHED);
+
+        try {
+            return SongResponse.fromEntity(songRepository.create(song, artistId));
+        } catch (SQLException exception) {
+            if (exception.getErrorCode() == DUPLICATE_KEY_ERROR_CODE) {
+                throw new SongException("SONG_SLUG_EXISTS", "A song with this slug already exists");
+            }
+            throw exception;
+        }
+    }
+
+    public SongResponse updateOwnSong(int artistId, int songId, SongUpdateRequest request)
+            throws SongException, SQLException {
+        if (request == null) {
+            throw new SongException("INVALID_REQUEST", "Request body is required");
+        }
+
+        String title = request.getTitle();
+        if (title == null || title.isBlank() || title.trim().length() > MAX_TITLE_LENGTH) {
+            throw new SongException("INVALID_SONG_TITLE", "Title is required and must be 255 characters or less");
+        }
+
+        String coverUrl = normalizeOptional(request.getCoverUrl());
+        if (coverUrl != null && (coverUrl.length() > MAX_URL_LENGTH || !isHttpUrl(coverUrl))) {
+            throw new SongException("INVALID_COVER_URL", "Cover URL must be a valid HTTP/HTTPS URL");
+        }
+
+        String lyrics = normalizeOptional(request.getLyrics());
+
+        return songRepository.updateOwn(artistId, songId, title.trim(), coverUrl, lyrics)
+                .map(SongResponse::fromEntity)
+                .orElseThrow(() -> new SongException("SONG_NOT_FOUND", "Song was not found"));
+    }
+
+    private void validateCreateRequest(SongCreateRequest request) throws SongException {
+        if (request == null) {
+            throw new SongException("INVALID_REQUEST", "Request body is required");
+        }
+
+        String title = request.getTitle();
+        if (title == null || title.isBlank() || title.trim().length() > MAX_TITLE_LENGTH) {
+            throw new SongException("INVALID_SONG_TITLE", "Title is required and must be 255 characters or less");
+        }
+
+        String slug = request.getSlug();
+        if (slug == null || slug.isBlank()) {
+            throw new SongException("INVALID_SONG_SLUG", "Slug is required");
+        }
+        String normalizedSlug = slug.trim();
+        if (normalizedSlug.length() > MAX_SLUG_LENGTH || !SLUG_PATTERN.matcher(normalizedSlug).matches()) {
+            throw new SongException(
+                    "INVALID_SONG_SLUG",
+                    "Slug must be lowercase letters, numbers, and hyphens only (e.g. my-song)"
+            );
+        }
+
+        String audioUrl = request.getAudioUrl();
+        if (audioUrl == null || audioUrl.isBlank()) {
+            throw new SongException("INVALID_AUDIO_URL", "An uploaded audio file is required");
+        }
+        if (audioUrl.trim().length() > MAX_URL_LENGTH || !isHttpUrl(audioUrl.trim())) {
+            throw new SongException("INVALID_AUDIO_URL", "Audio URL must be a valid HTTP/HTTPS URL");
+        }
+
+        String coverUrl = normalizeOptional(request.getCoverUrl());
+        if (coverUrl != null && (coverUrl.length() > MAX_URL_LENGTH || !isHttpUrl(coverUrl))) {
+            throw new SongException("INVALID_COVER_URL", "Cover URL must be a valid HTTP/HTTPS URL");
+        }
+
+        if (request.getDurationSec() != null && request.getDurationSec() < 0) {
+            throw new SongException("INVALID_DURATION", "Duration must be zero or a positive number of seconds");
+        }
+    }
+
+    private String normalizeOptional(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim();
+    }
+
+    private boolean isHttpUrl(String value) {
+        try {
+            URI uri = new URI(value);
+            String scheme = uri.getScheme();
+            return uri.getHost() != null
+                    && ("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme));
+        } catch (URISyntaxException exception) {
+            return false;
+        }
     }
 
     public PagedResponse<SongResponse> getOwnPage(int artistId, int page, int size) throws SQLException {

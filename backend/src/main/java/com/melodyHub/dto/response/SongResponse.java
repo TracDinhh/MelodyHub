@@ -20,6 +20,7 @@ public class SongResponse {
     private Short trackNumber;
     private Integer durationSec;
     private String coverUrl;
+    private String audioUrl;
     private String lyrics;
     private SongStatus status;
     private Long playCount;
@@ -39,6 +40,7 @@ public class SongResponse {
                 song.getTrackNumber(),
                 song.getDurationSec(),
                 song.getCoverUrl(),
+                song.getFilePath(),
                 song.getLyrics(),
                 song.getStatus(),
                 song.getPlayCount(),

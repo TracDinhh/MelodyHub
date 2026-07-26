@@ -53,6 +53,20 @@ public class ImageKitStorageService implements ImageStorageService {
         return uploader.upload(imageContent, fileName, folder);
     }
 
+    @Override
+    public ImageUploadResult uploadUserAudio(
+            int userId,
+            byte[] audioContent,
+            String fileName
+    ) throws ImageStorageException {
+        validateUserId(userId);
+        validateImageContent(audioContent);
+        validateFileName(fileName);
+
+        String folder = "/users/" + userId + "/audio/";
+        return uploader.upload(audioContent, fileName, folder);
+    }
+
     private static ImageKitUploader createUploader(ImageKitConfig config) {
         ImageKitClient client = ImageKitOkHttpClient.builder()
                 .privateKey(config.getPrivateKey())

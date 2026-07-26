@@ -44,6 +44,71 @@ public class SongRepository {
         this.dataSource = Objects.requireNonNull(dataSource, "dataSource must not be null");
     }
 
+    /**
+     * Creates a song and links it to the owning artist as MAIN, in one transaction.
+     */
+    public Song create(Song song, int artistId) throws SQLException {
+        String insertSong = """
+                INSERT INTO songs (title, slug, duration_sec, file_path, cover_url, lyrics, status)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """;
+        String linkArtist = """
+                INSERT INTO song_artists (song_id, artist_id, role, position)
+                VALUES (?, ?, 'MAIN', 0)
+                """;
+
+        Connection connection = getConnection();
+        try {
+            connection.setAutoCommit(false);
+
+            int songId;
+            try (var statement = connection.prepareStatement(insertSong, java.sql.Statement.RETURN_GENERATED_KEYS)) {
+                statement.setString(1, song.getTitle());
+                statement.setString(2, song.getSlug());
+                statement.setInt(3, song.getDurationSec() == null ? 0 : song.getDurationSec());
+                statement.setString(4, song.getFilePath());
+                statement.setString(5, song.getCoverUrl());
+                statement.setString(6, song.getLyrics());
+                statement.setString(7, (song.getStatus() == null ? SongStatus.PUBLISHED : song.getStatus()).name());
+                statement.executeUpdate();
+
+                try (var keys = statement.getGeneratedKeys()) {
+                    if (!keys.next()) {
+                        throw new SQLException("Creating song failed, no ID returned.");
+                    }
+                    songId = keys.getInt(1);
+                }
+            }
+
+            try (var statement = connection.prepareStatement(linkArtist)) {
+                statement.setInt(1, songId);
+                statement.setInt(2, artistId);
+                statement.executeUpdate();
+            }
+
+            connection.commit();
+
+            return findByIdInternal(connection, songId)
+                    .orElseThrow(() -> new SQLException("Song not found after insert."));
+        } catch (SQLException exception) {
+            connection.rollback();
+            throw exception;
+        } finally {
+            connection.setAutoCommit(true);
+            connection.close();
+        }
+    }
+
+    private Optional<Song> findByIdInternal(Connection connection, int id) throws SQLException {
+        String sql = "SELECT " + SONG_COLUMNS + " FROM songs WHERE id = ? AND deleted_at IS NULL";
+        try (var statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, id);
+            try (var resultSet = statement.executeQuery()) {
+                return resultSet.next() ? Optional.of(mapRow(resultSet)) : Optional.empty();
+            }
+        }
+    }
+
     public List<Song> getPage(int size, int offset, String titleQuery, String genreSlug) throws SQLException {
         List<Object> parameters = new ArrayList<>();
         String sql = "SELECT " + SONG_COLUMNS + " FROM songs"
@@ -109,6 +174,50 @@ public class SongRepository {
         }
     }
 
+    public List<Song> getPublishedByArtist(int artistId, int size, int offset) throws SQLException {
+        String sql = "SELECT " + SONG_COLUMNS + " FROM songs s"
+                + publishedByArtistClause()
+                + " ORDER BY s.play_count DESC, s.created_at DESC LIMIT ? OFFSET ?";
+
+        try (var connection = getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, artistId);
+            statement.setInt(2, size);
+            statement.setInt(3, offset);
+
+            try (var resultSet = statement.executeQuery()) {
+                List<Song> songs = new ArrayList<>();
+                while (resultSet.next()) {
+                    songs.add(mapRow(resultSet));
+                }
+                return songs;
+            }
+        }
+    }
+
+    public long countPublishedByArtist(int artistId) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM songs s" + publishedByArtistClause();
+
+        try (var connection = getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, artistId);
+            try (var resultSet = statement.executeQuery()) {
+                return resultSet.next() ? resultSet.getLong(1) : 0L;
+            }
+        }
+    }
+
+    private String publishedByArtistClause() {
+        return """
+                 WHERE s.status = 'PUBLISHED'
+                   AND s.deleted_at IS NULL
+                   AND EXISTS (
+                       SELECT 1 FROM song_artists sa
+                       WHERE sa.song_id = s.id AND sa.artist_id = ?
+                   )
+                """;
+    }
+
     public long countOwned(int artistId) throws SQLException {
         String sql = "SELECT COUNT(*) FROM songs s" + ownedByMainArtistClause();
 
@@ -121,6 +230,43 @@ public class SongRepository {
                 return resultSet.next() ? resultSet.getLong(1) : 0L;
             }
         }
+    }
+
+    /**
+     * Updates editable fields of a song owned (MAIN) by the artist. Returns the
+     * updated song, or empty if the artist does not own it / it does not exist.
+     */
+    public Optional<Song> updateOwn(int artistId, int songId, String title, String coverUrl, String lyrics)
+            throws SQLException {
+        String sql = """
+                UPDATE songs s
+                SET s.title = ?,
+                    s.cover_url = ?,
+                    s.lyrics = ?,
+                    s.updated_at = CURRENT_TIMESTAMP(6)
+                WHERE s.id = ?
+                  AND s.deleted_at IS NULL
+                  AND EXISTS (
+                      SELECT 1 FROM song_artists sa
+                      WHERE sa.song_id = s.id AND sa.artist_id = ? AND sa.role = ?
+                  )
+                """;
+
+        try (var connection = getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            statement.setString(1, title);
+            statement.setString(2, coverUrl);
+            statement.setString(3, lyrics);
+            statement.setInt(4, songId);
+            statement.setInt(5, artistId);
+            statement.setString(6, MAIN_ARTIST_ROLE);
+
+            if (statement.executeUpdate() == 0) {
+                return Optional.empty();
+            }
+        }
+
+        return findOwnedById(artistId, songId);
     }
 
     public Optional<Song> findOwnedById(int artistId, int songId) throws SQLException {

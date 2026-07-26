@@ -20,5 +20,13 @@ export const songService = {
 
   getMine(identifier) {
     return apiClient.get(`/api/artist/songs/${encodeURIComponent(identifier)}`);
+  },
+
+  createMine(payload) {
+    return apiClient.post('/api/artist/songs', payload);
+  },
+
+  updateMine(id, payload) {
+    return apiClient.put(`/api/artist/songs/${encodeURIComponent(id)}`, payload);
   }
 };
