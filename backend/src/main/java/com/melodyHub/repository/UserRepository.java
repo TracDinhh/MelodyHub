@@ -9,6 +9,8 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 public class UserRepository {
@@ -120,6 +122,85 @@ public class UserRepository {
 
     public boolean existsByEmail(String email) throws SQLException {
         return findByEmail(email).isPresent();
+    }
+
+    public List<User> findPage(UserRole role, String query, int limit, int offset) throws SQLException {
+        StringBuilder sql = new StringBuilder("SELECT " + USER_COLUMNS + " FROM users WHERE 1 = 1");
+        List<Object> params = new ArrayList<>();
+
+        if (role != null) {
+            sql.append(" AND role = ?");
+            params.add(role.name());
+        }
+        if (query != null && !query.isBlank()) {
+            sql.append(" AND (username LIKE ? OR email LIKE ? OR display_name LIKE ?)");
+            String like = "%" + query.trim() + "%";
+            params.add(like);
+            params.add(like);
+            params.add(like);
+        }
+        sql.append(" ORDER BY created_at DESC LIMIT ? OFFSET ?");
+        params.add(limit);
+        params.add(offset);
+
+        try (var connection = DatabaseConfig.getConnection();
+             var statement = connection.prepareStatement(sql.toString())) {
+            bindParams(statement, params);
+            try (var resultSet = statement.executeQuery()) {
+                List<User> users = new ArrayList<>();
+                while (resultSet.next()) {
+                    users.add(mapRow(resultSet));
+                }
+                return users;
+            }
+        }
+    }
+
+    public long countUsers(UserRole role, String query) throws SQLException {
+        StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM users WHERE 1 = 1");
+        List<Object> params = new ArrayList<>();
+
+        if (role != null) {
+            sql.append(" AND role = ?");
+            params.add(role.name());
+        }
+        if (query != null && !query.isBlank()) {
+            sql.append(" AND (username LIKE ? OR email LIKE ? OR display_name LIKE ?)");
+            String like = "%" + query.trim() + "%";
+            params.add(like);
+            params.add(like);
+            params.add(like);
+        }
+
+        try (var connection = DatabaseConfig.getConnection();
+             var statement = connection.prepareStatement(sql.toString())) {
+            bindParams(statement, params);
+            try (var resultSet = statement.executeQuery()) {
+                return resultSet.next() ? resultSet.getLong(1) : 0L;
+            }
+        }
+    }
+
+    private void bindParams(java.sql.PreparedStatement statement, List<Object> params) throws SQLException {
+        for (int index = 0; index < params.size(); index++) {
+            statement.setObject(index + 1, params.get(index));
+        }
+    }
+
+    public Optional<User> updateRole(int userId, UserRole role) throws SQLException {
+        String sql = "UPDATE users SET role = ?, updated_at = CURRENT_TIMESTAMP(6) WHERE id = ?";
+
+        try (var connection = DatabaseConfig.getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            statement.setString(1, role.name());
+            statement.setInt(2, userId);
+
+            if (statement.executeUpdate() == 0) {
+                return Optional.empty();
+            }
+
+            return findById(userId);
+        }
     }
 
     private User mapRow(ResultSet resultSet) throws SQLException {

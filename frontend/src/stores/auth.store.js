@@ -21,7 +21,9 @@ export const useAuthStore = defineStore('auth', () => {
   const initialized = ref(false);
 
   const isAuthenticated = computed(() => Boolean(token.value));
+  const isUser = computed(() => user.value?.role === 'USER');
   const isArtist = computed(() => user.value?.role === 'ARTIST');
+  const isAdmin = computed(() => user.value?.role === 'ADMIN');
   const displayName = computed(
     () => user.value?.displayName || user.value?.username || 'MelodyHub listener'
   );
@@ -100,12 +102,15 @@ export const useAuthStore = defineStore('auth', () => {
     isLoading,
     initialized,
     isAuthenticated,
+    isUser,
     isArtist,
+    isAdmin,
     displayName,
     login,
     register,
     logout,
     initialize,
-    clearSession
+    clearSession,
+    saveSession
   };
 });

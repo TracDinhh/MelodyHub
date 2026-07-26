@@ -3,6 +3,7 @@ import { computed, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { AtSign, Check, Disc3, Eye, EyeOff, Mail, Music2, UserRound } from '@lucide/vue';
 import { useAuthStore } from '../stores/auth.store';
+import { canAccessRoute, getRoleHomeRouteName } from '../utils/roleRouting';
 
 const router = useRouter();
 const route = useRoute();
@@ -127,11 +128,18 @@ function mapBackendError(error) {
       : message;
 }
 
-function safeRedirectTarget() {
+function safeRedirectTarget(role) {
   const redirect = route.query.redirect;
-  return typeof redirect === 'string' && redirect.startsWith('/') && !redirect.startsWith('//')
-    ? redirect
-    : '/';
+  if (typeof redirect !== 'string' || !redirect.startsWith('/') || redirect.startsWith('//')) {
+    return { name: getRoleHomeRouteName(role) };
+  }
+
+  const target = router.resolve(redirect);
+  if (target.name === 'not-found' || !canAccessRoute(role, target.meta.allowedRoles)) {
+    return { name: getRoleHomeRouteName(role) };
+  }
+
+  return redirect;
 }
 
 async function submit() {
@@ -152,7 +160,7 @@ async function submit() {
         displayName: registerForm.displayName.trim() || null
       });
     }
-    await router.push(safeRedirectTarget());
+    await router.push(safeRedirectTarget(authStore.user?.role));
   } catch (error) {
     mapBackendError(error);
   }

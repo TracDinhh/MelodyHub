@@ -4,11 +4,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.melodyHub.dto.request.ArtistProfileUpdateRequest;
+import com.melodyHub.dto.request.BecomeArtistRequest;
 import com.melodyHub.dto.response.ErrorResponse;
 import com.melodyHub.entity.Artist;
 import com.melodyHub.exception.ArtistException;
 import com.melodyHub.exception.AuthException;
 import com.melodyHub.service.artist.ArtistAccountService;
+import com.melodyHub.service.artist.ArtistRegistrationService;
 import com.melodyHub.service.artist.ArtistSongService;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
@@ -31,17 +33,29 @@ public class ArtistServlet extends HttpServlet {
 
     private ArtistAccountService artistAccountService;
     private ArtistSongService artistSongService;
+    private ArtistRegistrationService artistRegistrationService;
 
     @Override
     public void init() throws ServletException {
         artistAccountService = new ArtistAccountService();
         artistSongService = new ArtistSongService();
+        artistRegistrationService = new ArtistRegistrationService();
     }
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
         try {
             String path = getPath(request);
+            if ("/request".equals(path)) {
+                // Any authenticated user can check their own artist request status.
+                writeJson(
+                        response,
+                        HttpServletResponse.SC_OK,
+                        artistRegistrationService.getMyRequest(getBearerToken(request))
+                );
+                return;
+            }
+
             if ("/profile".equals(path)) {
                 writeJson(
                         response,
@@ -131,6 +145,51 @@ public class ArtistServlet extends HttpServlet {
                 "SONG_NOT_FOUND",
                 "Song was not found"
         );
+    }
+
+    @Override
+    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        request.setCharacterEncoding(StandardCharsets.UTF_8.name());
+
+        try {
+            if ("/become".equals(getPath(request))) {
+                BecomeArtistRequest becomeRequest = objectMapper.readValue(
+                        request.getInputStream(),
+                        BecomeArtistRequest.class
+                );
+                writeJson(
+                        response,
+                        HttpServletResponse.SC_CREATED,
+                        artistRegistrationService.submitRequest(getBearerToken(request), becomeRequest)
+                );
+                return;
+            }
+
+            writeError(
+                    response,
+                    HttpServletResponse.SC_NOT_FOUND,
+                    "NOT_FOUND",
+                    "Artist endpoint was not found"
+            );
+        } catch (AuthException exception) {
+            writeError(response, getStatusCode(exception), exception.getCode(), exception.getMessage());
+        } catch (ArtistException exception) {
+            writeError(response, getStatusCode(exception), exception.getCode(), exception.getMessage());
+        } catch (SQLException exception) {
+            writeError(
+                    response,
+                    HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+                    "DATABASE_ERROR",
+                    "Database error occurred"
+            );
+        } catch (IOException exception) {
+            writeError(
+                    response,
+                    HttpServletResponse.SC_BAD_REQUEST,
+                    "INVALID_JSON",
+                    "Request body is invalid"
+            );
+        }
     }
 
     @Override
@@ -239,7 +298,17 @@ public class ArtistServlet extends HttpServlet {
 
     private int getStatusCode(ArtistException exception) {
         return switch (exception.getCode()) {
-            case "ARTIST_SLUG_EXISTS" -> HttpServletResponse.SC_CONFLICT;
+            case "ARTIST_SLUG_EXISTS",
+                    "ARTIST_ALREADY_EXISTS",
+                    "ARTIST_REQUEST_PENDING_EXISTS",
+                    "ARTIST_REQUEST_NOT_PENDING" -> HttpServletResponse.SC_CONFLICT;
+            case "ARTIST_REQUEST_NOT_FOUND" -> HttpServletResponse.SC_NOT_FOUND;
+            case "INVALID_ARTIST_NAME",
+                    "INVALID_ARTIST_SLUG",
+                    "INVALID_ARTIST_BIO",
+                    "INVALID_ARTIST_IMAGE_URL",
+                    "INVALID_REVIEW_NOTE",
+                    "INVALID_REQUEST" -> HttpServletResponse.SC_BAD_REQUEST;
             default -> HttpServletResponse.SC_BAD_REQUEST;
         };
     }

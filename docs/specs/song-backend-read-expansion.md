@@ -24,6 +24,12 @@ backend:
 The catalog read path is proven but thin. It needs to become complete enough that
 a frontend could be built against it without further backend read work.
 
+The role roadmap also permits an Artist Dashboard only for accounts that are
+already ARTISTs, but it does not define a controlled way for a normal USER to
+become one. Without that path, Artist access would depend on manual database
+changes or a broad Admin role edit, neither of which gives applicants a visible
+status or gives review decisions a durable audit trail.
+
 ## Solution
 
 Extend the existing Song backend read path — still read-only, still public, still
@@ -47,6 +53,13 @@ stable `ErrorResponse(code, message)` JSON on failure, and pass through the
 existing CORS filter. No database schema change is required — all data already
 exists in `songs`, `artists`, `song_artists`, `albums`, `genres`, and
 `song_genres`.
+
+For platform roles, keep public registration USER-only and keep the existing
+single login contract for every account. Add an authenticated Artist Application
+workflow in which a USER submits artist details, an ADMIN reviews the request,
+and only an approval atomically promotes the User to ARTIST and creates or links
+their Artist profile. Role-aware frontend routing and all user-facing Artist
+Dashboard work follow this approval gate.
 
 ## User Stories
 
@@ -107,6 +120,23 @@ exists in `songs`, `artists`, `song_artists`, `albums`, `genres`, and
 38. As a deployment operator, I want ImageKit credentials supplied through environment variables, so that secrets are not committed to the repository or baked into the application image.
 39. As a backend developer, I want each successful image upload to return its URL, ImageKit file id, and ImageKit file path, so that later tasks can display and manage the stored image.
 40. As a tester, I want the image-storage contract verified independently from an Artist HTTP endpoint, so that the infrastructure can be completed before upload APIs exist.
+
+### Artist application and role activation
+
+41. As a new listener, I want public registration to create a `USER` account only, so that privileged roles cannot be self-assigned.
+42. As a listener, I want to sign in through the same login endpoint as every other account, so that I do not need to know a role-specific authentication flow.
+43. As a `USER`, I want to submit an Artist Application with my artist display name, biography, avatar URL, and optional social links, so that I can request access to Artist tools.
+44. As a `USER`, I want my submitted Artist Application to show as `PENDING`, so that I know it is awaiting an Admin decision.
+45. As a `USER`, I want to view my latest Artist Application and its decision, so that I understand whether I can access the Artist Dashboard.
+46. As a `USER`, I want the system to prevent a second pending application, so that my request cannot be duplicated or reviewed inconsistently.
+47. As an `ADMIN`, I want to list and inspect Artist Applications by status, so that I can review candidate Artists efficiently.
+48. As an `ADMIN`, I want to approve a pending Artist Application, so that the applicant becomes an `ARTIST` and receives an Artist profile.
+49. As an `ADMIN`, I want to link an approved account to an existing unlinked Artist profile when appropriate, so that duplicate Artist profiles are not created.
+50. As an `ADMIN`, I want to reject a pending Artist Application without changing the applicant's role, so that only approved candidates gain Artist access.
+51. As an approved Artist, I want the next authenticated request to recognize my `ARTIST` role, so that I can enter the Artist Dashboard without a separate account.
+52. As a frontend user, I want the app to route me according to the role returned by the backend, so that listeners, Artists, and Admins reach the correct workspace.
+53. As a frontend developer, I want role-protected routes to keep an unauthorized user out of Artist and Admin screens, so that the UI matches the backend permission model.
+54. As a security reviewer, I want role checks enforced by the backend on every privileged API, so that changing browser state cannot grant Artist or Admin access.
 
 ## Implementation Decisions
 
@@ -200,6 +230,53 @@ exists in `songs`, `artists`, `song_artists`, `albums`, `genres`, and
   mutate a Song, or permit a cover upload by itself. The later Artist cover-upload
   task composes authorization, Song ownership, and `ImageStorageService`.
 
+### Artist application and role activation amendment
+
+- MelodyHub keeps one authentication system, one public registration endpoint, and
+  one login endpoint. Public registration always creates a `USER` with `ACTIVE`
+  status. A request must not accept a role field, and no public Artist or Admin
+  registration route is introduced.
+- A login response and `GET /api/auth/me` remain the single identity contract. The
+  backend determines the authenticated role from the persisted User record; the
+  frontend must not select or submit a role during sign-in. Logout and refresh
+  token routes remain session-maintenance routes, not alternative login flows.
+- Introduce an `Artist Application` as a first-class persisted record owned by one
+  User. It contains an id, applicant user id, artist display name, biography,
+  optional avatar URL, optional social-links JSON object, status, reviewer user
+  id, review timestamp, optional rejection reason, and audit timestamps.
+- Artist Application status is exactly `PENDING`, `APPROVED`, or `REJECTED`.
+  An applicant can have at most one `PENDING` application. Rejected applications
+  remain immutable history; a USER may submit a new application after rejection.
+  An already-approved Artist cannot submit another application.
+- The application avatar is a URL in this phase. Avatar file upload and ImageKit
+  profile-media storage are separate future work; this feature must not bypass the
+  existing image-storage boundary or invent a second provider integration.
+- A USER submits an application through one authenticated self-service endpoint
+  and reads their own latest application through one authenticated read endpoint.
+  The response excludes reviewer-only internals except the visible status and any
+  approved rejection reason.
+- Admin review uses an `ADMIN`-only route family under `/api/admin/artist-applications`.
+  It supports paged/filterable review of applications, one application detail read,
+  approval, and rejection. The existing authorization service is the sole backend
+  role-enforcement seam.
+- Approval is one database transaction: lock and confirm the application is still
+  `PENDING`; promote the applicant from `USER` to `ARTIST`; create an Artist
+  profile from the application or link an Admin-selected, active, unlinked Artist
+  profile; record the reviewer and approval decision; then commit. A conflict,
+  invalid profile link, or database failure rolls back the entire transition.
+- Rejection is one database transaction that moves only a `PENDING` application
+  to `REJECTED`, records the reviewer and optional reason, and leaves the User role
+  as `USER`.
+- The frontend has one sign-in form. It may offer Listener, Artist Studio, and
+  Admin Console as destination context, but that context is never sent as a role.
+  After authentication, the app routes by the returned role: `USER` to listener
+  Home, `ARTIST` to Artist Dashboard, and `ADMIN` to Admin Dashboard. A selected
+  destination that conflicts with the actual role falls back to Home with a
+  non-privileged access notice.
+- Frontend role guards are navigation behavior only. Artist and Admin APIs must
+  continue to enforce authorization server-side, and an approved role change is
+  recognized from the persisted User record on the next authenticated request.
+
 ## Testing Decisions
 
 - **The single test seam is the HTTP contract at `GET /api/songs/*`.** Every capability is verified by making a request against the running Docker Compose stack (MySQL + backend) and asserting the externally visible response. This matches both prior Song specs and the project's current reality of no automated test harness.
@@ -228,17 +305,31 @@ exists in `songs`, `artists`, `song_artists`, `albums`, `genres`, and
 - Configuration verification must prove that missing required ImageKit environment
   variables fail with a clear configuration error and that no credential value is
   included in logs or returned errors.
+- The role-activation seam is the authenticated HTTP contract: a USER submits an
+  Artist Application, an ADMIN reviews it, and a later `/api/auth/me` plus an
+  ARTIST-only request demonstrate the resulting role and profile link. This is
+  higher-value than testing repository implementation details or frontend state.
+- Required role-activation scenarios are: public registration always returns a
+  USER; a USER can create and read one PENDING application; duplicate PENDING
+  creation is rejected; non-Admins cannot review; approval atomically promotes,
+  profiles, and marks the application approved; rejection preserves the USER
+  role; and the next authenticated role lookup and Artist-only request honor the
+  review result.
+- Frontend verification exercises the login-to-role-routing contract with the
+  existing auth store and route guard: USER reaches listener Home, ARTIST reaches
+  the Artist Dashboard, ADMIN reaches the Admin Dashboard, and a forged or stale
+  browser role never bypasses the backend `403` response.
 
 ## Roadmap
 
 Tasks are grouped into phases. Each task is independently implementable and
 verifiable at the HTTP seam. Dependencies are called out per task.
 
-This roadmap preserves the completed Song Catalog read work, then changes the
-future direction from a read-only catalog expansion into a role-based music
-platform. From Phase 3 onward, MelodyHub has three account roles: `USER`,
-`ARTIST`, and `ADMIN`. The old read-only Artist expansion phase is replaced by
-an Artist Dashboard backend phase.
+This roadmap preserves the completed Song Catalog read work and the completed
+role foundation. MelodyHub has three account roles: `USER`, `ARTIST`, and
+`ADMIN`. From this amendment forward, an Artist Application and Admin approval
+are the only user-facing path from `USER` to `ARTIST`; user-facing Artist
+Dashboard delivery is sequenced after that path.
 
 Primary test seams for future tasks:
 
@@ -248,6 +339,8 @@ Primary test seams for future tasks:
   that Artist's own profile and Songs.
 - Admin Dashboard APIs are verified as an `ADMIN` account and may manage platform
   resources across Users, Artists, Songs, Albums, and Genres.
+- Artist Application submission and review use one authenticated HTTP seam, and
+  approval is verified by the resulting current-user role and ARTIST-only access.
 
 ### Phase 0 - Authentication baseline
 
@@ -348,9 +441,13 @@ Primary test seams for future tasks:
   missing folders automatically; and return `imageUrl`, `fileId`, and `filePath` for every successful
   upload. Purpose: establish one reusable storage seam before any Artist upload
   endpoint is implemented. This task adds no servlet or Song mutation. *Depends
-  on:* 3.2. *Blocks:* Phase 4 and Task 6.2. - Done: environment-backed ImageKit
+  on:* 3.2. *Blocks:* Active Phase 7 Task 7.2. - Done: environment-backed ImageKit
   configuration, the provider-neutral storage contract, the ImageKit adapter,
   Artist cover-folder routing, and required upload result metadata are implemented.
+
+> **Historical roadmap:** the phases below preserve completed Artist API work and
+> the previously planned future sequence. The active task ordering that follows
+> this historical record is authoritative for all unfinished work.
 
 ### Phase 4 - Artist Dashboard: profile and own catalog
 
@@ -509,25 +606,163 @@ Primary test seams for future tasks:
 
 ### Recommended next task
 
-**Task 5.1 - Schema: allow draft Songs before audio upload.** Phase 4 is complete,
-so the next slice prepares Song storage for incremental Artist Dashboard writes
-without changing the completed public or private read contracts.
+> The Phase 4-9 plan above is retained as an implementation history. Its remaining
+> future-task ordering is superseded by the active roadmap below; completed API
+> tasks remain completed and are reused rather than removed.
+
+### Active Phase 4 - Become an Artist
+
+> This phase is the required gate before any new user-facing Artist Dashboard
+> work. It preserves public USER-only registration and the single login endpoint.
+
+- **Task 4.1 - Schema: Artist Application lifecycle.** Add the Artist Application
+  persistence model with applicant identity, artist display name, bio, optional
+  avatar URL, optional social links, `PENDING` / `APPROVED` / `REJECTED` status,
+  reviewer metadata, optional rejection reason, and audit timestamps. Enforce at
+  most one PENDING application per User. *Depends on:* 3.1 and 3.4.
+- **Task 4.2 - User: submit Artist Application.** Add the authenticated USER-only
+  API that validates and creates a PENDING application. Public registration stays
+  unchanged and creates USER accounts only. *Depends on:* 4.1 and 3.4.
+- **Task 4.3 - User: view own Artist Application.** Add the authenticated read
+  API for an account's most recent application and visible status. It must never
+  expose another applicant's data. *Depends on:* 4.2 and 3.4.
+- **Task 4.4 - Admin: review queue and application detail.** Add ADMIN-only paged
+  list and detail APIs, including status filtering, so an Admin can inspect
+  PENDING applications before deciding. *Depends on:* 4.1, 3.4, and Phase 2
+  pagination conventions.
+- **Task 4.5 - Admin: approve Artist Application atomically.** Approve one
+  PENDING application in a transaction: promote its User to ARTIST, create an
+  Artist profile from the application or link an Admin-selected active unlinked
+  profile, and record the approval. *Depends on:* 4.4, 3.2, 3.4, and 3.5.
+- **Task 4.6 - Admin: reject Artist Application.** Reject one PENDING application,
+  record the reviewer and optional reason, and retain the applicant as USER.
+  *Depends on:* 4.4.
+- **Task 4.7 - Frontend: role-aware sign-in and navigation.** Keep one login form
+  and route from the role returned by the existing auth contract. Add user-facing
+  application status, an Artist Dashboard route guarded for ARTIST, and an Admin
+  route guarded for ADMIN. Client guards guide navigation only; backend checks
+  remain authoritative. *Depends on:* 3.3, 4.3, and 4.5.
+
+### Active Phase 5 - Artist Dashboard entry and existing read APIs
+
+> The backend read APIs below are already complete. The first remaining task is
+> their Artist Dashboard integration, which is intentionally blocked on approval.
+
+- **[x] Task 5.1 - View own Artist profile API.** `GET /api/artist/profile`
+  resolves only the authenticated ARTIST's active profile. *Depends on:* 3.5.
+- **[x] Task 5.2 - Update own Artist profile API.** `PUT /api/artist/profile`
+  updates only the authenticated ARTIST's safe profile metadata. *Depends on:*
+  5.1.
+- **[x] Task 5.3 - List own Songs API.** `GET /api/artist/songs` returns the
+  current ARTIST's private Song page without soft-deleted Songs. *Depends on:*
+  3.5 and Phase 2.
+- **[x] Task 5.4 - View one own Song API.** `GET /api/artist/songs/{id-or-slug}`
+  resolves only a Song owned by the authenticated ARTIST. *Depends on:* 5.3.
+- **Task 5.5 - Frontend: Artist Dashboard read shell.** Build the profile and
+  own-catalog dashboard experience using the completed APIs, with no access for
+  USER or ADMIN accounts. *Depends on:* 4.7 and 5.1 through 5.4.
+
+### Active Phase 6 - Artist Dashboard: Song metadata writes
+
+- **Task 6.1 - Schema: allow Draft Songs before audio upload.** Adjust Song
+  storage so an Artist can create a Draft before an audio file exists, while
+  public APIs continue to expose only Published, non-deleted Songs. *Depends on:*
+  Phase 2 and 4.5.
+- **Task 6.2 - Create own Song metadata.** Add an ARTIST-only API to create a
+  Draft Song and attach the current Artist as its MAIN Artist. *Depends on:* 6.1
+  and 5.5.
+- **Task 6.3 - Update own Song metadata.** Add an ARTIST-only API to change
+  editable metadata for the current Artist's own Song. *Depends on:* 5.4 and 6.2.
+- **Task 6.4 - Soft-delete own Song.** Add an ARTIST-only soft-delete API for the
+  current Artist's own Song. *Depends on:* 5.4.
+- **Task 6.5 - Preserve public visibility after writes.** Verify Artist writes
+  cannot expose Draft, Hidden, or soft-deleted Songs through `/api/songs/*`.
+  *Depends on:* 6.2 through 6.4.
+
+### Active Phase 7 - Artist Dashboard: media and lyrics
+
+- **Task 7.1 - Audio and lyrics upload configuration.** Define storage, request
+  limits, and validation for audio files and `.lrc` uploads. *Depends on:* 6.1.
+- **Task 7.2 - Upload cover image for own Song.** Add the ARTIST-only cover upload
+  API that verifies ownership and uses `ImageStorageService` under the Artist's
+  cover folder. *Depends on:* 3.6 and 5.4.
+- **Task 7.3 - Upload audio file for own Song.** Add the ARTIST-only audio upload
+  API that persists the file location. *Depends on:* 7.1 and 6.2.
+- **Task 7.4 - Upload synchronized lyrics file.** Add the ARTIST-only `.lrc`
+  upload, parse, and transactional replacement flow. *Depends on:* 5.4 and 7.1.
+- **Task 7.5 - Validate upload ownership and content.** Return stable errors for
+  invalid file types, sizes, lyrics content, and cross-Artist attempts. *Depends
+  on:* 7.2 through 7.4.
+
+### Active Phase 8 - General Admin Dashboard foundation
+
+> Artist Application review is the first ADMIN-only slice. This phase generalizes
+> its conventions before wider catalog administration begins.
+
+- **Task 8.1 - Generalize the Admin route and authorization pattern.** Reuse the
+  application-review pattern for every `/api/admin/*` endpoint. *Depends on:*
+  3.4 and 4.4.
+- **Task 8.2 - Admin pagination and filter conventions.** Reuse the existing
+  paged response contract for administrative lists. *Depends on:* 8.1 and Phase 2.
+- **Task 8.3 - Admin error contract.** Define stable forbidden, not-found,
+  validation, conflict, and database error codes. *Depends on:* 8.1.
+
+### Active Phase 9 - Admin Dashboard: Users and Artists
+
+- **Task 9.1 - Admin list Users.** Add ADMIN-only paged User listing with search
+  and role/status filtering. *Depends on:* 8.2.
+- **Task 9.2 - Admin update User status.** Add ADMIN-only activation and ban
+  controls. Direct USER-to-ARTIST promotion remains the Artist Application
+  approval flow in Task 4.5. *Depends on:* 9.1.
+- **Task 9.3 - Admin list Artist profiles.** Add ADMIN-only paged Artist profile
+  listing, including account-link state. *Depends on:* 8.2 and 3.2.
+- **Task 9.4 - Admin create or update Artist profiles.** Add administrative Artist
+  profile management for profiles not yet linked to an account. *Depends on:* 9.3.
+- **Task 9.5 - Admin link or unlink Artist accounts.** Add explicit account-link
+  management while preserving the ARTIST-role database invariant. *Depends on:*
+  9.4 and 4.5.
+- **Task 9.6 - Admin soft-delete or restore Artist profiles.** Add reversible
+  Artist profile moderation. *Depends on:* 9.4.
+
+### Active Phase 10 - Admin Dashboard: Songs, Albums, and Genres
+
+- **Task 10.1 - Admin list Songs across Artists.** Add ADMIN-only paged Song
+  listing across all statuses and Artists. *Depends on:* 8.2 and Phase 6.
+- **Task 10.2 - Admin update Song metadata and status.** Add catalog moderation
+  controls, including hide and publish. *Depends on:* 10.1.
+- **Task 10.3 - Admin soft-delete or restore Songs.** Add reversible Song
+  moderation. *Depends on:* 10.1.
+- **Task 10.4 - Admin manage Albums.** Add Album create, update, list, and
+  soft-delete APIs while preserving Artist relationships. *Depends on:* 9.3.
+- **Task 10.5 - Admin manage Genres.** Add Genre create, update, list, and delete
+  APIs with duplicate-slug validation. *Depends on:* 8.2.
+- **Task 10.6 - Keep the public catalog stable after Admin actions.** Verify that
+  Admin changes do not leak private or deleted catalog data to listeners.
+  *Depends on:* 10.2 through 10.5.
+
+### Recommended next task
+
+**Task 4.1 - Schema: Artist Application lifecycle.** It establishes the durable
+state and invariants required for user submission, Admin review, role promotion,
+and the later Artist Dashboard entry flow.
 
 ## Out of Scope
 
-- Any write operation: creating, updating, hiding, or soft-deleting Songs, Artists, or Albums.
-- Artist upload HTTP endpoints, including Song cover, audio, lyrics, and avatar
-  uploads, are not part of Task 3.6; they remain later roadmap tasks.
-- Admin-only endpoints, moderation, or approval workflows.
-- Authentication or role/permission changes; every endpoint here stays public.
+- Direct public registration as ARTIST or ADMIN, role-selection fields in public
+  registration, and separate Artist or Admin login endpoints.
+- Automatic approval, automatic profile matching by name or slug, or any
+  non-Admin path that promotes a USER to ARTIST.
+- Editing, cancelling, or withdrawing a PENDING Artist Application; email or
+  push notifications about application decisions; and appeal workflows.
+- Avatar file uploads for applications. This phase accepts an avatar URL only;
+  profile-media storage is future work.
+- Artist Dashboard Song creation, update, deletion, cover/audio/lyrics upload,
+  playback, and streaming. These begin only in the later active phases.
+- General Admin management of Users, Artists, Songs, Albums, and Genres beyond
+  the Artist Application review endpoints scheduled in Active Phase 4.
 - Play-count incrementing and listen history.
-- Audio playback and audio file streaming (`filePath` stays hidden).
-- Lyrics and timed **Song Lyric Line** endpoints (`song_lyrics` is untouched; the plain `lyrics` text field already on the Song is unchanged).
-- Playlists, Song likes, Artist follows.
-- Recommendations, advanced multi-field search, sorting options beyond the fixed newest-first order.
-- Standalone Artist or Album endpoints (Artists and Albums appear only as expansions on a Song here).
-- Frontend rendering, Vue integration, and duration formatting.
-- Introducing an automated test harness (JUnit / Testcontainers). Verification stays manual at the HTTP seam.
+- Introducing a new automated test harness; verification remains at the existing
+  HTTP and browser-routing seams.
 
 ## Further Notes
 
@@ -553,3 +788,6 @@ without changing the completed public or private read contracts.
 - ImageKit credentials remain deployment secrets. Local Docker and deployed
   environments must inject the three ImageKit environment variables; the spec
   must never contain real credential values.
+- The existing ARTIST-only profile and own-Song APIs remain valid completed
+  backend work. This amendment changes when their user-facing dashboard is
+  delivered, not their authorization or data-ownership contract.
