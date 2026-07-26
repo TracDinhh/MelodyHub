@@ -5,8 +5,11 @@ import com.melodyHub.entity.Artist;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 public class ArtistRepository {
@@ -21,6 +24,100 @@ public class ArtistRepository {
             updated_at,
             deleted_at
             """;
+
+    public Artist create(int userId, String name, String slug, String bio, String imageUrl) throws SQLException {
+        String sql = """
+                INSERT INTO artists (user_id, name, slug, bio, image_url)
+                VALUES (?, ?, ?, ?, ?)
+                """;
+
+        try (var connection = DatabaseConfig.getConnection();
+             var statement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            statement.setInt(1, userId);
+            statement.setString(2, name);
+            statement.setString(3, slug);
+            statement.setString(4, bio);
+            statement.setString(5, imageUrl);
+
+            statement.executeUpdate();
+
+            try (var keys = statement.getGeneratedKeys()) {
+                if (!keys.next()) {
+                    throw new SQLException("Creating artist failed, no ID returned.");
+                }
+                int id = keys.getInt(1);
+                return findActiveById(connection, id)
+                        .orElseThrow(() -> new SQLException("Artist not found after insert."));
+            }
+        }
+    }
+
+    public boolean existsActiveByUserId(int userId) throws SQLException {
+        return findActiveByUserId(userId).isPresent();
+    }
+
+    public List<AdminRow> findPage(String query, int limit, int offset) throws SQLException {
+        StringBuilder sql = new StringBuilder("""
+                SELECT a.id, a.user_id, a.name, a.slug, a.bio, a.image_url,
+                       a.created_at, a.updated_at, a.deleted_at,
+                       u.username, u.email
+                FROM artists a
+                LEFT JOIN users u ON u.id = a.user_id
+                WHERE a.deleted_at IS NULL
+                """);
+        List<Object> params = new ArrayList<>();
+        if (query != null && !query.isBlank()) {
+            sql.append(" AND (a.name LIKE ? OR a.slug LIKE ?)");
+            String like = "%" + query.trim() + "%";
+            params.add(like);
+            params.add(like);
+        }
+        sql.append(" ORDER BY a.created_at DESC LIMIT ? OFFSET ?");
+        params.add(limit);
+        params.add(offset);
+
+        try (var connection = DatabaseConfig.getConnection();
+             var statement = connection.prepareStatement(sql.toString())) {
+            for (int index = 0; index < params.size(); index++) {
+                statement.setObject(index + 1, params.get(index));
+            }
+            try (var resultSet = statement.executeQuery()) {
+                List<AdminRow> rows = new ArrayList<>();
+                while (resultSet.next()) {
+                    rows.add(new AdminRow(
+                            mapRow(resultSet),
+                            resultSet.getString("username"),
+                            resultSet.getString("email")
+                    ));
+                }
+                return rows;
+            }
+        }
+    }
+
+    public long count(String query) throws SQLException {
+        StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM artists WHERE deleted_at IS NULL");
+        List<Object> params = new ArrayList<>();
+        if (query != null && !query.isBlank()) {
+            sql.append(" AND (name LIKE ? OR slug LIKE ?)");
+            String like = "%" + query.trim() + "%";
+            params.add(like);
+            params.add(like);
+        }
+
+        try (var connection = DatabaseConfig.getConnection();
+             var statement = connection.prepareStatement(sql.toString())) {
+            for (int index = 0; index < params.size(); index++) {
+                statement.setObject(index + 1, params.get(index));
+            }
+            try (var resultSet = statement.executeQuery()) {
+                return resultSet.next() ? resultSet.getLong(1) : 0L;
+            }
+        }
+    }
+
+    public record AdminRow(Artist artist, String linkedUsername, String linkedEmail) {
+    }
 
     public Optional<Artist> findActiveByUserId(int userId) throws SQLException {
         String sql = "SELECT " + ARTIST_COLUMNS + """

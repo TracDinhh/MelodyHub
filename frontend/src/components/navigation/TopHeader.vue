@@ -9,8 +9,10 @@ import {
   LogIn,
   LogOut,
   Menu,
+  Mic2,
   PanelRightOpen,
   Settings2,
+  ShieldCheck,
   UserRound
 } from '@lucide/vue';
 import { useAuthStore } from '../../stores/auth.store';
@@ -32,7 +34,7 @@ const email = computed(() =>
 );
 const badgeLabel = computed(() => {
   if (!authStore.isAuthenticated) return 'GUEST';
-  return authStore.isArtist ? 'ARTIST' : 'SONIX VIP';
+  return user.value.role || 'LISTENER';
 });
 const avatarUrl = computed(() => user.value.avatarUrl || featuredArtist.avatar);
 
@@ -99,6 +101,15 @@ onBeforeUnmount(() => document.removeEventListener('click', closeOnOutsideClick)
           </div>
           <RouterLink :to="{ name: 'library' }" class="sonix-menu-item" @click="dropdownOpen = false">
             <Library :size="16" /> Library
+          </RouterLink>
+          <RouterLink v-if="authStore.isUser" :to="{ name: 'become-an-artist' }" class="sonix-menu-item" @click="dropdownOpen = false">
+            <Mic2 :size="16" /> Become an Artist
+          </RouterLink>
+          <RouterLink v-if="authStore.isArtist" :to="{ name: 'artist-dashboard' }" class="sonix-menu-item" @click="dropdownOpen = false">
+            <Mic2 :size="16" /> Artist Dashboard
+          </RouterLink>
+          <RouterLink v-if="authStore.isAdmin" :to="{ name: 'admin-dashboard' }" class="sonix-menu-item" @click="dropdownOpen = false">
+            <ShieldCheck :size="16" /> Admin Dashboard
           </RouterLink>
           <button class="sonix-menu-item"><UserRound :size="16" /> Profile</button>
           <button class="sonix-menu-item"><AudioLines :size="16" /> Audio settings</button>

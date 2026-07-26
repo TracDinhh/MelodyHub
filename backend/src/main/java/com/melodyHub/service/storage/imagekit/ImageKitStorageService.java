@@ -39,6 +39,20 @@ public class ImageKitStorageService implements ImageStorageService {
         return uploader.upload(imageContent, fileName, folder);
     }
 
+    @Override
+    public ImageUploadResult uploadUserImage(
+            int userId,
+            byte[] imageContent,
+            String fileName
+    ) throws ImageStorageException {
+        validateUserId(userId);
+        validateImageContent(imageContent);
+        validateFileName(fileName);
+
+        String folder = "/users/" + userId + "/uploads/";
+        return uploader.upload(imageContent, fileName, folder);
+    }
+
     private static ImageKitUploader createUploader(ImageKitConfig config) {
         ImageKitClient client = ImageKitOkHttpClient.builder()
                 .privateKey(config.getPrivateKey())
@@ -100,6 +114,12 @@ public class ImageKitStorageService implements ImageStorageService {
                 : urlEndpoint;
         String normalizedPath = filePath.startsWith("/") ? filePath : "/" + filePath;
         return normalizedEndpoint + normalizedPath;
+    }
+
+    private static void validateUserId(int userId) {
+        if (userId <= 0) {
+            throw new IllegalArgumentException("userId must be a positive integer");
+        }
     }
 
     private static void validateArtistSlug(String artistSlug) {

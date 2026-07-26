@@ -291,3 +291,48 @@ CREATE TABLE listen_history (
 );
 CREATE INDEX idx_lh_user_time ON listen_history(user_id, listened_at DESC);
 CREATE INDEX idx_lh_song_time ON listen_history(song_id, listened_at);
+
+-- =====================================================
+-- 10. YEU CAU TRO THANH NGHE SI (ARTIST REQUEST)
+-- =====================================================
+-- User gui yeu cau -> PENDING. Admin duyet -> APPROVED (nang role + tao artist)
+-- hoac tu choi -> REJECTED. Moi user chi co 1 yeu cau PENDING tai mot thoi diem
+-- (rang buoc o tang service).
+CREATE TABLE artist_requests (
+    id           INT AUTO_INCREMENT PRIMARY KEY,
+    user_id      INT NOT NULL,
+    artist_name  VARCHAR(200) NOT NULL,
+    slug         VARCHAR(220) NOT NULL,
+    bio          TEXT,
+    image_url    VARCHAR(500),
+    status       VARCHAR(10) NOT NULL DEFAULT 'PENDING'
+                 CHECK (status IN ('PENDING','APPROVED','REJECTED')),
+    review_note  VARCHAR(500),                       -- ly do tu choi (tuy chon)
+    reviewed_by  INT NULL,                           -- admin da xu ly
+    reviewed_at  DATETIME(6) NULL,
+    created_at   DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    updated_at   DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    CONSTRAINT fk_ar_user FOREIGN KEY (user_id)
+        REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_ar_reviewer FOREIGN KEY (reviewed_by)
+        REFERENCES users(id) ON DELETE SET NULL
+);
+CREATE INDEX idx_ar_user   ON artist_requests(user_id, created_at DESC);
+CREATE INDEX idx_ar_status ON artist_requests(status, created_at);
+
+-- =====================================================
+-- 11. SEED DATA
+-- =====================================================
+-- Tai khoan ADMIN mac dinh.
+-- Dang nhap: username = admin  |  password = Admin@123456
+-- Hash BCrypt (cost 12) tao bang PasswordUtil/jBCrypt cua backend.
+-- LUU Y: doi mat khau nay ngay sau lan dang nhap dau tien tren moi truong that.
+INSERT INTO users (username, email, password_hash, display_name, role, status)
+VALUES (
+    'admin',
+    'admin@gmail.com',
+    '$2a$12$OH.JXdKvdtxZ6SC5JY908uJzOmylnn/6vUIrQKvY3ZGB8jvqWV9hS',
+    'MelodyHub Admin',
+    'ADMIN',
+    'ACTIVE'
+);
