@@ -172,8 +172,8 @@ function formatDuration(seconds) {
 <template>
   <div class="mx-auto w-full max-w-5xl px-5 py-8 pb-12 sm:px-8">
     <div class="mb-8 max-w-2xl">
-      <p class="sonix-kicker">ARTIST</p>
-      <h1 class="sonix-section-title">Upload a Song</h1>
+      <p class="melodyhub-kicker">ARTIST</p>
+      <h1 class="melodyhub-section-title">Upload a Song</h1>
       <p class="mt-3 text-sm leading-6 text-[#999]">Add your track, cover art, and lyrics.</p>
     </div>
 
@@ -194,7 +194,7 @@ function formatDuration(seconds) {
           <p v-if="fieldErrors.audio" class="mt-1 text-xs text-red-300">{{ fieldErrors.audio }}</p>
         </div>
 
-        <label class="sonix-field">
+        <label class="melodyhub-field">
           <span>Title</span>
           <div>
             <Music2 :size="16" />
@@ -203,7 +203,7 @@ function formatDuration(seconds) {
           <small v-if="fieldErrors.title" class="mt-1 block text-red-300">{{ fieldErrors.title }}</small>
         </label>
 
-        <label class="sonix-field">
+        <label class="melodyhub-field">
           <span>Slug <span class="font-normal text-[#666]">— /songs/{{ form.slug || 'your-song' }}</span></span>
           <div>
             <span class="select-none text-xs text-[#666]">/</span>
@@ -212,7 +212,7 @@ function formatDuration(seconds) {
           <small v-if="fieldErrors.slug" class="mt-1 block text-red-300">{{ fieldErrors.slug }}</small>
         </label>
 
-        <label class="sonix-field">
+        <label class="melodyhub-field">
           <span>Lyrics <span class="font-normal text-[#666]">(optional)</span></span>
           <textarea
             v-model="form.lyrics"

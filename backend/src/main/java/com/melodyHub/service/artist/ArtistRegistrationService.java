@@ -13,9 +13,9 @@ import com.melodyHub.service.auth.AuthorizationService;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
+import java.text.Normalizer;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.regex.Pattern;
 
 /**
  * Handles a listener's request to become an Artist. Submitting no longer upgrades
@@ -26,7 +26,6 @@ public class ArtistRegistrationService {
     private static final int MAX_SLUG_LENGTH = 220;
     private static final int MAX_BIO_LENGTH = 16_000;
     private static final int MAX_IMAGE_URL_LENGTH = 500;
-    private static final Pattern SLUG_PATTERN = Pattern.compile("[a-z0-9]+(?:-[a-z0-9]+)*");
 
     private final AuthorizationService authorizationService;
     private final ArtistRequestRepository artistRequestRepository;
@@ -65,14 +64,48 @@ public class ArtistRegistrationService {
             throw new ArtistException("ARTIST_REQUEST_PENDING_EXISTS", "You already have a request under review");
         }
 
+        String name = request.getArtistName().trim();
+        // Slug is derived automatically from the artist name (users no longer enter it).
+        String slug = generateUniqueSlug(name);
+
         ArtistRequest created = artistRequestRepository.create(
                 user.getId(),
-                request.getArtistName().trim(),
-                request.getSlug().trim(),
+                name,
+                slug,
                 normalizeOptional(request.getBio()),
                 normalizeOptional(request.getImageUrl())
         );
         return ArtistRequestResponse.fromEntity(created);
+    }
+
+    /**
+     * Builds a URL-safe slug from the name and appends a numeric suffix until it
+     * is unique against existing artists.
+     */
+    private String generateUniqueSlug(String name) throws SQLException {
+        String base = slugify(name);
+        if (base.isBlank()) {
+            base = "artist";
+        }
+        if (base.length() > MAX_SLUG_LENGTH - 6) {
+            base = base.substring(0, MAX_SLUG_LENGTH - 6);
+        }
+
+        String candidate = base;
+        int suffix = 2;
+        while (artistRepository.slugExists(candidate)) {
+            candidate = base + "-" + suffix++;
+        }
+        return candidate;
+    }
+
+    private String slugify(String input) {
+        String lowered = input.toLowerCase().replace('đ', 'd');
+        String normalized = Normalizer.normalize(lowered, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "");
+        return normalized
+                .replaceAll("[^a-z0-9]+", "-")
+                .replaceAll("(^-+)|(-+$)", "");
     }
 
     /**
@@ -96,19 +129,6 @@ public class ArtistRegistrationService {
             throw new ArtistException(
                     "INVALID_ARTIST_NAME",
                     "Artist name is required and must be 200 characters or less"
-            );
-        }
-
-        String slug = request.getSlug();
-        if (slug == null || slug.isBlank()) {
-            throw new ArtistException("INVALID_ARTIST_SLUG", "Artist slug is required");
-        }
-
-        String normalizedSlug = slug.trim();
-        if (normalizedSlug.length() > MAX_SLUG_LENGTH || !SLUG_PATTERN.matcher(normalizedSlug).matches()) {
-            throw new ArtistException(
-                    "INVALID_ARTIST_SLUG",
-                    "Artist slug must be lowercase letters, numbers, and hyphens only (e.g. my-artist-name)"
             );
         }
 

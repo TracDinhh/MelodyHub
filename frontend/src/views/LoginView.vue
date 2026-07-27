@@ -124,7 +124,7 @@ function mapBackendError(error) {
 
   errors.general =
     code === 'NETWORK_ERROR'
-      ? 'Unable to reach MelodyHub. Check that the backend is running.'
+      ? 'Unable to reach Melody Hub. Check that the backend is running.'
       : message;
 }
 
@@ -181,7 +181,7 @@ watch(() => registerForm.terms, () => clearFieldError('terms'));
     <div class="mb-8 text-center">
       <RouterLink :to="{ name: 'home' }" class="inline-flex items-center gap-2">
         <span class="grid size-10 place-items-center rounded-full bg-[#1DB954] text-black"><Disc3 :size="23" :stroke-width="2.5" /></span>
-        <span class="text-xl font-black tracking-[0.18em] text-white">SONIX</span>
+        <span class="text-xl font-black tracking-[0.18em] text-white">Melody Hub</span>
       </RouterLink>
       <h1 class="mt-7 text-3xl font-black text-white">{{ title }}</h1>
       <p class="mt-2 text-sm text-[#858585]">Your next favorite sound is one sign-in away.</p>
@@ -194,7 +194,7 @@ watch(() => registerForm.terms, () => clearFieldError('terms'));
       </div>
 
       <form class="space-y-4" novalidate @submit.prevent="submit">
-        <label v-if="mode === 'login'" class="sonix-field">
+        <label v-if="mode === 'login'" class="melodyhub-field">
           <span>Username or email</span>
           <div>
             <AtSign :size="16" />
@@ -209,7 +209,7 @@ watch(() => registerForm.terms, () => clearFieldError('terms'));
         </label>
 
         <template v-else>
-          <label class="sonix-field">
+          <label class="melodyhub-field">
             <span>Username</span>
             <div>
               <UserRound :size="16" />
@@ -217,7 +217,7 @@ watch(() => registerForm.terms, () => clearFieldError('terms'));
             </div>
             <small v-if="errors.username" class="text-red-300">{{ errors.username }}</small>
           </label>
-          <label class="sonix-field">
+          <label class="melodyhub-field">
             <span>Display name <span class="font-normal text-[#666]">(optional)</span></span>
             <div>
               <Music2 :size="16" />
@@ -225,7 +225,7 @@ watch(() => registerForm.terms, () => clearFieldError('terms'));
             </div>
             <small v-if="errors.displayName" class="text-red-300">{{ errors.displayName }}</small>
           </label>
-          <label class="sonix-field">
+          <label class="melodyhub-field">
             <span>Email</span>
             <div>
               <Mail :size="16" />
@@ -235,7 +235,7 @@ watch(() => registerForm.terms, () => clearFieldError('terms'));
           </label>
         </template>
 
-        <label class="sonix-field">
+        <label class="melodyhub-field">
           <span>Password</span>
           <div>
             <Music2 :size="16" />
@@ -261,7 +261,7 @@ watch(() => registerForm.terms, () => clearFieldError('terms'));
         </label>
 
         <template v-if="mode === 'register'">
-          <label class="sonix-field">
+          <label class="melodyhub-field">
             <span>Confirm password</span>
             <div>
               <Music2 :size="16" />
@@ -293,7 +293,7 @@ watch(() => registerForm.terms, () => clearFieldError('terms'));
         <p v-if="errors.general" class="rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-300" role="alert">{{ errors.general }}</p>
         <button type="submit" class="h-11 w-full rounded-full bg-[#1DB954] text-xs font-black text-black transition hover:bg-[#20ca5c] disabled:cursor-not-allowed disabled:opacity-60" :disabled="authStore.isLoading">
           <span v-if="authStore.isLoading">PLEASE WAIT...</span>
-          <span v-else>{{ mode === 'login' ? 'LOGIN TO SONIX' : 'CREATE ACCOUNT' }}</span>
+          <span v-else>{{ mode === 'login' ? 'LOGIN TO MELODY HUB' : 'CREATE ACCOUNT' }}</span>
         </button>
       </form>
     </div>

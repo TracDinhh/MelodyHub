@@ -39,8 +39,8 @@ onMounted(load);
   <div class="mx-auto w-full max-w-5xl px-5 py-8 pb-12 sm:px-8">
     <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
       <div>
-        <p class="sonix-kicker">ARTIST</p>
-        <h1 class="sonix-section-title">My Songs <span class="text-sm font-normal text-[#666]">({{ total }})</span></h1>
+        <p class="melodyhub-kicker">ARTIST</p>
+        <h1 class="melodyhub-section-title">My Songs <span class="text-sm font-normal text-[#666]">({{ total }})</span></h1>
       </div>
       <RouterLink
         :to="{ name: 'artist-song-upload' }"

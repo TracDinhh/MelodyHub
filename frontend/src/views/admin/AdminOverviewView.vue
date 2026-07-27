@@ -52,8 +52,8 @@ onMounted(load);
       <div class="flex items-center gap-3">
         <LayoutDashboard :size="28" class="text-[#1DB954]" />
         <div>
-          <p class="sonix-kicker">ADMIN</p>
-          <h1 class="sonix-section-title">Overview</h1>
+          <p class="melodyhub-kicker">ADMIN</p>
+          <h1 class="melodyhub-section-title">Overview</h1>
         </div>
       </div>
       <button

@@ -47,7 +47,7 @@ onBeforeUnmount(() => {
       <section class="max-h-[calc(100vh-2rem)] w-full max-w-lg overflow-auto rounded-lg border border-white/10 bg-[#151515] shadow-2xl">
         <header class="flex items-center justify-between border-b border-white/5 px-5 py-4">
           <h2 class="text-sm font-black text-white">{{ title }}</h2>
-          <button type="button" class="sonix-icon-btn" title="Close" @click="emit('close')">
+          <button type="button" class="melodyhub-icon-btn" title="Close" @click="emit('close')">
             <X :size="20" aria-hidden="true" />
             <span class="visually-hidden">Close</span>
           </button>

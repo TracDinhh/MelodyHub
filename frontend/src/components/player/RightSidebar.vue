@@ -40,12 +40,12 @@ watch(activeLine, async (index) => {
     @click="emit('close')"
   />
   <aside
-    class="fixed inset-y-0 right-0 z-50 flex w-[min(340px,90vw)] flex-col border-l border-white/5 bg-[#101010] transition-transform duration-300 xl:static xl:z-auto xl:w-80 xl:translate-x-0"
+    class="melodyhub-panel-edge fixed inset-y-0 right-0 z-50 flex w-[min(340px,90vw)] flex-col rounded-l-xl border border-white/[0.055] bg-[#101417] transition-transform duration-300 xl:static xl:z-auto xl:w-80 xl:rounded-xl xl:translate-x-0"
     :class="mobileOpen ? 'translate-x-0' : 'translate-x-full'"
   >
     <header class="flex h-18 items-center justify-between px-5">
       <h2 class="text-xs font-black tracking-wide text-white">NOW PLAYING</h2>
-      <button class="sonix-icon-btn xl:hidden" title="Close track information" @click="emit('close')">
+      <button class="melodyhub-icon-btn xl:hidden" title="Close track information" @click="emit('close')">
         <X :size="18" />
       </button>
     </header>

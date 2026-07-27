@@ -68,7 +68,7 @@ watch(() => route.params.slug, (slug) => slug && load(slug));
         <div class="absolute inset-0 bg-gradient-to-t from-[#0d0d0d] via-black/50 to-black/30" />
         <div class="relative flex min-h-[300px] items-end px-5 pb-7 sm:px-8">
           <div class="w-full">
-            <p class="sonix-kicker">ARTIST</p>
+            <p class="melodyhub-kicker">ARTIST</p>
             <h1 class="mt-2 text-5xl font-black text-white sm:text-7xl">{{ artist.name }}</h1>
             <p class="mt-3 text-sm text-white/70">{{ songs.length }} song{{ songs.length === 1 ? '' : 's' }}</p>
             <div class="mt-5 flex flex-wrap items-center gap-3">
@@ -87,7 +87,7 @@ watch(() => route.params.slug, (slug) => slug && load(slug));
       <div class="px-4 py-7 sm:px-7">
         <section>
           <div class="mb-3 flex items-end justify-between px-3">
-            <div><p class="sonix-kicker">ESSENTIALS</p><h2 class="sonix-section-title">Popular</h2></div>
+            <div><p class="melodyhub-kicker">ESSENTIALS</p><h2 class="melodyhub-section-title">Popular</h2></div>
             <p class="text-[10px] font-bold text-[#666]">PLAYS</p>
           </div>
 
@@ -102,8 +102,8 @@ watch(() => route.params.slug, (slug) => slug && load(slug));
         <section v-if="artist.bio" class="mt-10 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
           <img v-if="artist.imageUrl" :src="artist.imageUrl" :alt="artist.name" class="max-h-[420px] w-full rounded-lg object-cover" />
           <div>
-            <p class="sonix-kicker">ABOUT</p>
-            <h2 class="sonix-section-title">{{ artist.name }}</h2>
+            <p class="melodyhub-kicker">ABOUT</p>
+            <h2 class="melodyhub-section-title">{{ artist.name }}</h2>
             <p class="mt-5 whitespace-pre-line text-sm leading-7 text-[#999]">{{ artist.bio }}</p>
           </div>
         </section>

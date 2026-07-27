@@ -215,7 +215,7 @@ export const podcasts = [
   {
     id: 3,
     title: 'Behind the Chorus',
-    host: 'SONIX Studios',
+    host: 'Melody Hub Studios',
     cover: image('photo-1589903308904-1010c2294adc', 500),
     length: '54 min'
   }

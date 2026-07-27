@@ -53,18 +53,19 @@ onBeforeUnmount(() => document.removeEventListener('click', closeOnOutsideClick)
 </script>
 
 <template>
-  <header class="sticky top-0 z-30 flex h-18 items-center justify-between border-b border-white/5 bg-[#0d0d0d]/90 px-4 backdrop-blur-xl sm:px-6">
+  <header class="sticky top-0 z-30 flex h-18 items-center justify-between border-b border-white/[0.055] bg-[#121719]/76 px-4 backdrop-blur-xl sm:px-6">
     <div class="flex min-w-0 items-center gap-3">
-      <button class="sonix-icon-btn lg:hidden" title="Open navigation" @click="emit('toggle-nav')">
+      <button class="melodyhub-icon-btn lg:hidden" title="Open navigation" @click="emit('toggle-nav')">
         <Menu :size="20" />
       </button>
-      <p class="min-w-0 truncate text-xs text-[#747474] sm:text-sm">
+      <span class="hidden size-1.5 rounded-full bg-[#65e78c] shadow-[0_0_12px_#1DB954] sm:block" />
+      <p class="min-w-0 truncate text-xs font-medium text-[#9aa39d] sm:text-sm">
         {{ route.meta.breadcrumb || route.meta.title }}
       </p>
     </div>
 
     <div class="flex items-center gap-2">
-      <button class="sonix-icon-btn xl:hidden" title="Open track information" @click="emit('toggle-info')">
+      <button class="melodyhub-icon-btn xl:hidden" title="Open track information" @click="emit('toggle-info')">
         <PanelRightOpen :size="19" />
       </button>
       <div ref="dropdown" class="relative">
@@ -99,22 +100,22 @@ onBeforeUnmount(() => document.removeEventListener('click', closeOnOutsideClick)
               <Crown :size="11" /> {{ badgeLabel }}
             </span>
           </div>
-          <RouterLink :to="{ name: 'library' }" class="sonix-menu-item" @click="dropdownOpen = false">
+          <RouterLink :to="{ name: 'library' }" class="melodyhub-menu-item" @click="dropdownOpen = false">
             <Library :size="16" /> Library
           </RouterLink>
-          <RouterLink v-if="authStore.isUser" :to="{ name: 'become-an-artist' }" class="sonix-menu-item" @click="dropdownOpen = false">
+          <RouterLink v-if="authStore.isUser" :to="{ name: 'become-an-artist' }" class="melodyhub-menu-item" @click="dropdownOpen = false">
             <Mic2 :size="16" /> Become an Artist
           </RouterLink>
-          <RouterLink v-if="authStore.isArtist" :to="{ name: 'artist-dashboard' }" class="sonix-menu-item" @click="dropdownOpen = false">
+          <RouterLink v-if="authStore.isArtist" :to="{ name: 'artist-dashboard' }" class="melodyhub-menu-item" @click="dropdownOpen = false">
             <Mic2 :size="16" /> Artist Dashboard
           </RouterLink>
-          <RouterLink v-if="authStore.isAdmin" :to="{ name: 'admin-dashboard' }" class="sonix-menu-item" @click="dropdownOpen = false">
+          <RouterLink v-if="authStore.isAdmin" :to="{ name: 'admin-dashboard' }" class="melodyhub-menu-item" @click="dropdownOpen = false">
             <ShieldCheck :size="16" /> Admin Dashboard
           </RouterLink>
-          <button class="sonix-menu-item"><UserRound :size="16" /> Profile</button>
-          <button class="sonix-menu-item"><AudioLines :size="16" /> Audio settings</button>
-          <button class="sonix-menu-item"><Settings2 :size="16" /> Preferences</button>
-          <button class="sonix-menu-item mt-1 border-t border-white/5 pt-3" @click="signOut">
+          <button class="melodyhub-menu-item"><UserRound :size="16" /> Profile</button>
+          <button class="melodyhub-menu-item"><AudioLines :size="16" /> Audio settings</button>
+          <button class="melodyhub-menu-item"><Settings2 :size="16" /> Preferences</button>
+          <button class="melodyhub-menu-item mt-1 border-t border-white/5 pt-3" @click="signOut">
             <component :is="authStore.isAuthenticated ? LogOut : LogIn" :size="16" />
             {{ authStore.isAuthenticated ? 'Log out' : 'Log in' }}
           </button>
