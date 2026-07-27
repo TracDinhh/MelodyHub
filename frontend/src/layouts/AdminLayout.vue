@@ -40,11 +40,11 @@ async function logout() {
               <Disc3 :size="21" :stroke-width="2.5" />
             </span>
             <div class="leading-tight">
-              <span class="block text-lg font-black tracking-[0.18em] text-white">SONIX</span>
+              <span class="block text-lg font-black tracking-[0.18em] text-white">Melody Hub</span>
               <span class="block text-[10px] font-bold tracking-[0.2em] text-[#1DB954]">ADMIN</span>
             </div>
           </div>
-          <button class="sonix-icon-btn lg:hidden" title="Close menu" @click="navOpen = false">
+          <button class="melodyhub-icon-btn lg:hidden" title="Close menu" @click="navOpen = false">
             <X :size="19" />
           </button>
         </header>
@@ -80,10 +80,10 @@ async function logout() {
       <!-- Content -->
       <section class="min-w-0 overflow-hidden bg-[#0d0d0d]">
         <header class="flex h-18 items-center gap-3 border-b border-white/5 px-5 lg:hidden">
-          <button class="sonix-icon-btn" title="Open menu" @click="navOpen = true">
+          <button class="melodyhub-icon-btn" title="Open menu" @click="navOpen = true">
             <Menu :size="20" />
           </button>
-          <span class="text-sm font-black tracking-[0.16em]">SONIX ADMIN</span>
+          <span class="text-sm font-black tracking-[0.16em]">MELODY HUB ADMIN</span>
         </header>
         <main class="h-[calc(100%-4.5rem)] overflow-y-auto lg:h-full">
           <slot />

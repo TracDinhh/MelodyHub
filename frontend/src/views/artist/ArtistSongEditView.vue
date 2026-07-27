@@ -101,8 +101,8 @@ onMounted(load);
 <template>
   <div class="mx-auto w-full max-w-5xl px-5 py-8 pb-12 sm:px-8">
     <div class="mb-8 max-w-2xl">
-      <p class="sonix-kicker">ARTIST</p>
-      <h1 class="sonix-section-title">Edit Song</h1>
+      <p class="melodyhub-kicker">ARTIST</p>
+      <h1 class="melodyhub-section-title">Edit Song</h1>
       <p class="mt-3 text-sm leading-6 text-[#999]">Update the title, cover art, or lyrics.</p>
     </div>
 
@@ -112,7 +112,7 @@ onMounted(load);
 
     <form v-else class="grid max-w-4xl gap-8 lg:grid-cols-[minmax(0,1fr)_220px]" novalidate @submit.prevent="save">
       <div class="space-y-5 border border-white/10 bg-[#121212] p-5 sm:p-6">
-        <label class="sonix-field">
+        <label class="melodyhub-field">
           <span>Title</span>
           <div>
             <Music2 :size="16" />
@@ -121,7 +121,7 @@ onMounted(load);
           <small v-if="fieldErrors.title" class="mt-1 block text-red-300">{{ fieldErrors.title }}</small>
         </label>
 
-        <label class="sonix-field">
+        <label class="melodyhub-field">
           <span>Slug <span class="font-normal text-[#666]">(not editable)</span></span>
           <div>
             <span class="select-none text-xs text-[#666]">/</span>
@@ -129,7 +129,7 @@ onMounted(load);
           </div>
         </label>
 
-        <label class="sonix-field">
+        <label class="melodyhub-field">
           <span>Lyrics <span class="font-normal text-[#666]">(optional)</span></span>
           <textarea
             v-model="form.lyrics"

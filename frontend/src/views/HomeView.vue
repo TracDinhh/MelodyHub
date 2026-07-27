@@ -99,56 +99,64 @@ function scrollArtists(direction) {
 </script>
 
 <template>
-  <div class="mx-auto max-w-[1180px] space-y-9 px-4 py-6 sm:px-6 sm:py-8">
-    <section class="relative overflow-hidden rounded-xl bg-[#151515] px-6 py-7 sm:px-8">
+  <div class="mx-auto max-w-[1260px] space-y-11 px-4 py-6 sm:px-7 sm:py-8">
+    <section class="relative min-h-[300px] overflow-hidden rounded-xl border border-white/[0.07] bg-[#111719] px-6 py-8 sm:min-h-[340px] sm:px-9 sm:py-10">
       <div
-        class="absolute inset-0 bg-cover bg-center opacity-25"
+        class="absolute inset-0 bg-cover bg-center opacity-50"
         :style="{ backgroundImage: `url(${playlists[0].cover})` }"
       />
-      <div class="absolute inset-0 bg-gradient-to-r from-[#151515] via-[#151515]/85 to-transparent" />
-      <div class="relative max-w-xl">
-        <p class="text-xs font-black tracking-[0.16em] text-[#1DB954]">YOUR DAILY MIX</p>
-        <h1 class="mt-2 text-2xl font-black text-white sm:text-4xl">{{ sectionTitle }}</h1>
-        <p class="mt-3 max-w-lg text-sm leading-6 text-[#a3a3a3]">
+      <div class="melodyhub-hero-shine absolute inset-0" />
+      <div class="relative flex min-h-[236px] max-w-xl flex-col justify-end sm:min-h-[260px]">
+        <p class="melodyhub-kicker">YOUR DAILY MIX</p>
+        <h1 class="mt-3 text-3xl font-black leading-tight text-white sm:text-5xl">{{ sectionTitle }}</h1>
+        <p class="mt-3 max-w-lg text-sm leading-6 text-[#c3cac4]">
           A fresh mix of artists you love and the sounds shaping this week.
         </p>
-        <button class="mt-5 inline-flex h-10 items-center gap-2 rounded-full bg-[#1DB954] px-5 text-xs font-black text-black transition hover:scale-[1.03]" @click="player.playTrack(tracks[0])">
+        <div class="mt-6 flex flex-wrap items-center gap-4">
+          <button class="inline-flex h-11 items-center gap-2 rounded-full bg-[#65e78c] px-5 text-xs font-black text-[#071108] shadow-[0_8px_22px_rgba(29,185,84,0.26)] transition hover:scale-[1.03]" @click="player.playTrack(tracks[0])">
           <Play :size="16" class="fill-current" /> PLAY MIX
-        </button>
+          </button>
+          <span class="text-xs font-semibold text-white/65">42 tracks &middot; updated today</span>
+        </div>
+      </div>
+      <div class="absolute right-6 bottom-6 hidden w-40 border-l border-white/20 pl-4 sm:block">
+        <p class="text-[10px] font-black tracking-[0.15em] text-[#8be8a8]">FEATURED MOOD</p>
+        <p class="mt-1 text-sm font-bold text-white">Night Drive</p>
+        <p class="mt-1 text-xs leading-5 text-white/65">Synthwave for city lights.</p>
       </div>
     </section>
 
     <section>
       <div class="mb-4 flex items-end justify-between">
-        <div><p class="sonix-kicker">CURATED FOR YOU</p><h2 class="sonix-section-title">Trending playlists</h2></div>
+        <div><p class="melodyhub-kicker">CURATED FOR YOU</p><h2 class="melodyhub-section-title">Trending playlists</h2></div>
         <RouterLink :to="{ name: 'explore' }" class="flex items-center gap-1 text-xs font-bold text-[#8b8b8b] hover:text-white">See all <ArrowRight :size="14" /></RouterLink>
       </div>
-      <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div class="grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-4">
         <button
           v-for="(playlist, index) in playlists"
           :key="playlist.id"
           class="group min-w-0 text-left"
           @click="player.playTrack(tracks[index])"
         >
-          <span class="relative block aspect-square overflow-hidden rounded-lg bg-[#181818]">
+          <span class="relative block aspect-square overflow-hidden rounded-lg bg-[#181818] ring-1 ring-white/[0.07]">
             <img :src="playlist.cover" :alt="playlist.title" class="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
-            <span class="absolute inset-0 bg-black/10 transition group-hover:bg-black/25" />
-            <span class="absolute right-3 bottom-3 grid size-11 translate-y-3 place-items-center rounded-full bg-[#1DB954] text-black opacity-0 shadow-xl transition group-hover:translate-y-0 group-hover:opacity-100">
+            <span class="absolute inset-0 bg-black/5 transition group-hover:bg-black/25" />
+            <span class="absolute right-3 bottom-3 grid size-11 translate-y-3 place-items-center rounded-full bg-[#65e78c] text-[#071108] opacity-0 shadow-xl shadow-black/40 transition group-hover:translate-y-0 group-hover:opacity-100">
               <Play :size="19" class="ml-0.5 fill-current" />
             </span>
           </span>
-          <span class="mt-3 block truncate text-sm font-bold text-white">{{ playlist.title }}</span>
-          <span class="mt-1 block line-clamp-2 text-xs leading-5 text-[#777]">{{ playlist.subtitle }}</span>
+          <span class="mt-3 block truncate text-sm font-bold text-white transition group-hover:text-[#8be8a8]">{{ playlist.title }}</span>
+          <span class="mt-1 block line-clamp-2 text-xs leading-5 text-[#8b948e]">{{ playlist.subtitle }}</span>
         </button>
       </div>
     </section>
 
     <section>
       <div class="mb-4 flex items-end justify-between">
-        <div><p class="sonix-kicker">ON REPEAT</p><h2 class="sonix-section-title">Top artists</h2></div>
+        <div><p class="melodyhub-kicker">ON REPEAT</p><h2 class="melodyhub-section-title">Top artists</h2></div>
         <div class="flex gap-1">
-          <button class="sonix-icon-btn" title="Previous artists" @click="scrollArtists(-1)"><ChevronLeft :size="18" /></button>
-          <button class="sonix-icon-btn" title="Next artists" @click="scrollArtists(1)"><ChevronRight :size="18" /></button>
+          <button class="melodyhub-icon-btn" title="Previous artists" @click="scrollArtists(-1)"><ChevronLeft :size="18" /></button>
+          <button class="melodyhub-icon-btn" title="Next artists" @click="scrollArtists(1)"><ChevronRight :size="18" /></button>
         </div>
       </div>
       <div v-if="topArtistsLoading" class="flex gap-4 overflow-hidden">
@@ -169,18 +177,18 @@ function scrollArtists(direction) {
           :to="{ name: 'artist-detail', params: { slug: artist.slug } }"
           class="group w-32 shrink-0 snap-start text-center sm:w-40"
         >
-          <span class="relative mx-auto block aspect-square overflow-hidden rounded-full bg-[#181818] ring-1 ring-white/5">
+          <span class="relative mx-auto block aspect-square overflow-hidden rounded-full bg-[#181818] p-1 ring-1 ring-white/10 transition group-hover:ring-[#65e78c]/70">
             <img v-if="artist.imageUrl" :src="artist.imageUrl" :alt="artist.name" class="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
             <span v-else class="grid h-full w-full place-items-center text-[#555]"><CheckCircle2 :size="26" /></span>
           </span>
-          <span class="mt-3 block truncate text-sm font-bold text-white">{{ artist.name }}</span>
-          <span class="mt-1 block truncate text-xs text-[#777]">Artist</span>
+          <span class="mt-3 block truncate text-sm font-bold text-white transition group-hover:text-[#8be8a8]">{{ artist.name }}</span>
+          <span class="mt-1 block truncate text-xs text-[#87918a]">Artist</span>
         </RouterLink>
       </div>
     </section>
 
     <section>
-      <div class="mb-4"><p class="sonix-kicker">JUST LANDED</p><h2 class="sonix-section-title">New releases</h2></div>
+      <div class="mb-4"><p class="melodyhub-kicker">JUST LANDED</p><h2 class="melodyhub-section-title">New releases</h2></div>
 
       <div v-if="newReleasesLoading" class="grid gap-2 sm:grid-cols-2">
         <div v-for="n in 4" :key="n" class="flex items-center gap-3 rounded-lg p-2">
@@ -197,7 +205,7 @@ function scrollArtists(direction) {
         <button
           v-for="song in newReleases"
           :key="song.id"
-          class="group flex min-w-0 items-center gap-3 rounded-lg p-2 text-left transition hover:bg-white/5"
+          class="group flex min-w-0 items-center gap-3 rounded-lg border border-transparent p-2 text-left transition hover:border-white/[0.06] hover:bg-white/[0.045]"
           @click="playNewRelease(song)"
         >
           <span class="relative shrink-0">
@@ -205,7 +213,7 @@ function scrollArtists(direction) {
               v-if="song.coverUrl"
               :src="song.coverUrl"
               :alt="`${song.title} cover`"
-              class="size-13 rounded-md object-cover"
+              class="size-13 rounded-lg object-cover ring-1 ring-white/[0.08]"
             />
             <span v-else class="grid size-13 place-items-center rounded-md bg-white/[0.06] text-[#555]">
               <Music2 :size="20" />
@@ -215,8 +223,8 @@ function scrollArtists(direction) {
             </span>
           </span>
           <span class="min-w-0 flex-1">
-            <span class="block truncate text-sm font-bold text-white">{{ song.title }}</span>
-            <span class="mt-1 block truncate text-xs text-[#777]">/songs/{{ song.slug }}</span>
+            <span class="block truncate text-sm font-bold text-white transition group-hover:text-[#8be8a8]">{{ song.title }}</span>
+            <span class="mt-1 block truncate text-xs text-[#87918a]">/songs/{{ song.slug }}</span>
           </span>
           <span class="text-[10px] font-bold text-[#666]">{{ formatReleaseDate(song.createdAt) }}</span>
         </button>
@@ -225,16 +233,16 @@ function scrollArtists(direction) {
 
     <section class="pb-8">
       <div class="mb-4 flex items-end justify-between">
-        <div><p class="sonix-kicker">LISTEN DEEPER</p><h2 class="sonix-section-title">Podcasts for you</h2></div>
+        <div><p class="melodyhub-kicker">LISTEN DEEPER</p><h2 class="melodyhub-section-title">Podcasts for you</h2></div>
         <RouterLink :to="{ name: 'podcasts' }" class="text-xs font-bold text-[#8b8b8b] hover:text-white">Browse podcasts</RouterLink>
       </div>
       <div class="grid gap-3 sm:grid-cols-3">
-        <article v-for="podcast in podcasts" :key="podcast.id" class="flex min-w-0 gap-3 rounded-lg bg-white/[0.035] p-3 transition hover:bg-white/[0.065]">
-          <img :src="podcast.cover" :alt="podcast.title" class="size-20 rounded-md object-cover" />
+        <article v-for="podcast in podcasts" :key="podcast.id" class="flex min-w-0 gap-3 rounded-lg border border-white/[0.055] bg-[#151a1b] p-3 transition hover:-translate-y-0.5 hover:border-white/10 hover:bg-[#192021]">
+          <img :src="podcast.cover" :alt="podcast.title" class="size-20 rounded-md object-cover ring-1 ring-white/[0.08]" />
           <div class="min-w-0">
             <p class="line-clamp-2 text-sm font-bold text-white">{{ podcast.title }}</p>
-            <p class="mt-1 truncate text-xs text-[#777]">{{ podcast.host }}</p>
-            <p class="mt-3 text-[10px] font-bold text-[#1DB954]">{{ podcast.length }}</p>
+            <p class="mt-1 truncate text-xs text-[#8b948e]">{{ podcast.host }}</p>
+            <p class="mt-3 text-[10px] font-bold text-[#65e78c]">{{ podcast.length }}</p>
           </div>
         </article>
       </div>

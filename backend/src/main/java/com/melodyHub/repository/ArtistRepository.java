@@ -56,6 +56,21 @@ public class ArtistRepository {
         return findActiveByUserId(userId).isPresent();
     }
 
+    /**
+     * Checks whether a slug is already used by ANY artist row (the unique
+     * constraint ignores soft-delete), so generated slugs stay collision-free.
+     */
+    public boolean slugExists(String slug) throws SQLException {
+        String sql = "SELECT 1 FROM artists WHERE slug = ? LIMIT 1";
+        try (var connection = DatabaseConfig.getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            statement.setString(1, slug);
+            try (var resultSet = statement.executeQuery()) {
+                return resultSet.next();
+            }
+        }
+    }
+
     public List<AdminRow> findPage(String query, int limit, int offset) throws SQLException {
         StringBuilder sql = new StringBuilder("""
                 SELECT a.id, a.user_id, a.name, a.slug, a.bio, a.image_url,

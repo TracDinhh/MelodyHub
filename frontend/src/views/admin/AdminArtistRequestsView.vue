@@ -83,8 +83,8 @@ onMounted(load);
     <div class="mb-6 flex items-center gap-3">
       <ShieldCheck :size="28" class="text-[#1DB954]" />
       <div>
-        <p class="sonix-kicker">ADMIN</p>
-        <h1 class="sonix-section-title">Artist Requests</h1>
+        <p class="melodyhub-kicker">ADMIN</p>
+        <h1 class="melodyhub-section-title">Artist Requests</h1>
       </div>
     </div>
 

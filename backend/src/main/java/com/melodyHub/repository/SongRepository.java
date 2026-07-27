@@ -44,9 +44,7 @@ public class SongRepository {
         this.dataSource = Objects.requireNonNull(dataSource, "dataSource must not be null");
     }
 
-    /**
-     * Creates a song and links it to the owning artist as MAIN, in one transaction.
-     */
+
     public Song create(Song song, int artistId) throws SQLException {
         String insertSong = """
                 INSERT INTO songs (title, slug, duration_sec, file_path, cover_url, lyrics, status)

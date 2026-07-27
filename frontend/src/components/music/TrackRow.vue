@@ -33,11 +33,11 @@ const isLiked = computed(() => player.likedIds.has(props.track.id));
     </div>
     <p class="truncate text-xs text-[#777]">{{ showAlbum ? track.album : track.plays }}</p>
     <p class="text-xs text-[#777]">{{ formatDuration(track.duration) }}</p>
-    <button class="sonix-icon-btn !size-8" :title="isLiked ? 'Remove from favorites' : 'Add to favorites'" @click="player.toggleLike(track.id)">
+    <button class="melodyhub-icon-btn !size-8" :title="isLiked ? 'Remove from favorites' : 'Add to favorites'" @click="player.toggleLike(track.id)">
       <Heart :size="16" :class="isLiked ? 'fill-[#1DB954] text-[#1DB954]' : ''" />
     </button>
     <div class="relative">
-      <button class="sonix-icon-btn !size-8" title="Track options" @click="menuOpen = !menuOpen"><MoreHorizontal :size="17" /></button>
+      <button class="melodyhub-icon-btn !size-8" title="Track options" @click="menuOpen = !menuOpen"><MoreHorizontal :size="17" /></button>
       <div v-if="menuOpen" class="absolute right-0 top-8 z-20 w-40 rounded-lg border border-white/10 bg-[#202020] p-1.5 text-xs text-[#bbb] shadow-xl">
         <button class="w-full rounded-md px-3 py-2 text-left hover:bg-white/10 hover:text-white">Add to queue</button>
         <button class="w-full rounded-md px-3 py-2 text-left hover:bg-white/10 hover:text-white">Go to album</button>

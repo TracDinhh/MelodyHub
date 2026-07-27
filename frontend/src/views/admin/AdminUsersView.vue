@@ -58,8 +58,8 @@ onMounted(load);
     <div class="mb-6 flex items-center gap-3">
       <Users :size="28" class="text-[#1DB954]" />
       <div>
-        <p class="sonix-kicker">ADMIN</p>
-        <h1 class="sonix-section-title">Users <span class="text-sm font-normal text-[#666]">({{ total }})</span></h1>
+        <p class="melodyhub-kicker">ADMIN</p>
+        <h1 class="melodyhub-section-title">Users <span class="text-sm font-normal text-[#666]">({{ total }})</span></h1>
       </div>
     </div>
 

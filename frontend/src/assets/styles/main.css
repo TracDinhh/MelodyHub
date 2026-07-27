@@ -2,17 +2,17 @@
 
 @theme {
   --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --color-sonix-green: #1DB954;
-  --color-sonix-black: #090909;
-  --color-sonix-panel: #121212;
+  --color-melodyhub-green: #1DB954;
+  --color-melodyhub-black: #080a0c;
+  --color-melodyhub-panel: #121619;
 }
 
 @layer base {
   :root {
     color-scheme: dark;
     font-family: var(--font-sans);
-    background: #090909;
-    color: #fff;
+    background: #080a0c;
+    color: #f7f8f6;
     font-synthesis: none;
   }
 
@@ -23,7 +23,7 @@
 
   html {
     min-width: 320px;
-    background: #090909;
+    background: #080a0c;
   }
 
   body {
@@ -31,7 +31,7 @@
     min-height: 100vh;
     margin: 0;
     overflow: hidden;
-    background: #090909;
+    background: #080a0c;
   }
 
   button,
@@ -76,48 +76,70 @@
 }
 
 @layer components {
-  .sonix-icon-btn {
-    @apply grid size-9 shrink-0 place-items-center rounded-full text-[#858585] transition hover:bg-white/10 hover:text-white disabled:opacity-40;
+  .melodyhub-icon-btn {
+    @apply grid size-9 shrink-0 place-items-center rounded-full text-[#8d9792] transition duration-200 hover:bg-white/10 hover:text-white disabled:opacity-40;
   }
 
-  .sonix-player-btn {
-    @apply grid size-8 place-items-center rounded-full text-[#8a8a8a] transition hover:text-white;
+  .melodyhub-player-btn {
+    @apply grid size-8 place-items-center rounded-full text-[#8d9792] transition duration-200 hover:bg-white/10 hover:text-white;
   }
 
-  .sonix-menu-item {
-    @apply flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-xs font-semibold text-[#aaa] transition hover:bg-white/5 hover:text-white;
+  .melodyhub-menu-item {
+    @apply flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-xs font-semibold text-[#b0b8b2] transition hover:bg-white/7 hover:text-white;
   }
 
-  .sonix-kicker {
-    @apply text-[10px] font-black tracking-[0.16em] text-[#1DB954];
+  .melodyhub-kicker {
+    @apply text-[10px] font-black tracking-[0.16em] text-[#64e68a];
   }
 
-  .sonix-section-title {
+  .melodyhub-section-title {
     @apply mt-1 text-xl font-black text-white sm:text-2xl;
   }
 
-  .sonix-field {
+  .melodyhub-field {
     @apply block text-xs font-bold text-[#aaa];
   }
 
-  .sonix-field > span {
+  .melodyhub-field > span {
     @apply mb-2 block;
   }
 
-  .sonix-field > div {
+  .melodyhub-field > div {
     @apply flex h-11 items-center gap-2 rounded-lg border border-white/10 bg-black/30 px-3 text-[#666] transition focus-within:border-[#1DB954]/70 focus-within:ring-2 focus-within:ring-[#1DB954]/10;
   }
 
-  .sonix-field input {
+  .melodyhub-field input {
     @apply min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-[#555];
   }
 
-  .sonix-field > input {
+  .melodyhub-field > input {
     @apply h-11 w-full rounded-lg border border-white/10 bg-black/30 px-3 transition focus:border-[#1DB954]/70 focus:ring-2 focus:ring-[#1DB954]/10;
   }
 }
 
-.sonix-range {
+.melodyhub-app-shell {
+  background:
+    radial-gradient(900px 460px at 62% -10%, rgba(29, 185, 84, 0.09), transparent 66%),
+    #080a0c;
+}
+
+.melodyhub-main-panel {
+  background:
+    linear-gradient(180deg, rgba(21, 27, 30, 0.94) 0%, rgba(12, 15, 17, 0.98) 190px),
+    #0c0f11;
+}
+
+.melodyhub-panel-edge {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035), 0 16px 45px rgba(0, 0, 0, 0.14);
+}
+
+.melodyhub-hero-shine {
+  background:
+    linear-gradient(90deg, rgba(8, 10, 12, 0.96) 0%, rgba(8, 10, 12, 0.78) 42%, rgba(8, 10, 12, 0.2) 100%),
+    linear-gradient(0deg, rgba(8, 10, 12, 0.5), transparent 58%);
+}
+
+.melodyhub-range {
   --range-progress: 0%;
   height: 4px;
   appearance: none;
@@ -132,7 +154,7 @@
   cursor: pointer;
 }
 
-.sonix-range::-webkit-slider-thumb {
+.melodyhub-range::-webkit-slider-thumb {
   width: 12px;
   height: 12px;
   appearance: none;
@@ -143,12 +165,12 @@
   transition: opacity 150ms ease;
 }
 
-.sonix-range:hover::-webkit-slider-thumb,
-.sonix-range:focus-visible::-webkit-slider-thumb {
+.melodyhub-range:hover::-webkit-slider-thumb,
+.melodyhub-range:focus-visible::-webkit-slider-thumb {
   opacity: 1;
 }
 
-.sonix-range::-moz-range-thumb {
+.melodyhub-range::-moz-range-thumb {
   width: 12px;
   height: 12px;
   border: 0;

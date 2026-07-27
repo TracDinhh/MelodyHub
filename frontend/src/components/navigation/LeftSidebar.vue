@@ -51,31 +51,31 @@ function deletePlaylist(id) {
     @click="emit('close')"
   />
   <aside
-    class="fixed inset-y-0 left-0 z-50 flex w-60 flex-col border-r border-white/5 bg-[#090909] transition-transform duration-300 lg:static lg:z-auto lg:translate-x-0"
+    class="melodyhub-panel-edge fixed inset-y-0 left-0 z-50 flex w-60 flex-col rounded-r-xl border border-white/[0.055] bg-[#101417] transition-transform duration-300 lg:static lg:z-auto lg:rounded-xl lg:translate-x-0"
     :class="mobileOpen ? 'translate-x-0' : '-translate-x-full'"
   >
     <header class="flex h-18 items-center justify-between px-5">
       <RouterLink :to="{ name: 'home' }" class="flex items-center gap-2.5" @click="emit('close')">
-        <span class="grid size-9 place-items-center rounded-full bg-[#1DB954] text-black">
+        <span class="grid size-9 place-items-center rounded-xl bg-[#1DB954] text-black shadow-[0_7px_20px_rgba(29,185,84,0.22)]">
           <Disc3 :size="21" :stroke-width="2.5" />
         </span>
-        <span class="text-lg font-black tracking-[0.18em] text-white">SONIX</span>
+        <span class="text-base font-black tracking-[0.12em] text-white">MELODY HUB</span>
       </RouterLink>
-      <button class="sonix-icon-btn hidden lg:grid" title="More options">
+      <button class="melodyhub-icon-btn hidden lg:grid" title="More options">
         <MoreHorizontal :size="19" />
       </button>
-      <button class="sonix-icon-btn lg:hidden" title="Close menu" @click="emit('close')">
+      <button class="melodyhub-icon-btn lg:hidden" title="Close menu" @click="emit('close')">
         <X :size="19" />
       </button>
     </header>
 
     <div class="px-4 pb-3">
-      <label class="flex h-10 items-center gap-2 rounded-lg bg-white/5 px-3 text-[#A3A3A3] ring-1 ring-white/5 focus-within:ring-[#1DB954]/60">
+      <label class="flex h-10 items-center gap-2 rounded-lg bg-black/20 px-3 text-[#A3A3A3] ring-1 ring-white/[0.07] transition focus-within:bg-black/35 focus-within:ring-[#1DB954]/60">
         <Search :size="16" />
         <input
           class="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-[#737373]"
           placeholder="Search"
-          aria-label="Search SONIX"
+          aria-label="Search Melody Hub"
         />
         <SlidersHorizontal :size="15" />
       </label>
@@ -86,8 +86,8 @@ function deletePlaylist(id) {
         v-for="item in navItems"
         :key="item.route"
         :to="{ name: item.route }"
-        class="group relative flex h-10 items-center gap-3 rounded-md px-3 text-sm font-semibold text-[#8f8f8f] transition hover:bg-white/5 hover:text-white"
-        active-class="bg-white/[0.06] !text-[#1DB954] before:absolute before:-left-3 before:h-6 before:w-0.5 before:rounded-r before:bg-[#1DB954]"
+        class="group relative flex h-10 items-center gap-3 rounded-md px-3 text-sm font-semibold text-[#8f9893] transition hover:bg-white/[0.06] hover:text-white"
+        active-class="bg-[#1DB954]/[0.10] !text-[#65e78c] before:absolute before:-left-3 before:h-6 before:w-0.5 before:rounded-r before:bg-[#1DB954]"
         @click="emit('close')"
       >
         <component :is="item.icon" :size="18" />
@@ -98,7 +98,7 @@ function deletePlaylist(id) {
     <section class="mt-7 min-h-0 flex-1 px-3">
       <div class="mb-2 flex items-center justify-between px-3">
         <h2 class="text-[10px] font-black tracking-[0.16em] text-[#737373]">MY PLAYLISTS</h2>
-        <button class="sonix-icon-btn !size-7" title="Create playlist" @click="addPlaylist">
+        <button class="melodyhub-icon-btn !size-7" title="Create playlist" @click="addPlaylist">
           <Plus :size="16" />
         </button>
       </div>
@@ -121,10 +121,10 @@ function deletePlaylist(id) {
       </div>
     </section>
 
-    <div class="m-3 overflow-hidden rounded-lg bg-[#151515] ring-1 ring-white/5">
-      <img :src="tracks[2].cover" :alt="`${tracks[2].title} cover`" class="h-20 w-full object-cover opacity-75" />
-      <div class="p-3">
-        <p class="text-[10px] font-bold uppercase text-[#727272]">Recently saved</p>
+    <div class="m-3 overflow-hidden rounded-lg bg-[#171c1d] ring-1 ring-white/[0.06]">
+      <img :src="tracks[2].cover" :alt="`${tracks[2].title} cover`" class="h-20 w-full object-cover opacity-80" />
+      <div class="border-t border-white/[0.05] p-3">
+        <p class="text-[10px] font-bold uppercase text-[#84918a]">Recently saved</p>
         <p class="mt-1 truncate text-xs font-bold text-white">{{ tracks[2].title }}</p>
         <p class="truncate text-[11px] text-[#888]">{{ tracks[2].artist }}</p>
       </div>

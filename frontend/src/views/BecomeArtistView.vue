@@ -28,13 +28,11 @@ const error = ref('');
 
 const fieldErrors = reactive({
   artistName: '',
-  slug: '',
   avatar: ''
 });
 
 const form = reactive({
   artistName: '',
-  slug: '',
   bio: ''
 });
 
@@ -49,23 +47,9 @@ const submittedDate = computed(() =>
     : ''
 );
 
-function toSlug(value) {
-  return value
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9\s-]/g, '')
-    .trim()
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-');
-}
-
 function onArtistNameInput() {
   fieldErrors.artistName = '';
   error.value = '';
-  if (!form.slug || form.slug === toSlug(form.artistName.slice(0, -1))) {
-    form.slug = toSlug(form.artistName);
-  }
 }
 
 function clearFieldError(field) {
@@ -75,19 +59,11 @@ function clearFieldError(field) {
 
 function validateForm() {
   fieldErrors.artistName = '';
-  fieldErrors.slug = '';
-  let valid = true;
-
   if (form.artistName.trim().length < 2) {
     fieldErrors.artistName = 'Artist name must be at least 2 characters.';
-    valid = false;
+    return false;
   }
-  const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-  if (!form.slug.trim() || !slugPattern.test(form.slug.trim())) {
-    fieldErrors.slug = 'Slug must be lowercase letters, numbers, and hyphens (e.g. my-artist-name).';
-    valid = false;
-  }
-  return valid;
+  return true;
 }
 
 function selectAvatar(event) {
@@ -141,18 +117,13 @@ async function submit() {
 
     request.value = await artistApplicationService.submitRequest({
       artistName: form.artistName.trim(),
-      slug: form.slug.trim(),
       bio: form.bio.trim() || null,
       imageUrl
     });
   } catch (requestError) {
     const code = requestError.code;
-    if (code === 'ARTIST_SLUG_EXISTS') {
-      fieldErrors.slug = 'This slug is already taken. Choose a different one.';
-    } else if (code === 'INVALID_ARTIST_NAME') {
+    if (code === 'INVALID_ARTIST_NAME') {
       fieldErrors.artistName = requestError.message;
-    } else if (code === 'INVALID_ARTIST_SLUG') {
-      fieldErrors.slug = requestError.message;
     } else if (code === 'INVALID_FILE' || code === 'UPLOAD_FAILED') {
       fieldErrors.avatar = requestError.message || 'Avatar upload failed. Try another image.';
     } else if (code === 'ARTIST_REQUEST_PENDING_EXISTS') {
@@ -177,8 +148,8 @@ onMounted(loadRequest);
 <template>
   <div class="mx-auto w-full max-w-5xl px-5 py-8 pb-12 sm:px-8">
     <div class="mb-8 max-w-2xl">
-      <p class="sonix-kicker">ARTIST ACCESS</p>
-      <h1 class="sonix-section-title">Become an Artist</h1>
+      <p class="melodyhub-kicker">ARTIST ACCESS</p>
+      <h1 class="melodyhub-section-title">Become an Artist</h1>
       <p class="mt-3 text-sm leading-6 text-[#999]">
         Submit your artist details for review. An admin will approve your request before
         your account becomes an Artist.
@@ -252,7 +223,7 @@ onMounted(loadRequest);
         @submit.prevent="submit"
       >
         <div class="space-y-5 border border-white/10 bg-[#121212] p-5 sm:p-6">
-          <label class="sonix-field">
+          <label class="melodyhub-field">
             <span>Artist name</span>
             <div>
               <Music2 :size="16" />
@@ -268,24 +239,7 @@ onMounted(loadRequest);
             </small>
           </label>
 
-          <label class="sonix-field">
-            <span>
-              Slug
-              <span class="font-normal text-[#666]">— URL: /artist/{{ form.slug || 'your-slug' }}</span>
-            </span>
-            <div>
-              <span class="select-none text-xs text-[#666]">/</span>
-              <input
-                v-model="form.slug"
-                maxlength="220"
-                placeholder="your-artist-slug"
-                @input="clearFieldError('slug')"
-              />
-            </div>
-            <small v-if="fieldErrors.slug" class="mt-1 block text-red-300">{{ fieldErrors.slug }}</small>
-          </label>
-
-          <label class="sonix-field">
+          <label class="melodyhub-field">
             <span>Bio <span class="font-normal text-[#666]">(optional)</span></span>
             <textarea
               v-model="form.bio"
