@@ -1,6 +1,8 @@
 package com.melodyHub.repository;
 
 import com.melodyHub.config.DatabaseConfig;
+import com.melodyHub.entity.Album;
+import com.melodyHub.entity.Artist;
 import com.melodyHub.entity.Song;
 import com.melodyHub.entity.SongStatus;
 import java.sql.Connection;
@@ -10,9 +12,11 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import javax.sql.DataSource;
 
 public class SongRepository {
@@ -363,6 +367,187 @@ public class SongRepository {
                 return Optional.empty();
             }
         }
+    }
+
+    /**
+     * Returns all non-deleted artists linked to the song via {@code song_artists},
+     * ordered MAIN first, then FEATURED, then by position.
+     */
+    public List<Artist> findArtistsForSong(int songId) throws SQLException {
+        String sql = """
+                SELECT a.id, a.user_id, a.name, a.slug, a.bio, a.image_url,
+                       a.created_at, a.updated_at, a.deleted_at
+                FROM song_artists sa
+                JOIN artists a ON a.id = sa.artist_id
+                WHERE sa.song_id = ?
+                  AND a.deleted_at IS NULL
+                ORDER BY FIELD(sa.role, 'MAIN', 'FEATURED'), sa.position
+                """;
+
+        try (var connection = getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, songId);
+            try (var resultSet = statement.executeQuery()) {
+                List<Artist> artists = new ArrayList<>();
+                while (resultSet.next()) {
+                    artists.add(mapArtistRow(resultSet));
+                }
+                return artists;
+            }
+        }
+    }
+
+    /**
+     * Returns the active album for the song, if any. The album must not be
+     * soft-deleted. Returns empty when the song has no album or the album
+     * was deleted.
+     */
+    public Optional<Album> findAlbumForSong(Integer albumId) throws SQLException {
+        if (albumId == null) {
+            return Optional.empty();
+        }
+        String sql = """
+                SELECT id, artist_id, title, slug, album_type, cover_url,
+                       release_date, created_at, updated_at, deleted_at
+                FROM albums
+                WHERE id = ? AND deleted_at IS NULL
+                """;
+        try (var connection = getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, albumId);
+            try (var resultSet = statement.executeQuery()) {
+                if (!resultSet.next()) {
+                    return Optional.empty();
+                }
+                return Optional.of(mapAlbumRow(resultSet));
+            }
+        }
+    }
+
+    public long countLikes(int songId) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM song_likes WHERE song_id = ?";
+        try (var connection = getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, songId);
+            try (var resultSet = statement.executeQuery()) {
+                return resultSet.next() ? resultSet.getLong(1) : 0L;
+            }
+        }
+    }
+
+    public boolean isLikedBy(int songId, int userId) throws SQLException {
+        String sql = "SELECT 1 FROM song_likes WHERE song_id = ? AND user_id = ? LIMIT 1";
+        try (var connection = getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, songId);
+            statement.setInt(2, userId);
+            try (var resultSet = statement.executeQuery()) {
+                return resultSet.next();
+            }
+        }
+    }
+
+    public void incrementPlayCount(int songId) throws SQLException {
+        String sql = """
+                UPDATE songs
+                SET play_count = play_count + 1,
+                    updated_at = updated_at
+                WHERE id = ? AND deleted_at IS NULL
+                """;
+        try (var connection = getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, songId);
+            statement.executeUpdate();
+        }
+    }
+
+    /**
+     * Returns up to {@code limit} published songs related to {@code songId}.
+     * Priority order: same MAIN artist → same album → anything else.
+     * Dedupes by song id. Always excludes the source song itself.
+     */
+    public List<Song> findRelated(int songId, int albumId, int limit) throws SQLException {
+        if (limit <= 0) {
+            return List.of();
+        }
+
+        String sql = """
+                SELECT s.id, s.title, s.slug, s.album_id, s.track_number, s.duration_sec,
+                       s.file_path, s.cover_url, s.lyrics, s.status, s.play_count,
+                       s.created_at, s.updated_at, s.deleted_at,
+                       (
+                           SELECT MIN(
+                               CASE sa.role
+                                   WHEN 'MAIN' THEN 1
+                                   WHEN 'FEATURED' THEN 2
+                                   ELSE 3
+                               END
+                           )
+                           FROM song_artists sa
+                           WHERE sa.song_id = s.id
+                             AND sa.artist_id IN (
+                                 SELECT sa2.artist_id FROM song_artists sa2 WHERE sa2.song_id = ?
+                             )
+                       ) AS same_artist_rank,
+                       (CASE WHEN s.album_id = ? THEN 0 ELSE 1 END) AS same_album_rank
+                FROM songs s
+                WHERE s.status = 'PUBLISHED'
+                  AND s.deleted_at IS NULL
+                  AND s.id <> ?
+                ORDER BY same_artist_rank ASC, same_album_rank ASC, s.play_count DESC, s.created_at DESC
+                LIMIT ?
+                """;
+
+        try (var connection = getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, songId);
+            statement.setInt(2, albumId);
+            statement.setInt(3, songId);
+            statement.setInt(4, limit);
+
+            try (var resultSet = statement.executeQuery()) {
+                List<Song> songs = new ArrayList<>();
+                Set<Integer> seen = new HashSet<>();
+                while (resultSet.next()) {
+                    Song song = mapRow(resultSet);
+                    if (seen.add(song.getId())) {
+                        songs.add(song);
+                    }
+                }
+                return songs;
+            }
+        }
+    }
+
+    private Artist mapArtistRow(ResultSet resultSet) throws SQLException {
+        return new Artist(
+                resultSet.getInt("id"),
+                getNullableInteger(resultSet, "user_id"),
+                resultSet.getString("name"),
+                resultSet.getString("slug"),
+                resultSet.getString("bio"),
+                resultSet.getString("image_url"),
+                getLocalDateTime(resultSet, "created_at"),
+                getLocalDateTime(resultSet, "updated_at"),
+                getLocalDateTime(resultSet, "deleted_at")
+        );
+    }
+
+    private Album mapAlbumRow(ResultSet resultSet) throws SQLException {
+        java.sql.Date releaseDate = resultSet.getDate("release_date");
+        LocalDateTime releaseDateTime = releaseDate == null ? null : releaseDate.toLocalDate().atStartOfDay();
+        return new Album(
+                resultSet.getInt("id"),
+                resultSet.getInt("artist_id"),
+                resultSet.getString("title"),
+                resultSet.getString("slug"),
+                resultSet.getString("album_type"),
+                resultSet.getString("cover_url"),
+                releaseDateTime,
+                getLocalDateTime(resultSet, "created_at"),
+                getLocalDateTime(resultSet, "updated_at"),
+                getLocalDateTime(resultSet, "deleted_at")
+        );
     }
 
     private Connection getConnection() throws SQLException {

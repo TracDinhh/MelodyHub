@@ -69,6 +69,15 @@ const router = createRouter({
       }
     },
     {
+      path: '/songs/:slug',
+      name: 'song-detail',
+      component: () => import('../views/SongDetailView.vue'),
+      meta: {
+        title: 'Song',
+        breadcrumb: 'Home / Song'
+      }
+    },
+    {
       path: '/library',
       name: 'library',
       component: () => import('../views/LibraryView.vue'),
