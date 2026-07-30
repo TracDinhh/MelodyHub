@@ -14,6 +14,13 @@ export const songService = {
     });
   },
 
+  getRelated(slug, params) {
+    return apiClient.get(`/api/songs/${encodeURIComponent(slug)}/related`, {
+      params,
+      authenticated: false
+    });
+  },
+
   listMine(params) {
     return apiClient.get('/api/artist/songs', { params });
   },

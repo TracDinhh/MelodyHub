@@ -17,6 +17,7 @@ const notFound = ref(false);
 const playerTracks = computed(() =>
   songs.value.map((song) => ({
     id: song.id,
+    slug: song.slug,
     title: song.title,
     artist: artist.value?.name || '',
     cover: song.coverUrl,
@@ -95,7 +96,7 @@ watch(() => route.params.slug, (slug) => slug && load(slug));
             This artist hasn't published any songs yet.
           </div>
           <div v-else class="overflow-x-auto">
-            <TrackRow v-for="(track, index) in playerTracks" :key="track.id" :track="track" :index="index" />
+            <TrackRow v-for="(track, index) in playerTracks" :key="track.id" :track="track" :index="index" :song-slug="track.slug" />
           </div>
         </section>
 

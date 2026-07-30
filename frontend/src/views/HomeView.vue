@@ -202,13 +202,16 @@ function scrollArtists(direction) {
       </div>
 
       <div v-else class="grid gap-2 sm:grid-cols-2">
-        <button
+        <div
           v-for="song in newReleases"
           :key="song.id"
-          class="group flex min-w-0 items-center gap-3 rounded-lg border border-transparent p-2 text-left transition hover:border-white/[0.06] hover:bg-white/[0.045]"
-          @click="playNewRelease(song)"
+          class="group flex min-w-0 items-center gap-3 rounded-lg border border-transparent p-2 transition hover:border-white/[0.06] hover:bg-white/[0.045]"
         >
-          <span class="relative shrink-0">
+          <button
+            class="relative shrink-0"
+            :title="`Open ${song.title}`"
+            @click="$router.push({ name: 'song-detail', params: { slug: song.slug } })"
+          >
             <img
               v-if="song.coverUrl"
               :src="song.coverUrl"
@@ -218,16 +221,23 @@ function scrollArtists(direction) {
             <span v-else class="grid size-13 place-items-center rounded-md bg-white/[0.06] text-[#555]">
               <Music2 :size="20" />
             </span>
-            <span class="absolute inset-0 grid place-items-center rounded-md bg-black/50 opacity-0 transition group-hover:opacity-100">
-              <Play :size="17" class="fill-white text-white" />
-            </span>
-          </span>
-          <span class="min-w-0 flex-1">
+          </button>
+          <RouterLink
+            :to="{ name: 'song-detail', params: { slug: song.slug } }"
+            class="min-w-0 flex-1"
+          >
             <span class="block truncate text-sm font-bold text-white transition group-hover:text-[#8be8a8]">{{ song.title }}</span>
             <span class="mt-1 block truncate text-xs text-[#87918a]">/songs/{{ song.slug }}</span>
-          </span>
+          </RouterLink>
+          <button
+            class="melodyhub-icon-btn !size-9 shrink-0"
+            :title="`Play ${song.title}`"
+            @click="playNewRelease(song)"
+          >
+            <Play :size="15" class="fill-current" />
+          </button>
           <span class="text-[10px] font-bold text-[#666]">{{ formatReleaseDate(song.createdAt) }}</span>
-        </button>
+        </div>
       </div>
     </section>
 

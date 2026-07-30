@@ -1,0 +1,226 @@
+<script setup>
+import { computed, onMounted, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
+import {
+  ArrowLeft,
+  Heart,
+  LoaderCircle,
+  Music2,
+  Pause,
+  Play,
+  Plus
+} from '@lucide/vue';
+import { songService } from '../services/songService';
+import { usePlayerStore } from '../stores/player.store';
+import { formatDuration } from '../utils/formatDate';
+
+const route = useRoute();
+const player = usePlayerStore();
+
+const song = ref(null);
+const related = ref([]);
+const isLoading = ref(true);
+const notFound = ref(false);
+
+const artistLabel = computed(() => {
+  if (!song.value?.artists?.length) return 'Unknown artist';
+  return song.value.artists.map((artist) => artist.name).join(' & ');
+});
+
+const artistList = computed(() => song.value?.artists ?? []);
+
+const relatedTrackList = computed(() =>
+  related.value.map((item) => ({
+    id: item.id,
+    title: item.title,
+    cover: item.coverUrl,
+    artist: (item.artists || []).map((artist) => artist.name).join(' & '),
+    duration: item.durationSec || 0,
+    audioUrl: item.audioUrl
+  }))
+);
+
+async function load(slug) {
+  isLoading.value = true;
+  notFound.value = false;
+  song.value = null;
+  related.value = [];
+  try {
+    const [detail, relatedResponse] = await Promise.all([
+      songService.getPublic(slug),
+      songService.getRelated(slug, { size: 8 }).catch(() => ({ items: [] }))
+    ]);
+    song.value = detail;
+    related.value = relatedResponse?.items || [];
+  } catch (error) {
+    if (error.status === 404) notFound.value = true;
+  } finally {
+    isLoading.value = false;
+  }
+}
+
+function playSong() {
+  if (!song.value) return;
+  const main = toPlayerTrack(song.value);
+  const queue = [main, ...relatedTrackList.value.filter((track) => track.id !== main.id)];
+  player.playTrack(main, queue);
+}
+
+function playRelated(track) {
+  const queue = [toPlayerTrack(song.value), ...relatedTrackList.value.filter((t) => t.id !== track.id)];
+  player.playTrack(track, queue);
+}
+
+function toPlayerTrack(detail) {
+  return {
+    id: detail.id,
+    title: detail.title,
+    cover: detail.coverUrl,
+    artist: (detail.artists || []).map((artist) => artist.name).join(' & '),
+    duration: detail.durationSec || 0,
+    audioUrl: detail.audioUrl
+  };
+}
+
+const isPlaying = computed(() => player.isPlaying && player.currentTrack.id === song.value?.id);
+
+onMounted(() => load(route.params.slug));
+watch(() => route.params.slug, (slug) => slug && load(slug));
+</script>
+
+<template>
+  <div class="pb-10">
+    <div v-if="isLoading" class="flex min-h-[60vh] items-center justify-center text-sm text-[#888]">
+      <LoaderCircle :size="22" class="mr-3 animate-spin text-[#1DB954]" /> Loading song
+    </div>
+
+    <div v-else-if="notFound || !song" class="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-center">
+      <p class="text-lg font-black text-white">Song not found</p>
+      <RouterLink :to="{ name: 'home' }" class="text-xs font-bold text-[#1DB954]">Back to Home</RouterLink>
+    </div>
+
+    <template v-else>
+      <RouterLink :to="{ name: 'home' }" class="melodyhub-icon-btn ml-4 mt-4 inline-flex" title="Back">
+        <ArrowLeft :size="18" />
+      </RouterLink>
+
+      <section
+        class="relative mx-4 mt-3 min-h-[280px] overflow-hidden rounded-xl bg-cover bg-center sm:mx-7"
+        :style="song.coverUrl ? { backgroundImage: `url(${song.coverUrl})` } : {}"
+      >
+        <div class="absolute inset-0 bg-gradient-to-t from-[#0d0d0d] via-black/60 to-black/30" />
+        <div class="relative flex min-h-[280px] flex-col gap-5 px-5 py-7 sm:flex-row sm:items-end sm:gap-7 sm:px-8">
+          <img
+            v-if="song.coverUrl"
+            :src="song.coverUrl"
+            :alt="`${song.title} cover`"
+            class="size-48 shrink-0 rounded-lg object-cover shadow-2xl shadow-black/60 ring-1 ring-white/10 sm:size-56"
+          />
+          <span
+            v-else
+            class="grid size-48 shrink-0 place-items-center rounded-lg bg-[#181818] text-[#444] sm:size-56"
+          >
+            <Music2 :size="56" />
+          </span>
+
+          <div class="min-w-0 flex-1">
+            <p class="melodyhub-kicker">SONG</p>
+            <h1 class="mt-2 text-4xl font-black text-white sm:text-6xl">{{ song.title }}</h1>
+            <div class="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-white/75">
+              <span
+                v-for="artist in artistList"
+                :key="artist.id"
+              >
+                <RouterLink :to="{ name: 'artist-detail', params: { slug: artist.slug } }" class="font-bold text-white hover:text-[#8be8a8]">
+                  {{ artist.name }}
+                </RouterLink>
+              </span>
+              <span v-if="song.album" class="text-white/40">·</span>
+              <RouterLink
+                v-if="song.album"
+                :to="{ name: 'home' }"
+                class="text-white/75 hover:text-white"
+              >
+                {{ song.album.title }}
+              </RouterLink>
+              <span class="text-white/40">·</span>
+              <span>{{ (song.playCount ?? 0).toLocaleString() }} plays</span>
+              <span class="text-white/40">·</span>
+              <span>{{ formatDuration(song.durationSec) }}</span>
+            </div>
+
+            <div class="mt-5 flex flex-wrap items-center gap-3">
+              <button
+                class="inline-flex h-11 items-center gap-2 rounded-full bg-[#1DB954] px-6 text-xs font-black text-black transition hover:scale-[1.03] disabled:opacity-50"
+                :disabled="!song.audioUrl"
+                @click="playSong"
+              >
+                <Pause v-if="isPlaying" :size="17" class="fill-current" />
+                <Play v-else :size="17" class="fill-current" />
+                {{ isPlaying ? 'PAUSE' : 'PLAY' }}
+              </button>
+              <button
+                class="melodyhub-icon-btn !size-11"
+                :title="song.isLiked ? 'You liked this song' : 'Like this song'"
+                disabled
+              >
+                <Heart :size="18" :class="song.isLiked ? 'fill-[#1DB954] text-[#1DB954]' : ''" />
+              </button>
+              <button class="melodyhub-icon-btn !size-11" title="Add to playlist" disabled>
+                <Plus :size="18" />
+              </button>
+              <span class="text-xs text-white/40">Like & Add to playlist unlock in Phase 2/3</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="px-4 py-7 sm:px-7">
+        <section v-if="song.lyrics" class="rounded-lg border border-white/[0.06] bg-[#111] p-5">
+          <div class="mb-3 flex items-end justify-between">
+            <div>
+              <p class="melodyhub-kicker">LYRICS</p>
+              <h2 class="melodyhub-section-title">Words</h2>
+            </div>
+            <p class="text-[10px] font-bold text-[#666]">SYNC COMING SOON</p>
+          </div>
+          <p class="whitespace-pre-line text-sm leading-7 text-[#bbb]">{{ song.lyrics }}</p>
+        </section>
+
+        <section v-if="related.length" class="mt-8">
+          <div class="mb-3 flex items-end justify-between px-1">
+            <div>
+              <p class="melodyhub-kicker">MORE TO PLAY</p>
+              <h2 class="melodyhub-section-title">Related songs</h2>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-4">
+            <button
+              v-for="track in relatedTrackList"
+              :key="track.id"
+              class="group min-w-0 text-left"
+              @click="playRelated(track)"
+            >
+              <span class="relative block aspect-square overflow-hidden rounded-lg bg-[#181818] ring-1 ring-white/[0.07]">
+                <img
+                  v-if="track.cover"
+                  :src="track.cover"
+                  :alt="`${track.title} cover`"
+                  class="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                />
+                <span v-else class="grid h-full w-full place-items-center text-[#555]">
+                  <Music2 :size="32" />
+                </span>
+                <span class="absolute inset-0 grid place-items-center bg-black/40 opacity-0 transition group-hover:opacity-100">
+                  <Play :size="22" class="ml-0.5 fill-white text-white" />
+                </span>
+              </span>
+              <span class="mt-3 block truncate text-sm font-bold text-white transition group-hover:text-[#8be8a8]">{{ track.title }}</span>
+              <span class="mt-1 block truncate text-xs text-[#87918a]">{{ track.artist }}</span>
+            </button>
+          </div>
+        </section>
+      </div>
+    </template>
+  </div>
+</template>
