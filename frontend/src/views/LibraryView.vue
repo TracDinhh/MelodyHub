@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue';
-import { ListMusic, Play, Trash2 } from '@lucide/vue';
+import { History, ListMusic, Play, Trash2 } from '@lucide/vue';
 import TrackRow from '../components/music/TrackRow.vue';
 import { playlists, tracks } from '../data/music';
 import { usePlayerStore } from '../stores/player.store';
@@ -41,6 +41,15 @@ const deleted = ref(false);
       <div class="overflow-x-auto">
         <TrackRow v-for="(track, index) in tracks" :key="track.id" :track="track" :index="index" show-album />
       </div>
+    </section>
+
+    <section v-if="!deleted" class="px-4 py-2 sm:px-7">
+      <RouterLink
+        :to="{ name: 'library-history' }"
+        class="inline-flex items-center gap-2 rounded-full border border-white/15 px-5 py-2 text-xs font-bold text-[#aaa] transition hover:border-[#65e78c]/60 hover:text-[#65e78c]"
+      >
+        <History :size="14" /> View listen history
+      </RouterLink>
     </section>
   </div>
 </template>

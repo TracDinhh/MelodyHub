@@ -88,6 +88,16 @@ const router = createRouter({
       }
     },
     {
+      path: '/library/history',
+      name: 'library-history',
+      component: () => import('../views/ListenHistoryView.vue'),
+      meta: {
+        requiresAuth: true,
+        title: 'Listen history',
+        breadcrumb: 'Home / My Library / Listen history'
+      }
+    },
+    {
       path: '/become-an-artist',
       name: 'become-an-artist',
       component: () => import('../views/BecomeArtistView.vue'),

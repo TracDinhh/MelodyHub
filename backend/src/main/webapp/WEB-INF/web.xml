@@ -51,6 +51,11 @@
         </multipart-config>
     </servlet>
 
+    <servlet>
+        <servlet-name>ListenHistoryServlet</servlet-name>
+        <servlet-class>com.melodyHub.controller.listen.ListenHistoryServlet</servlet-class>
+    </servlet>
+
     <servlet-mapping>
         <servlet-name>AuthServlet</servlet-name>
         <url-pattern>/api/auth/*</url-pattern>
@@ -79,6 +84,11 @@
     <servlet-mapping>
         <servlet-name>UploadServlet</servlet-name>
         <url-pattern>/api/uploads/*</url-pattern>
+    </servlet-mapping>
+
+    <servlet-mapping>
+        <servlet-name>ListenHistoryServlet</servlet-name>
+        <url-pattern>/api/listens/*</url-pattern>
     </servlet-mapping>
 
     <session-config>
