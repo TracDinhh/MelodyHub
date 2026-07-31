@@ -1,5 +1,6 @@
 import { computed, ref } from 'vue';
 import { defineStore } from 'pinia';
+import { useListenTrackerStore } from './listenTracker.store';
 
 const EMPTY_TRACK = { id: null, title: '', artist: '', cover: '', duration: 0, audioUrl: null };
 
@@ -29,21 +30,52 @@ export const usePlayerStore = defineStore('player', () => {
     queue.value.findIndex((track) => track.id === currentTrack.value.id)
   );
 
+  // Listen-tracker integration: record a song once the user has actually
+  // listened past MIN_LISTEN_SECONDS. Calling useListenTrackerStore() at store
+  // init would force all components that import the player to also import the
+  // tracker (which pulls in auth + http + services), so we resolve it lazily.
+  let trackerInstance = null;
+
+  function getTracker() {
+    if (!trackerInstance) {
+      try {
+        trackerInstance = useListenTrackerStore();
+      } catch {
+        trackerInstance = null;
+      }
+    }
+    return trackerInstance;
+  }
+
   if (audio) {
     audio.volume = volume.value / 100;
     audio.addEventListener('timeupdate', () => {
-      currentTime.value = Math.floor(audio.currentTime);
+      const seconds = Math.floor(audio.currentTime);
+      currentTime.value = seconds;
+      const tracker = getTracker();
+      if (tracker && currentTrack.value?.id) {
+        tracker.noteProgress(currentTrack.value.id, seconds);
+      }
     });
     audio.addEventListener('loadedmetadata', () => {
       if (Number.isFinite(audio.duration)) durationSec.value = Math.round(audio.duration);
     });
     audio.addEventListener('play', () => {
       isPlaying.value = true;
+      const tracker = getTracker();
+      if (tracker && currentTrack.value?.id) {
+        tracker.resetOnTrackChange(currentTrack.value.id);
+        tracker.tryRecord(currentTrack.value.id);
+      }
     });
     audio.addEventListener('pause', () => {
       isPlaying.value = false;
     });
     audio.addEventListener('ended', () => {
+      const tracker = getTracker();
+      if (tracker && currentTrack.value?.id) {
+        tracker.tryRecord(currentTrack.value.id);
+      }
       if (repeat.value) {
         audio.currentTime = 0;
         audio.play().catch(() => {});

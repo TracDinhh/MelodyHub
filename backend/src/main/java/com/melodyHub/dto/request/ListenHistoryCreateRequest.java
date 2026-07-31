@@ -1,0 +1,15 @@
+package com.melodyHub.dto.request;
+
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+public class ListenHistoryCreateRequest {
+    private Integer songId;
+    private Integer playedSec;
+}
