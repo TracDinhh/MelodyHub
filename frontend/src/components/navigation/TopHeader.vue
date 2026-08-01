@@ -5,6 +5,7 @@ import {
   AudioLines,
   ChevronDown,
   Crown,
+  History,
   Library,
   LogIn,
   LogOut,
@@ -102,6 +103,9 @@ onBeforeUnmount(() => document.removeEventListener('click', closeOnOutsideClick)
           </div>
           <RouterLink :to="{ name: 'library' }" class="melodyhub-menu-item" @click="dropdownOpen = false">
             <Library :size="16" /> Library
+          </RouterLink>
+          <RouterLink v-if="authStore.isAuthenticated" :to="{ name: 'library-history' }" class="melodyhub-menu-item" @click="dropdownOpen = false">
+            <History :size="16" /> Listen history
           </RouterLink>
           <RouterLink v-if="authStore.isUser" :to="{ name: 'become-an-artist' }" class="melodyhub-menu-item" @click="dropdownOpen = false">
             <Mic2 :size="16" /> Become an Artist
