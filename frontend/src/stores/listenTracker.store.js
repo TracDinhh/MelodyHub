@@ -3,7 +3,7 @@ import { defineStore } from 'pinia';
 import { useAuthStore } from '../stores/auth.store';
 import { listenHistoryService } from '../services/listenHistoryService';
 
-const MIN_LISTEN_SECONDS = 30;
+const MIN_LISTEN_SECONDS = 0;
 const PENDING_TRACK_KEY = 'melodyhub.listen_history_pending';
 
 function readPending() {
