@@ -98,6 +98,26 @@ const router = createRouter({
       }
     },
     {
+      path: '/playlists',
+      name: 'playlists',
+      component: () => import('../views/PlaylistsView.vue'),
+      meta: {
+        requiresAuth: true,
+        title: 'My Playlists',
+        breadcrumb: 'Home / My Playlists'
+      }
+    },
+    {
+      path: '/playlists/:id',
+      name: 'playlist-detail',
+      component: () => import('../views/PlaylistDetailView.vue'),
+      meta: {
+        requiresAuth: true,
+        title: 'Playlist',
+        breadcrumb: 'Home / My Playlists / Playlist'
+      }
+    },
+    {
       path: '/become-an-artist',
       name: 'become-an-artist',
       component: () => import('../views/BecomeArtistView.vue'),

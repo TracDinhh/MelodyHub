@@ -7,11 +7,11 @@ import {
   LoaderCircle,
   Music2,
   Pause,
-  Play,
-  Plus
+  Play
 } from '@lucide/vue';
 import { songService } from '../services/songService';
 import { usePlayerStore } from '../stores/player.store';
+import AddToPlaylistButton from '../components/music/AddToPlaylistButton.vue';
 import { formatDuration } from '../utils/formatDate';
 
 const route = useRoute();
@@ -166,10 +166,7 @@ watch(() => route.params.slug, (slug) => slug && load(slug));
               >
                 <Heart :size="18" :class="song.isLiked ? 'fill-[#1DB954] text-[#1DB954]' : ''" />
               </button>
-              <button class="melodyhub-icon-btn !size-11" title="Add to playlist" disabled>
-                <Plus :size="18" />
-              </button>
-              <span class="text-xs text-white/40">Like & Add to playlist unlock in Phase 2/3</span>
+              <AddToPlaylistButton :song-id="song.id" />
             </div>
           </div>
         </div>

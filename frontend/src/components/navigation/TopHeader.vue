@@ -7,6 +7,7 @@ import {
   Crown,
   History,
   Library,
+  ListMusic,
   LogIn,
   LogOut,
   Menu,
@@ -103,6 +104,9 @@ onBeforeUnmount(() => document.removeEventListener('click', closeOnOutsideClick)
           </div>
           <RouterLink :to="{ name: 'library' }" class="melodyhub-menu-item" @click="dropdownOpen = false">
             <Library :size="16" /> Library
+          </RouterLink>
+          <RouterLink v-if="authStore.isAuthenticated" :to="{ name: 'playlists' }" class="melodyhub-menu-item" @click="dropdownOpen = false">
+            <ListMusic :size="16" /> My playlists
           </RouterLink>
           <RouterLink v-if="authStore.isAuthenticated" :to="{ name: 'library-history' }" class="melodyhub-menu-item" @click="dropdownOpen = false">
             <History :size="16" /> Listen history
