@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { ArrowRight, CheckCircle2, ChevronLeft, ChevronRight, Music2, Play } from '@lucide/vue';
 import { playlists, podcasts, tracks } from '../data/music';
+import AddToPlaylistButton from '../components/music/AddToPlaylistButton.vue';
 import { artistBrowseService } from '../services/artistBrowseService';
 import { songService } from '../services/songService';
 import { useAuthStore } from '../stores/auth.store';
@@ -236,6 +237,11 @@ function scrollArtists(direction) {
           >
             <Play :size="15" class="fill-current" />
           </button>
+          <AddToPlaylistButton
+            :song-id="song.id"
+            hide-until-hover
+            size="sm"
+          />
           <span class="text-[10px] font-bold text-[#666]">{{ formatReleaseDate(song.createdAt) }}</span>
         </div>
       </div>
