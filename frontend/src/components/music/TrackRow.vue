@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue';
 import { Heart, MoreHorizontal, Pause, Play } from '@lucide/vue';
 import { useRouter } from 'vue-router';
+import AddToPlaylistButton from './AddToPlaylistButton.vue';
 import { usePlayerStore } from '../../stores/player.store';
 import { formatDuration } from '../../utils/formatDate';
 
@@ -25,7 +26,7 @@ function openDetail() {
 </script>
 
 <template>
-  <div class="group grid min-w-[680px] grid-cols-[40px_minmax(240px,1.5fr)_minmax(130px,0.8fr)_100px_50px_40px] items-center gap-3 rounded-md px-3 py-2 text-sm transition hover:bg-white/[0.045]">
+  <div class="group grid min-w-[680px] grid-cols-[40px_minmax(240px,1.5fr)_minmax(130px,0.8fr)_100px_40px_40px_40px] items-center gap-3 rounded-md px-3 py-2 text-sm transition hover:bg-white/[0.045]">
     <button class="grid size-8 place-items-center text-[#777] group-hover:text-white" :title="`Play ${track.title}`" @click="player.playTrack(track)">
       <span v-if="isCurrent && player.isPlaying" class="playing-bars" aria-label="Currently playing"><i></i><i></i><i></i></span>
       <Pause v-else-if="isCurrent" :size="16" class="fill-current" />
@@ -55,6 +56,12 @@ function openDetail() {
     <button class="melodyhub-icon-btn !size-8" :title="isLiked ? 'Remove from favorites' : 'Add to favorites'" @click="player.toggleLike(track.id)">
       <Heart :size="16" :class="isLiked ? 'fill-[#1DB954] text-[#1DB954]' : ''" />
     </button>
+    <AddToPlaylistButton
+      v-if="track.id != null"
+      :song-id="track.id"
+      hide-until-hover
+      size="sm"
+    />
     <div class="relative">
       <button class="melodyhub-icon-btn !size-8" title="Track options" @click="menuOpen = !menuOpen"><MoreHorizontal :size="17" /></button>
       <div v-if="menuOpen" class="absolute right-0 top-8 z-20 w-40 rounded-lg border border-white/10 bg-[#202020] p-1.5 text-xs text-[#bbb] shadow-xl">
