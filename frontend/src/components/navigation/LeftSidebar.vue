@@ -11,8 +11,6 @@ import {
   Mic2,
   MoreHorizontal,
   Plus,
-  Search,
-  SlidersHorizontal,
   Trash2,
   X
 } from '@lucide/vue';
@@ -68,18 +66,6 @@ function deletePlaylist(id) {
         <X :size="19" />
       </button>
     </header>
-
-    <div class="px-4 pb-3">
-      <label class="flex h-10 items-center gap-2 rounded-lg bg-black/20 px-3 text-[#A3A3A3] ring-1 ring-white/[0.07] transition focus-within:bg-black/35 focus-within:ring-[#1DB954]/60">
-        <Search :size="16" />
-        <input
-          class="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-[#737373]"
-          placeholder="Search"
-          aria-label="Search Melody Hub"
-        />
-        <SlidersHorizontal :size="15" />
-      </label>
-    </div>
 
     <nav class="space-y-1 px-3" aria-label="Primary navigation">
       <RouterLink

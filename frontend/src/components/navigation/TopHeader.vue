@@ -13,9 +13,11 @@ import {
   Menu,
   Mic2,
   PanelRightOpen,
+  Search,
   Settings2,
   ShieldCheck,
-  UserRound
+  UserRound,
+  X
 } from '@lucide/vue';
 import { useAuthStore } from '../../stores/auth.store';
 import { featuredArtist } from '../../data/music';
@@ -26,6 +28,7 @@ const router = useRouter();
 const authStore = useAuthStore();
 const dropdownOpen = ref(false);
 const dropdown = ref(null);
+const searchInput = ref('');
 
 const user = computed(() => authStore.user || {});
 const displayName = computed(() => authStore.displayName);
@@ -50,12 +53,19 @@ async function signOut() {
   await router.push({ name: 'login' });
 }
 
+function submitSearch() {
+  const q = searchInput.value.trim();
+  if (!q) return;
+  router.push({ name: 'home', query: q ? { q } : {} });
+  searchInput.value = '';
+}
+
 onMounted(() => document.addEventListener('click', closeOnOutsideClick));
 onBeforeUnmount(() => document.removeEventListener('click', closeOnOutsideClick));
 </script>
 
 <template>
-  <header class="sticky top-0 z-30 flex h-18 items-center justify-between border-b border-white/[0.055] bg-[#121719]/76 px-4 backdrop-blur-xl sm:px-6">
+  <header class="sticky top-0 z-30 flex h-18 items-center gap-3 border-b border-white/[0.055] bg-[#121719]/76 px-4 backdrop-blur-xl sm:px-6">
     <div class="flex min-w-0 items-center gap-3">
       <button class="melodyhub-icon-btn lg:hidden" title="Open navigation" @click="emit('toggle-nav')">
         <Menu :size="20" />
@@ -65,6 +75,22 @@ onBeforeUnmount(() => document.removeEventListener('click', closeOnOutsideClick)
         {{ route.meta.breadcrumb || route.meta.title }}
       </p>
     </div>
+
+    <form class="ml-auto mr-auto w-full max-w-xs flex-1 sm:max-w-sm" @submit.prevent="submitSearch">
+      <label class="flex h-9 cursor-text items-center gap-2 rounded-full border border-white/[0.07] bg-white/[0.05] px-3 text-[#A3A3A3] ring-1 ring-white/[0.05] transition focus-within:border-[#1DB954]/50 focus-within:bg-black/30 focus-within:ring-[#1DB954]/30">
+        <Search :size="15" />
+        <input
+          v-model="searchInput"
+          class="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-[#737373]"
+          placeholder="Search songs, artists..."
+          aria-label="Search Melody Hub"
+          autocomplete="off"
+        />
+        <button v-if="searchInput" type="button" class="grid place-items-center" @click="searchInput = ''">
+          <X :size="14" />
+        </button>
+      </label>
+    </form>
 
     <div class="flex items-center gap-2">
       <button class="melodyhub-icon-btn xl:hidden" title="Open track information" @click="emit('toggle-info')">
