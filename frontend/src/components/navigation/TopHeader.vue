@@ -146,7 +146,9 @@ onBeforeUnmount(() => document.removeEventListener('click', closeOnOutsideClick)
           <RouterLink v-if="authStore.isAdmin" :to="{ name: 'admin-dashboard' }" class="melodyhub-menu-item" @click="dropdownOpen = false">
             <ShieldCheck :size="16" /> Admin Dashboard
           </RouterLink>
-          <button class="melodyhub-menu-item"><UserRound :size="16" /> Profile</button>
+          <RouterLink :to="{ name: 'profile' }" class="melodyhub-menu-item" @click="dropdownOpen = false">
+            <UserRound :size="16" /> Profile
+          </RouterLink>
           <button class="melodyhub-menu-item"><AudioLines :size="16" /> Audio settings</button>
           <button class="melodyhub-menu-item"><Settings2 :size="16" /> Preferences</button>
           <button class="melodyhub-menu-item mt-1 border-t border-white/5 pt-3" @click="signOut">

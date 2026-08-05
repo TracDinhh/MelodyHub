@@ -11,5 +11,9 @@ export const userService = {
 
   updateArtistProfile(profile) {
     return apiClient.put('/api/artist/profile', profile);
+  },
+
+  updateMyProfile(payload) {
+    return apiClient.patch('/api/users/me', payload);
   }
 };

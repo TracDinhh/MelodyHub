@@ -203,6 +203,28 @@ public class UserRepository {
         }
     }
 
+    public Optional<User> updateProfile(int userId, String displayName, String email, String avatarUrl) throws SQLException {
+        String sql = """
+                UPDATE users
+                SET display_name = ?, email = ?, avatar_url = ?, updated_at = CURRENT_TIMESTAMP(6)
+                WHERE id = ?
+                """;
+
+        try (var connection = DatabaseConfig.getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            statement.setString(1, displayName);
+            statement.setString(2, email);
+            statement.setString(3, avatarUrl);
+            statement.setInt(4, userId);
+
+            if (statement.executeUpdate() == 0) {
+                return Optional.empty();
+            }
+
+            return findById(userId);
+        }
+    }
+
     private User mapRow(ResultSet resultSet) throws SQLException {
         return new User(
                 resultSet.getInt("id"),

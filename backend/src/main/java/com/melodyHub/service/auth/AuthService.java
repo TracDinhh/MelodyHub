@@ -1,6 +1,7 @@
 package com.melodyHub.service.auth;
 
 import com.melodyHub.dto.request.LoginRequest;
+import com.melodyHub.dto.request.ProfileUpdateRequest;
 import com.melodyHub.dto.request.RefreshTokenRequest;
 import com.melodyHub.dto.request.RegisterRequest;
 import com.melodyHub.dto.response.AuthResponse;
@@ -104,6 +105,36 @@ public class AuthService {
 
     public UserResponse getCurrentUser(String token) throws AuthException, SQLException {
         return UserResponse.fromEntity(authorizationService.requireAuthenticated(token));
+    }
+
+    public UserResponse updateMyProfile(String token, ProfileUpdateRequest request) throws AuthException, SQLException {
+        if (request == null) {
+            throw new AuthException("INVALID_REQUEST", "Profile update request is required");
+        }
+
+        User current = authorizationService.requireAuthenticated(token);
+        String displayName = normalizeOptional(request.getDisplayName());
+        String email = normalizeEmail(request.getEmail());
+        String avatarUrl = normalizeOptional(request.getAvatarUrl());
+
+        if (displayName != null && displayName.length() > MAX_DISPLAY_NAME_LENGTH) {
+            throw new AuthException("INVALID_DISPLAY_NAME", "Display name must be 100 characters or less");
+        }
+        if (email == null || email.length() > MAX_EMAIL_LENGTH || !EMAIL_PATTERN.matcher(email).matches()) {
+            throw new AuthException("INVALID_EMAIL", "Email is invalid");
+        }
+        if (avatarUrl != null && avatarUrl.length() > 500) {
+            throw new AuthException("INVALID_AVATAR_URL", "Avatar URL must be 500 characters or less");
+        }
+
+        if (!email.equals(current.getEmail()) && userRepository.existsByEmail(email)) {
+            throw new AuthException("EMAIL_EXISTS", "Email already exists");
+        }
+
+        User updated = userRepository.updateProfile(current.getId(), displayName, email, avatarUrl)
+                .orElseThrow(() -> new AuthException("USER_NOT_FOUND", "User was not found"));
+
+        return UserResponse.fromEntity(updated);
     }
 
     public AuthResponse refresh(RefreshTokenRequest request) throws AuthException, SQLException {

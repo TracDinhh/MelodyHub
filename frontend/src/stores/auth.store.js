@@ -49,6 +49,12 @@ export const useAuthStore = defineStore('auth', () => {
     token.value = event.detail.token;
     user.value = event.detail.user;
   });
+  window.addEventListener('melodyhub:profile-updated', (event) => {
+    if (event.detail) {
+      user.value = event.detail;
+      sessionStorage.setItem(USER_KEY, JSON.stringify(event.detail));
+    }
+  });
 
   async function login(credentials) {
     isLoading.value = true;

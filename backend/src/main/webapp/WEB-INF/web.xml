@@ -61,6 +61,11 @@
         <servlet-class>com.melodyHub.controller.playlist.PlaylistServlet</servlet-class>
     </servlet>
 
+    <servlet>
+        <servlet-name>UserServlet</servlet-name>
+        <servlet-class>com.melodyHub.controller.user.UserServlet</servlet-class>
+    </servlet>
+
     <servlet-mapping>
         <servlet-name>AuthServlet</servlet-name>
         <url-pattern>/api/auth/*</url-pattern>
@@ -99,6 +104,11 @@
     <servlet-mapping>
         <servlet-name>PlaylistServlet</servlet-name>
         <url-pattern>/api/playlists/*</url-pattern>
+    </servlet-mapping>
+
+    <servlet-mapping>
+        <servlet-name>UserServlet</servlet-name>
+        <url-pattern>/api/users/*</url-pattern>
     </servlet-mapping>
 
     <session-config>

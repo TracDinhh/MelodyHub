@@ -88,6 +88,26 @@ const router = createRouter({
       }
     },
     {
+      path: '/profile',
+      name: 'profile',
+      component: () => import('../views/ProfileView.vue'),
+      meta: {
+        requiresAuth: true,
+        title: 'Your profile',
+        breadcrumb: 'Home / Profile'
+      }
+    },
+    {
+      path: '/profile/edit',
+      name: 'profile-edit',
+      component: () => import('../views/EditProfileView.vue'),
+      meta: {
+        requiresAuth: true,
+        title: 'Edit profile',
+        breadcrumb: 'Home / Profile / Edit'
+      }
+    },
+    {
       path: '/library/history',
       name: 'library-history',
       component: () => import('../views/ListenHistoryView.vue'),
