@@ -3,12 +3,15 @@ package com.melodyHub.controller.auth;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.melodyHub.dto.request.ForgotPasswordRequest;
 import com.melodyHub.dto.request.LoginRequest;
 import com.melodyHub.dto.request.RefreshTokenRequest;
 import com.melodyHub.dto.request.RegisterRequest;
+import com.melodyHub.dto.request.ResetPasswordRequest;
 import com.melodyHub.dto.response.ErrorResponse;
 import com.melodyHub.exception.AuthException;
 import com.melodyHub.service.auth.AuthService;
+import com.melodyHub.service.auth.PasswordResetService;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
@@ -27,10 +30,12 @@ public class AuthServlet extends HttpServlet {
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
     private AuthService authService;
+    private PasswordResetService passwordResetService;
 
     @Override
     public void init() throws ServletException {
         authService = new AuthService();
+        passwordResetService = new PasswordResetService();
     }
 
     @Override
@@ -43,6 +48,8 @@ public class AuthServlet extends HttpServlet {
                 case "/login" -> handleLogin(request, response);
                 case "/refresh" -> handleRefresh(request, response);
                 case "/logout" -> handleLogout(request, response);
+                case "/forgot-password" -> handleForgotPassword(request, response);
+                case "/reset-password" -> handleResetPassword(request, response);
                 default -> writeError(
                         response,
                         HttpServletResponse.SC_NOT_FOUND,
@@ -132,6 +139,27 @@ public class AuthServlet extends HttpServlet {
     private void handleMe(HttpServletRequest request, HttpServletResponse response)
             throws IOException, AuthException, SQLException {
         writeJson(response, HttpServletResponse.SC_OK, authService.getCurrentUser(getBearerToken(request)));
+    }
+
+    private void handleForgotPassword(HttpServletRequest request, HttpServletResponse response)
+            throws IOException, AuthException, SQLException {
+        ForgotPasswordRequest forgotRequest = objectMapper.readValue(
+                request.getInputStream(),
+                ForgotPasswordRequest.class
+        );
+        passwordResetService.requestReset(forgotRequest.email());
+        // Always return 200 OK to prevent email enumeration
+        writeJson(response, HttpServletResponse.SC_OK, java.util.Map.of("message", "If an account exists with that email, a reset link has been sent."));
+    }
+
+    private void handleResetPassword(HttpServletRequest request, HttpServletResponse response)
+            throws IOException, AuthException, SQLException {
+        ResetPasswordRequest resetRequest = objectMapper.readValue(
+                request.getInputStream(),
+                ResetPasswordRequest.class
+        );
+        passwordResetService.resetPassword(resetRequest.token(), resetRequest.newPassword());
+        writeJson(response, HttpServletResponse.SC_OK, java.util.Map.of("message", "Password has been reset successfully."));
     }
 
     private String getPath(HttpServletRequest request) {

@@ -225,6 +225,20 @@ public class UserRepository {
         }
     }
 
+    public void updatePassword(int userId, String passwordHash) throws SQLException {
+        String sql = """
+                UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP(6)
+                WHERE id = ?
+                """;
+
+        try (var connection = DatabaseConfig.getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            statement.setString(1, passwordHash);
+            statement.setInt(2, userId);
+            statement.executeUpdate();
+        }
+    }
+
     private User mapRow(ResultSet resultSet) throws SQLException {
         return new User(
                 resultSet.getInt("id"),

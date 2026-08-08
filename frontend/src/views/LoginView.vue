@@ -1,7 +1,7 @@
 <script setup>
 import { computed, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { AtSign, Check, Disc3, Eye, EyeOff, Mail, Music2, UserRound } from '@lucide/vue';
+import { AtSign, Check, Disc3, Eye, EyeOff, Mail, Music2, UserRound, KeyRound } from '@lucide/vue';
 import { useAuthStore } from '../stores/auth.store';
 import { canAccessRoute, getRoleHomeRouteName } from '../utils/roleRouting';
 
@@ -13,7 +13,8 @@ const passwordVisible = ref(false);
 const confirmPasswordVisible = ref(false);
 const loginForm = reactive({
   usernameOrEmail: '',
-  password: ''
+  password: '',
+  rememberMe: false
 });
 const registerForm = reactive({
   username: '',
@@ -35,6 +36,10 @@ const errors = reactive({
 });
 const title = computed(() => (mode.value === 'login' ? 'Welcome back' : 'Create your account'));
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const currentPassword = computed({
+  get: () => mode.value === 'login' ? loginForm.password : registerForm.password,
+  set: (v) => { if (mode.value === 'login') loginForm.password = v; else registerForm.password = v; }
+});
 
 function clearErrors() {
   Object.keys(errors).forEach((key) => {
@@ -151,7 +156,7 @@ async function submit() {
       await authStore.login({
         usernameOrEmail: loginForm.usernameOrEmail.trim(),
         password: loginForm.password
-      });
+      }, loginForm.rememberMe);
     } else {
       await authStore.register({
         username: registerForm.username.trim(),
@@ -196,8 +201,8 @@ watch(() => registerForm.terms, () => clearFieldError('terms'));
       <form class="space-y-4" novalidate @submit.prevent="submit">
         <label v-if="mode === 'login'" class="melodyhub-field">
           <span>Username or email</span>
-          <div>
-            <AtSign :size="16" />
+          <div class="field-inline">
+            <AtSign :size="15" class="shrink-0 text-[#3A4A3E]" />
             <input
               v-model="loginForm.usernameOrEmail"
               autocomplete="username"
@@ -211,24 +216,24 @@ watch(() => registerForm.terms, () => clearFieldError('terms'));
         <template v-else>
           <label class="melodyhub-field">
             <span>Username</span>
-            <div>
-              <UserRound :size="16" />
+            <div class="field-inline">
+              <UserRound :size="15" class="shrink-0 text-[#3A4A3E]" />
               <input v-model="registerForm.username" autocomplete="username" maxlength="50" placeholder="alexmorgan" />
             </div>
             <small v-if="errors.username" class="text-red-300">{{ errors.username }}</small>
           </label>
           <label class="melodyhub-field">
-            <span>Display name <span class="font-normal text-[#666]">(optional)</span></span>
-            <div>
-              <Music2 :size="16" />
+            <span>Display name <span class="font-normal text-[#555]">(optional)</span></span>
+            <div class="field-inline">
+              <Music2 :size="15" class="shrink-0 text-[#3A4A3E]" />
               <input v-model="registerForm.displayName" autocomplete="name" maxlength="100" placeholder="Alex Morgan" />
             </div>
             <small v-if="errors.displayName" class="text-red-300">{{ errors.displayName }}</small>
           </label>
           <label class="melodyhub-field">
             <span>Email</span>
-            <div>
-              <Mail :size="16" />
+            <div class="field-inline">
+              <Mail :size="15" class="shrink-0 text-[#3A4A3E]" />
               <input v-model="registerForm.email" type="email" autocomplete="email" maxlength="255" placeholder="you@example.com" />
             </div>
             <small v-if="errors.email" class="text-red-300">{{ errors.email }}</small>
@@ -237,42 +242,46 @@ watch(() => registerForm.terms, () => clearFieldError('terms'));
 
         <label class="melodyhub-field">
           <span>Password</span>
-          <div>
-            <Music2 :size="16" />
+          <div class="field-inline">
+            <Music2 :size="15" class="shrink-0 text-[#3A4A3E]" />
             <input
-              v-if="mode === 'login'"
-              v-model="loginForm.password"
+              v-model="currentPassword"
               :type="passwordVisible ? 'text' : 'password'"
-              autocomplete="current-password"
-              placeholder="Your password"
+              :autocomplete="mode === 'login' ? 'current-password' : 'new-password'"
+              :placeholder="mode === 'login' ? 'Your password' : 'At least 6 characters'"
             />
-            <input
-              v-else
-              v-model="registerForm.password"
-              :type="passwordVisible ? 'text' : 'password'"
-              autocomplete="new-password"
-              placeholder="At least 6 characters"
-            />
-            <button type="button" class="text-[#777] hover:text-white" title="Toggle password visibility" @click="passwordVisible = !passwordVisible">
-              <EyeOff v-if="passwordVisible" :size="17" /><Eye v-else :size="17" />
+            <button type="button" class="ml-auto shrink-0 text-[#3A4A3E] hover:text-[#EDE9E0]" title="Toggle password visibility" @click="passwordVisible = !passwordVisible">
+              <EyeOff v-if="passwordVisible" :size="16" /><Eye v-else :size="16" />
             </button>
           </div>
           <small v-if="errors.password" class="text-red-300">{{ errors.password }}</small>
         </label>
 
+        <!-- Remember me & Forgot password -->
+        <div v-if="mode === 'login'" class="flex items-center justify-between">
+          <label class="flex cursor-pointer items-center gap-2.5 text-xs text-[#777]">
+            <input v-model="loginForm.rememberMe" type="checkbox" class="peer sr-only" />
+            <span class="grid size-4 shrink-0 place-items-center rounded border border-white/15 peer-checked:border-[#1DB954] peer-checked:bg-[#1DB954] peer-checked:text-black">
+              <Check v-if="loginForm.rememberMe" :size="10" :stroke-width="4" />
+            </span>
+            <span>Remember me</span>
+          </label>
+          <RouterLink :to="{ name: 'forgot-password' }" class="text-xs text-[#1DB954] hover:underline">Forgot password?</RouterLink>
+        </div>
+
         <template v-if="mode === 'register'">
           <label class="melodyhub-field">
             <span>Confirm password</span>
-            <div>
-              <Music2 :size="16" />
+            <div class="field-inline">
+              <Music2 :size="15" class="shrink-0 text-[#3A4A3E]" />
               <input
                 v-model="registerForm.confirmPassword"
                 :type="confirmPasswordVisible ? 'text' : 'password'"
                 autocomplete="new-password"
                 placeholder="Enter your password again"
               />
-              <button type="button" class="text-[#777] hover:text-white" title="Toggle confirm password visibility" @click="confirmPasswordVisible = !confirmPasswordVisible">
-                <EyeOff v-if="confirmPasswordVisible" :size="17" /><Eye v-else :size="17" />
+              <button type="button" class="ml-auto shrink-0 text-[#3A4A3E] hover:text-[#EDE9E0]" title="Toggle confirm password visibility" @click="confirmPasswordVisible = !confirmPasswordVisible">
+                <EyeOff v-if="confirmPasswordVisible" :size="16" /><Eye v-else :size="16" />
               </button>
             </div>
             <small v-if="errors.confirmPassword" class="text-red-300">{{ errors.confirmPassword }}</small>

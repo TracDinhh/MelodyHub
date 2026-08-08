@@ -19,7 +19,19 @@ export const authService = {
 
   logout() {
     return apiClient.post('/api/auth/logout', {
-      refreshToken: refreshTokenStorage.get()
+      refreshToken: refreshTokenStorage.get() || refreshTokenStorage.getPersistent()
+    });
+  },
+
+  requestPasswordReset(email) {
+    return apiClient.post('/api/auth/forgot-password', { email }, {
+      authenticated: false
+    });
+  },
+
+  resetPassword(token, newPassword) {
+    return apiClient.post('/api/auth/reset-password', { token, newPassword }, {
+      authenticated: false
     });
   }
 };

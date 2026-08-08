@@ -20,18 +20,33 @@ export class HttpError extends Error {
   }
 }
 
+export const REMEMBER_KEY = 'melodyhub.remember';
 export const tokenStorage = {
   key: TOKEN_KEY,
   get: () => sessionStorage.getItem(TOKEN_KEY),
-  set: (token) => sessionStorage.setItem(TOKEN_KEY, token),
-  clear: () => sessionStorage.removeItem(TOKEN_KEY)
+  set: (token, remember = false) => {
+    const storage = remember ? localStorage : sessionStorage;
+    storage.setItem(TOKEN_KEY, token);
+  },
+  clear: () => {
+    sessionStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(TOKEN_KEY);
+  },
+  getPersistent: () => localStorage.getItem(TOKEN_KEY)
 };
 
 export const refreshTokenStorage = {
   key: REFRESH_TOKEN_KEY,
   get: () => sessionStorage.getItem(REFRESH_TOKEN_KEY),
-  set: (token) => sessionStorage.setItem(REFRESH_TOKEN_KEY, token),
-  clear: () => sessionStorage.removeItem(REFRESH_TOKEN_KEY)
+  set: (token, remember = false) => {
+    const storage = remember ? localStorage : sessionStorage;
+    storage.setItem(REFRESH_TOKEN_KEY, token);
+  },
+  clear: () => {
+    sessionStorage.removeItem(REFRESH_TOKEN_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
+  },
+  getPersistent: () => localStorage.getItem(REFRESH_TOKEN_KEY)
 };
 
 export const apiClient = axios.create({
@@ -87,12 +102,13 @@ async function refreshSession() {
   if (!refreshPromise) {
     refreshPromise = refreshClient
       .post('/api/auth/refresh', {
-        refreshToken: refreshTokenStorage.get()
+        refreshToken: refreshTokenStorage.get() || refreshTokenStorage.getPersistent()
       })
       .then((response) => {
         const authResponse = response.data;
-        tokenStorage.set(authResponse.token);
-        refreshTokenStorage.set(authResponse.refreshToken);
+        const remember = localStorage.getItem(REMEMBER_KEY) === 'true';
+        tokenStorage.set(authResponse.token, remember);
+        refreshTokenStorage.set(authResponse.refreshToken, remember);
         sessionStorage.setItem(USER_KEY, JSON.stringify(authResponse.user));
         window.dispatchEvent(new CustomEvent('melodyhub:token-refreshed', { detail: authResponse }));
         return authResponse.token;
