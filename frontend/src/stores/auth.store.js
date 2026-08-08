@@ -4,6 +4,7 @@ import { authService } from '../services/authService';
 import { refreshTokenStorage, tokenStorage } from '../services/http';
 
 const USER_KEY = 'melodyhub.user';
+const REMEMBER_KEY = 'melodyhub.remember';
 
 function readStoredUser() {
   try {
@@ -14,11 +15,16 @@ function readStoredUser() {
   }
 }
 
+function readRememberMe() {
+  return localStorage.getItem(REMEMBER_KEY) === 'true';
+}
+
 export const useAuthStore = defineStore('auth', () => {
-  const token = ref(tokenStorage.get());
+  const token = ref(tokenStorage.get() || tokenStorage.getPersistent());
   const user = ref(readStoredUser());
   const isLoading = ref(false);
   const initialized = ref(false);
+  const rememberMe = ref(readRememberMe());
 
   const isAuthenticated = computed(() => Boolean(token.value));
   const isUser = computed(() => user.value?.role === 'USER');
@@ -28,11 +34,14 @@ export const useAuthStore = defineStore('auth', () => {
     () => user.value?.displayName || user.value?.username || 'MelodyHub listener'
   );
 
-  function saveSession(authResponse) {
+  function saveSession(authResponse, remember = false) {
     token.value = authResponse.token;
     user.value = authResponse.user;
-    tokenStorage.set(authResponse.token);
-    refreshTokenStorage.set(authResponse.refreshToken);
+    tokenStorage.set(authResponse.token, remember);
+    refreshTokenStorage.set(authResponse.refreshToken, remember);
+    if (remember) {
+      localStorage.setItem(REMEMBER_KEY, 'true');
+    }
     sessionStorage.setItem(USER_KEY, JSON.stringify(authResponse.user));
   }
 
@@ -56,11 +65,11 @@ export const useAuthStore = defineStore('auth', () => {
     }
   });
 
-  async function login(credentials) {
+  async function login(credentials, remember = false) {
     isLoading.value = true;
     try {
       const authResponse = await authService.login(credentials);
-      saveSession(authResponse);
+      saveSession(authResponse, remember);
       return authResponse.user;
     } finally {
       isLoading.value = false;

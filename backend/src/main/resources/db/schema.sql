@@ -60,6 +60,22 @@ CREATE TABLE refresh_tokens (
 );
 CREATE INDEX idx_refresh_tokens_user ON refresh_tokens(user_id, expires_at);
 
+-- =====================================================
+-- PASSWORD RESET TOKENS
+-- =====================================================
+CREATE TABLE password_reset_tokens (
+    id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id     INT NOT NULL,
+    token_hash  CHAR(64) NOT NULL,                  -- SHA-256 of the actual token
+    expires_at  DATETIME(6) NOT NULL,
+    used_at     DATETIME(6) NULL,                   -- NULL = not yet used
+    created_at  DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    CONSTRAINT uk_password_reset_token_hash UNIQUE (token_hash),
+    CONSTRAINT fk_password_reset_tokens_user FOREIGN KEY (user_id)
+        REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE INDEX idx_password_reset_tokens_user ON password_reset_tokens(user_id, expires_at);
+
 DELIMITER //
 
 CREATE TRIGGER trg_artists_user_must_be_artist_before_insert
