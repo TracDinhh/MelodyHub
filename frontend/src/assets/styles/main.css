@@ -1,231 +1,299 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --color-melodyhub-green: #1DB954;
-  --color-melodyhub-black: #080a0c;
-  --color-melodyhub-panel: #121619;
+  --font-sans: 'DM Sans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-display: 'Bebas Neue', ui-sans-serif, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --color-melodyhub-green: #3DDE7C;
+  --color-melodyhub-black: #0B0D0F;
+  --color-melodyhub-panel: #131820;
+  --color-melodyhub-surface: #1A2030;
 }
+
+/* ─── Palette ──────────────────────────────────────────────────── */
+/* bg-base:       #0B0D0F — near-black, cool-tinted                */
+/* bg-panel:      #131820 — brushed aluminum housing                  */
+/* text-primary:  #EDE9E0 — warm off-white (vintage label)           */
+/* text-muted:    #4E5A52 — muted, warm gray-green                   */
+/* accent:        #3DDE7C — electric green, clean signal             */
+/* accent-glow:   rgba(61, 222, 124, 0.10) — ambient glow           */
+/* border:        rgba(237, 233, 224, 0.07) — warm subtle            */
 
 @layer base {
   :root {
     color-scheme: dark;
     font-family: var(--font-sans);
-    background: #080a0c;
-    color: #f7f8f6;
+    background: #0B0D0F;
+    color: #EDE9E0;
     font-synthesis: none;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
-  * {
-    box-sizing: border-box;
-    letter-spacing: 0;
-  }
+  * { box-sizing: border-box; letter-spacing: 0; }
 
   html {
     min-width: 320px;
-    background: #080a0c;
+    background: #0B0D0F;
+    scroll-behavior: smooth;
   }
 
   body {
     min-width: 320px;
-    min-height: 100vh;
+    min-height: 100dvh;
     margin: 0;
     overflow: hidden;
-    background: #080a0c;
+    background: #0B0D0F;
   }
 
-  button,
-  input {
-    font: inherit;
-  }
-
-  button {
-    cursor: pointer;
-  }
-
-  button:disabled {
-    cursor: not-allowed;
-  }
+  button, input { font: inherit; }
+  button { cursor: pointer; }
+  button:disabled { cursor: not-allowed; }
 
   button:focus-visible,
   input:focus-visible,
   a:focus-visible {
-    outline: 2px solid #1DB954;
+    outline: 1.5px solid #3DDE7C;
     outline-offset: 2px;
+    border-radius: 4px;
   }
 
   ::selection {
-    background: #1DB954;
-    color: #090909;
+    background: rgba(61, 222, 124, 0.25);
+    color: #EDE9E0;
   }
 
   * {
     scrollbar-width: thin;
-    scrollbar-color: #333 transparent;
+    scrollbar-color: #252D35 transparent;
   }
 
-  *::-webkit-scrollbar {
-    width: 7px;
-    height: 7px;
-  }
-
+  *::-webkit-scrollbar { width: 4px; height: 4px; }
+  *::-webkit-scrollbar-track { background: transparent; }
   *::-webkit-scrollbar-thumb {
     border-radius: 999px;
-    background: #333;
+    background: #252D35;
   }
+  *::-webkit-scrollbar-thumb:hover { background: #3A4754; }
 }
+
+/* ─── Component tokens ──────────────────────────────────────────── */
 
 @layer components {
   .melodyhub-icon-btn {
-    @apply grid size-9 shrink-0 place-items-center rounded-full text-[#8d9792] transition duration-200 hover:bg-white/10 hover:text-white disabled:opacity-40;
+    @apply grid size-9 shrink-0 place-items-center rounded-lg text-[#5A6860] transition-all duration-200;
   }
+  .melodyhub-icon-btn:hover {
+    @apply text-[#EDE9E0] bg-white/[0.05];
+  }
+  .melodyhub-icon-btn:disabled { @apply opacity-30; }
 
   .melodyhub-player-btn {
-    @apply grid size-8 place-items-center rounded-full text-[#8d9792] transition duration-200 hover:bg-white/10 hover:text-white;
+    @apply grid size-8 place-items-center rounded-lg text-[#5A6860] transition-all duration-200;
+  }
+  .melodyhub-player-btn:hover {
+    @apply text-[#EDE9E0] bg-white/[0.05];
   }
 
   .melodyhub-menu-item {
-    @apply flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-xs font-semibold text-[#b0b8b2] transition hover:bg-white/7 hover:text-white;
+    @apply flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-xs font-medium tracking-wide text-[#7A8880] transition-all duration-200;
+  }
+  .melodyhub-menu-item:hover {
+    @apply text-[#EDE9E0] bg-white/[0.05];
   }
 
   .melodyhub-kicker {
-    @apply text-[10px] font-black tracking-[0.16em] text-[#64e68a];
+    @apply text-[10px] font-bold uppercase tracking-[0.22em] text-[#3DDE7C];
   }
 
   .melodyhub-section-title {
-    @apply mt-1 text-xl font-black text-white sm:text-2xl;
+    @apply mt-1 text-2xl font-bold text-[#EDE9E0];
   }
 
   .melodyhub-field {
-    @apply block text-xs font-bold text-[#aaa];
+    @apply block text-xs font-medium tracking-wide text-[#7A8880];
   }
 
   .melodyhub-field > span {
     @apply mb-2 block;
   }
 
-  .melodyhub-field > div {
-    @apply flex h-11 items-center gap-2 rounded-lg border border-white/10 bg-black/30 px-3 text-[#666] transition focus-within:border-[#1DB954]/70 focus-within:ring-2 focus-within:ring-[#1DB954]/10;
-  }
-
   .melodyhub-field input {
-    @apply min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-[#555];
+    @apply h-11 w-full rounded-xl border border-white/[0.07] bg-black/40 px-3 text-sm text-white transition-all duration-200;
   }
 
-  .melodyhub-field > input {
-    @apply h-11 w-full rounded-lg border border-white/10 bg-black/30 px-3 transition focus:border-[#1DB954]/70 focus:ring-2 focus:ring-[#1DB954]/10;
+  .melodyhub-field input:focus {
+    border-color: rgba(237, 233, 224, 0.15);
+    background: rgba(0, 0, 0, 0.5);
+    outline: none;
   }
-}
 
-.melodyhub-app-shell {
-  background:
-    radial-gradient(900px 460px at 62% -10%, rgba(29, 185, 84, 0.09), transparent 66%),
-    #080a0c;
-}
+  .melodyhub-field input::placeholder {
+    @apply text-[#555];
+  }
 
-.melodyhub-main-panel {
-  background:
-    linear-gradient(180deg, rgba(21, 27, 30, 0.94) 0%, rgba(12, 15, 17, 0.98) 190px),
-    #0c0f11;
-}
+  /* Inline field: icon + input on one line */
+  .field-inline {
+    @apply flex h-11 items-center gap-2.5 rounded-xl border border-white/[0.07] bg-black/40 px-3 text-[#4E5A52] transition-all duration-200;
+  }
 
-.melodyhub-panel-edge {
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035), 0 16px 45px rgba(0, 0, 0, 0.14);
-}
+  .field-inline:focus-within {
+    border-color: rgba(237, 233, 224, 0.15);
+    background: rgba(0, 0, 0, 0.5);
+  }
 
-.melodyhub-hero-shine {
-  background:
-    linear-gradient(90deg, rgba(8, 10, 12, 0.96) 0%, rgba(8, 10, 12, 0.78) 42%, rgba(8, 10, 12, 0.2) 100%),
-    linear-gradient(0deg, rgba(8, 10, 12, 0.5), transparent 58%);
-}
+  .field-inline input {
+    @apply min-w-0 flex-1 bg-transparent text-sm text-[#EDE9E0] outline-none placeholder:text-[#3A4238];
+  }
+  .waveform-bar {
+    display: inline-block;
+    width: 2px;
+    border-radius: 1px;
+    background: rgba(61, 222, 124, 0.35);
+    transition: height 0.15s ease, background 0.2s ease;
+  }
 
-.melodyhub-range {
-  --range-progress: 0%;
-  height: 4px;
-  appearance: none;
-  border-radius: 999px;
-  background: linear-gradient(
-    to right,
-    #1DB954 0,
-    #1DB954 var(--range-progress),
-    #3b3b3b var(--range-progress),
-    #3b3b3b 100%
-  );
-  cursor: pointer;
-}
+  .waveform-bar.active {
+    background: #3DDE7C;
+    box-shadow: 0 0 6px rgba(61, 222, 124, 0.6);
+  }
 
-.melodyhub-range::-webkit-slider-thumb {
-  width: 12px;
-  height: 12px;
-  appearance: none;
-  border: 0;
-  border-radius: 50%;
-  background: #fff;
-  opacity: 0;
-  transition: opacity 150ms ease;
-}
+  /* Glass surfaces */
+  .surface-panel {
+    background: #131820;
+    border: 1px solid rgba(237, 233, 224, 0.06);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.04),
+      0 24px 48px rgba(0, 0, 0, 0.2);
+  }
 
-.melodyhub-range:hover::-webkit-slider-thumb,
-.melodyhub-range:focus-visible::-webkit-slider-thumb {
-  opacity: 1;
-}
+  .surface-glass {
+    background: rgba(19, 24, 32, 0.85);
+    backdrop-filter: blur(28px) saturate(160%);
+    -webkit-backdrop-filter: blur(28px) saturate(160%);
+    border: 1px solid rgba(237, 233, 224, 0.07);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.05),
+      0 16px 40px rgba(0, 0, 0, 0.22);
+  }
 
-.melodyhub-range::-moz-range-thumb {
-  width: 12px;
-  height: 12px;
-  border: 0;
-  border-radius: 50%;
-  background: #fff;
-}
+  /* Console-style nav item */
+  .nav-item {
+    @apply relative flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium tracking-wide text-[#6A7870] transition-all duration-200;
+  }
+  .nav-item:hover {
+    @apply text-[#EDE9E0] bg-white/[0.04];
+  }
+  .nav-item:hover svg {
+    transform: scale(1.05);
+  }
+  .nav-item.active {
+    @apply text-[#EDE9E0] bg-white/[0.06];
+  }
+  .nav-item.active::before {
+    content: '';
+    position: absolute;
+    left: -4px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 18px;
+    border-radius: 2px;
+    background: #3DDE7C;
+    box-shadow: 0 0 8px rgba(61, 222, 124, 0.7);
+  }
 
-.playing-bars {
-  display: inline-flex;
-  height: 16px;
-  align-items: end;
-  gap: 2px;
-}
+  /* Progress range */
+  .melodyhub-range {
+    --range-progress: 0%;
+    height: 3px;
+    appearance: none;
+    border-radius: 999px;
+    background: linear-gradient(
+      to right,
+      #3DDE7C 0%,
+      #3DDE7C var(--range-progress),
+      rgba(237, 233, 224, 0.08) var(--range-progress),
+      rgba(237, 233, 224, 0.08) 100%
+    );
+    cursor: pointer;
+    transition: height 0.2s ease;
+  }
+  .melodyhub-range:hover { height: 5px; }
+  .melodyhub-range::-webkit-slider-thumb {
+    width: 12px;
+    height: 12px;
+    appearance: none;
+    border-radius: 50%;
+    background: #EDE9E0;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.5);
+    opacity: 0;
+    transition: opacity 150ms, transform 150ms;
+  }
+  .melodyhub-range:hover::-webkit-slider-thumb,
+  .melodyhub-range:focus-visible::-webkit-slider-thumb { opacity: 1; }
+  .melodyhub-range::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    border: 0;
+    border-radius: 50%;
+    background: #EDE9E0;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.5);
+    cursor: pointer;
+  }
 
-.playing-bars i {
-  width: 2px;
-  border-radius: 2px;
-  background: #1DB954;
-  animation: playing-bar 650ms ease-in-out infinite alternate;
-}
+  /* Playing bars */
+  .playing-bars {
+    display: inline-flex;
+    height: 14px;
+    align-items: end;
+    gap: 2px;
+  }
+  .playing-bars i {
+    width: 2px;
+    border-radius: 1px;
+    background: #3DDE7C;
+    animation: playing-bar 680ms ease-in-out infinite alternate;
+  }
+  .playing-bars i:nth-child(1) { height: 6px; }
+  .playing-bars i:nth-child(2) { height: 13px; animation-delay: 200ms; }
+  .playing-bars i:nth-child(3) { height: 9px; animation-delay: 400ms; }
 
-.playing-bars i:nth-child(1) {
-  height: 7px;
-}
-
-.playing-bars i:nth-child(2) {
-  height: 14px;
-  animation-delay: 180ms;
-}
-
-.playing-bars i:nth-child(3) {
-  height: 10px;
-  animation-delay: 360ms;
+  @keyframes playing-bar {
+    to { height: 3px; }
+  }
 }
 
 .no-scrollbar {
   scrollbar-width: none;
 }
+.no-scrollbar::-webkit-scrollbar { display: none; }
 
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
+/* ─── App shell ────────────────────────────────────────────────── */
+.melodyhub-app-shell {
+  background:
+    radial-gradient(ellipse 80% 40% at 65% 0%, rgba(61, 222, 124, 0.06), transparent 60%),
+    #0B0D0F;
 }
 
-@keyframes playing-bar {
-  to {
-    height: 4px;
-  }
+.melodyhub-main-panel {
+  background: linear-gradient(180deg, #161C26 0%, #0E1218 180px), #0E1218;
 }
 
+.melodyhub-panel-edge {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.015),
+    0 24px 56px rgba(0, 0, 0, 0.18);
+}
+
+/* ─── Responsive ───────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  *, *::before, *::after {
     scroll-behavior: auto !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
+  .playing-bars i { animation: none; height: 6px; }
 }

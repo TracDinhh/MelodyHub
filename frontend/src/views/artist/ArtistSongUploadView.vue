@@ -196,8 +196,8 @@ function formatDuration(seconds) {
 
         <label class="melodyhub-field">
           <span>Title</span>
-          <div>
-            <Music2 :size="16" />
+          <div class="field-inline">
+            <Music2 :size="16" class="shrink-0 text-[#3A4A3E]" />
             <input v-model="form.title" maxlength="255" placeholder="Song title" @input="onTitleInput" />
           </div>
           <small v-if="fieldErrors.title" class="mt-1 block text-red-300">{{ fieldErrors.title }}</small>
@@ -205,7 +205,7 @@ function formatDuration(seconds) {
 
         <label class="melodyhub-field">
           <span>Slug <span class="font-normal text-[#666]">— /songs/{{ form.slug || 'your-song' }}</span></span>
-          <div>
+          <div class="field-inline">
             <span class="select-none text-xs text-[#666]">/</span>
             <input v-model="form.slug" maxlength="280" placeholder="your-song-slug" @input="fieldErrors.slug = ''" />
           </div>
