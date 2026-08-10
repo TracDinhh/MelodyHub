@@ -13,4 +13,5 @@ public class SongUpdateRequest {
     private String title;
     private String coverUrl;
     private String lyrics;
+    private String lyricsType;
 }

@@ -1,5 +1,6 @@
 package com.melodyHub.dto.response;
 
+import com.melodyHub.entity.LyricsType;
 import com.melodyHub.entity.Song;
 import com.melodyHub.entity.SongStatus;
 import java.time.LocalDateTime;
@@ -22,6 +23,7 @@ public class SongResponse {
     private String coverUrl;
     private String audioUrl;
     private String lyrics;
+    private LyricsType lyricsType;
     private SongStatus status;
     private Long playCount;
     private LocalDateTime createdAt;
@@ -42,6 +44,7 @@ public class SongResponse {
                 song.getCoverUrl(),
                 song.getFilePath(),
                 song.getLyrics(),
+                song.getLyricsType(),
                 song.getStatus(),
                 song.getPlayCount(),
                 song.getCreatedAt(),

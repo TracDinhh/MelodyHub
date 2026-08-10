@@ -3,6 +3,7 @@ package com.melodyHub.repository;
 import com.melodyHub.config.DatabaseConfig;
 import com.melodyHub.entity.Album;
 import com.melodyHub.entity.Artist;
+import com.melodyHub.entity.LyricsType;
 import com.melodyHub.entity.Song;
 import com.melodyHub.entity.SongStatus;
 import java.sql.Connection;
@@ -31,6 +32,7 @@ public class SongRepository {
             file_path,
             cover_url,
             lyrics,
+            lyrics_type,
             status,
             play_count,
             created_at,
@@ -51,8 +53,8 @@ public class SongRepository {
 
     public Song create(Song song, int artistId) throws SQLException {
         String insertSong = """
-                INSERT INTO songs (title, slug, duration_sec, file_path, cover_url, lyrics, status)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO songs (title, slug, duration_sec, file_path, cover_url, lyrics, lyrics_type, status)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """;
         String linkArtist = """
                 INSERT INTO song_artists (song_id, artist_id, role, position)
@@ -71,7 +73,8 @@ public class SongRepository {
                 statement.setString(4, song.getFilePath());
                 statement.setString(5, song.getCoverUrl());
                 statement.setString(6, song.getLyrics());
-                statement.setString(7, (song.getStatus() == null ? SongStatus.PUBLISHED : song.getStatus()).name());
+                statement.setString(7, (song.getLyricsType() == null ? LyricsType.PLAIN : song.getLyricsType()).name());
+                statement.setString(8, (song.getStatus() == null ? SongStatus.PUBLISHED : song.getStatus()).name());
                 statement.executeUpdate();
 
                 try (var keys = statement.getGeneratedKeys()) {
@@ -238,13 +241,14 @@ public class SongRepository {
      * Updates editable fields of a song owned (MAIN) by the artist. Returns the
      * updated song, or empty if the artist does not own it / it does not exist.
      */
-    public Optional<Song> updateOwn(int artistId, int songId, String title, String coverUrl, String lyrics)
+    public Optional<Song> updateOwn(int artistId, int songId, String title, String coverUrl, String lyrics, String lyricsType)
             throws SQLException {
         String sql = """
                 UPDATE songs s
                 SET s.title = ?,
                     s.cover_url = ?,
                     s.lyrics = ?,
+                    s.lyrics_type = ?,
                     s.updated_at = CURRENT_TIMESTAMP(6)
                 WHERE s.id = ?
                   AND s.deleted_at IS NULL
@@ -259,9 +263,10 @@ public class SongRepository {
             statement.setString(1, title);
             statement.setString(2, coverUrl);
             statement.setString(3, lyrics);
-            statement.setInt(4, songId);
-            statement.setInt(5, artistId);
-            statement.setString(6, MAIN_ARTIST_ROLE);
+            statement.setString(4, lyricsType);
+            statement.setInt(5, songId);
+            statement.setInt(6, artistId);
+            statement.setString(7, MAIN_ARTIST_ROLE);
 
             if (statement.executeUpdate() == 0) {
                 return Optional.empty();
@@ -565,6 +570,7 @@ public class SongRepository {
                 resultSet.getString("file_path"),
                 resultSet.getString("cover_url"),
                 resultSet.getString("lyrics"),
+                LyricsType.fromDatabaseValue(resultSet.getString("lyrics_type")),
                 SongStatus.fromDatabaseValue(resultSet.getString("status")),
                 resultSet.getLong("play_count"),
                 getLocalDateTime(resultSet, "created_at"),

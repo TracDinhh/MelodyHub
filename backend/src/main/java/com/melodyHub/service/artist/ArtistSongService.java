@@ -4,6 +4,7 @@ import com.melodyHub.dto.request.SongCreateRequest;
 import com.melodyHub.dto.request.SongUpdateRequest;
 import com.melodyHub.dto.response.PagedResponse;
 import com.melodyHub.dto.response.SongResponse;
+import com.melodyHub.entity.LyricsType;
 import com.melodyHub.entity.Song;
 import com.melodyHub.entity.SongStatus;
 import com.melodyHub.exception.SongException;
@@ -44,6 +45,7 @@ public class ArtistSongService {
         song.setCoverUrl(normalizeOptional(request.getCoverUrl()));
         song.setDurationSec(request.getDurationSec() == null ? 0 : Math.max(0, request.getDurationSec()));
         song.setLyrics(normalizeOptional(request.getLyrics()));
+        song.setLyricsType(parseLyricsType(request.getLyricsType()));
         song.setStatus(SongStatus.PUBLISHED);
 
         try {
@@ -73,8 +75,9 @@ public class ArtistSongService {
         }
 
         String lyrics = normalizeOptional(request.getLyrics());
+        String lyricsType = normalizeOptional(request.getLyricsType());
 
-        return songRepository.updateOwn(artistId, songId, title.trim(), coverUrl, lyrics)
+        return songRepository.updateOwn(artistId, songId, title.trim(), coverUrl, lyrics, lyricsType)
                 .map(SongResponse::fromEntity)
                 .orElseThrow(() -> new SongException("SONG_NOT_FOUND", "Song was not found"));
     }
@@ -117,6 +120,15 @@ public class ArtistSongService {
         if (request.getDurationSec() != null && request.getDurationSec() < 0) {
             throw new SongException("INVALID_DURATION", "Duration must be zero or a positive number of seconds");
         }
+
+        String lyricsType = request.getLyricsType();
+        if (lyricsType != null && !lyricsType.isBlank()) {
+            try {
+                LyricsType.valueOf(lyricsType.trim().toUpperCase());
+            } catch (IllegalArgumentException e) {
+                throw new SongException("INVALID_LYRICS_TYPE", "Lyrics type must be PLAIN or SYNCED");
+            }
+        }
     }
 
     private String normalizeOptional(String value) {
@@ -124,6 +136,17 @@ public class ArtistSongService {
             return null;
         }
         return value.trim();
+    }
+
+    private LyricsType parseLyricsType(String value) {
+        if (value == null || value.isBlank()) {
+            return LyricsType.PLAIN;
+        }
+        try {
+            return LyricsType.valueOf(value.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return LyricsType.PLAIN;
+        }
     }
 
     private boolean isHttpUrl(String value) {

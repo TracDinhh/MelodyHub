@@ -2,6 +2,7 @@ package com.melodyHub.repository;
 
 import com.melodyHub.config.DatabaseConfig;
 import com.melodyHub.entity.ListenHistory;
+import com.melodyHub.entity.LyricsType;
 import com.melodyHub.entity.Song;
 import com.melodyHub.entity.SongStatus;
 import java.sql.Connection;
@@ -158,6 +159,7 @@ public class ListenHistoryRepository {
                 resultSet.getString("file_path"),
                 resultSet.getString("cover_url"),
                 resultSet.getString("lyrics"),
+                LyricsType.fromDatabaseValue(resultSet.getString("lyrics_type")),
                 SongStatus.fromDatabaseValue(resultSet.getString("status")),
                 resultSet.getLong("play_count"),
                 getLocalDateTime(resultSet, "created_at"),
