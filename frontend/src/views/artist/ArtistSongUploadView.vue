@@ -40,9 +40,8 @@ function toSlug(value) {
 function onTitleInput() {
   fieldErrors.title = '';
   error.value = '';
-  if (!form.slug || form.slug === toSlug(form.title.slice(0, -1))) {
-    form.slug = toSlug(form.title);
-  }
+  // Auto-generate slug from title (frontend fills the slug input hidden from user)
+  form.slug = toSlug(form.title);
 }
 
 function selectCover(event) {
@@ -201,15 +200,6 @@ function formatDuration(seconds) {
             <input v-model="form.title" maxlength="255" placeholder="Song title" @input="onTitleInput" />
           </div>
           <small v-if="fieldErrors.title" class="mt-1 block text-red-300">{{ fieldErrors.title }}</small>
-        </label>
-
-        <label class="melodyhub-field">
-          <span>Slug <span class="font-normal text-[#666]">— /songs/{{ form.slug || 'your-song' }}</span></span>
-          <div class="field-inline">
-            <span class="select-none text-xs text-[#666]">/</span>
-            <input v-model="form.slug" maxlength="280" placeholder="your-song-slug" @input="fieldErrors.slug = ''" />
-          </div>
-          <small v-if="fieldErrors.slug" class="mt-1 block text-red-300">{{ fieldErrors.slug }}</small>
         </label>
 
         <label class="melodyhub-field">

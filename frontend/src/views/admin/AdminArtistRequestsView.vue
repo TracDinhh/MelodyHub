@@ -21,14 +21,24 @@ const isEmpty = computed(() => !isLoading.value && requests.value.length === 0);
 async function load() {
   isLoading.value = true;
   error.value = '';
+  console.log('[AdminRequests] Loading start, isLoading:', isLoading.value);
   try {
+    console.log('[AdminRequests] Calling API with status:', activeTab.value);
     const paged = await adminService.listArtistRequests({ status: activeTab.value, page: 1, size: 50 });
+    console.log('[AdminRequests] API Response:', JSON.stringify(paged));
+    console.log('[AdminRequests] Items:', paged?.items);
+    console.log('[AdminRequests] Total:', paged?.total);
     requests.value = paged?.items || [];
     total.value = paged?.total || 0;
+    console.log('[AdminRequests] After assignment, requests:', requests.value);
   } catch (requestError) {
+    console.error('[AdminRequests] CATCH error:', requestError);
+    console.error('[AdminRequests] Error message:', requestError.message);
+    console.error('[AdminRequests] Error code:', requestError.code);
     error.value = requestError.message || 'Unable to load artist requests.';
   } finally {
     isLoading.value = false;
+    console.log('[AdminRequests] Finally block, isLoading:', isLoading.value);
   }
 }
 
@@ -141,7 +151,6 @@ onMounted(load);
         <!-- Info -->
         <div class="min-w-0 flex-1">
           <p class="truncate text-base font-black text-white">{{ item.artistName }}</p>
-          <p class="mt-0.5 truncate text-xs text-[#888]">/artist/{{ item.slug }}</p>
           <p class="mt-1 truncate text-xs text-[#aaa]">
             Requested by
             <span class="text-[#ddd]">{{ item.requesterDisplayName || item.requesterUsername }}</span>
