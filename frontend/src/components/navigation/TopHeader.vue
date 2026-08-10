@@ -19,6 +19,8 @@ import {
   UserRound,
   X
 } from '@lucide/vue';
+
+
 import { useAuthStore } from '../../stores/auth.store';
 import { featuredArtist } from '../../data/music';
 
@@ -56,7 +58,7 @@ async function signOut() {
 function submitSearch() {
   const q = searchInput.value.trim();
   if (!q) return;
-  router.push({ name: 'home', query: q ? { q } : {} });
+  router.push({ name: 'home', query: { q } });
   searchInput.value = '';
 }
 
@@ -65,96 +67,161 @@ onBeforeUnmount(() => document.removeEventListener('click', closeOnOutsideClick)
 </script>
 
 <template>
-  <header class="sticky top-0 z-30 flex h-18 items-center gap-3 border-b border-white/[0.055] bg-[#121719]/76 px-4 backdrop-blur-xl sm:px-6">
-    <div class="flex min-w-0 items-center gap-3">
-      <button class="melodyhub-icon-btn lg:hidden" title="Open navigation" @click="emit('toggle-nav')">
-        <Menu :size="20" />
+  <header class="relative z-30 flex h-[3.75rem] items-center border-b border-white/[0.05]">
+
+    <!-- Content -->
+    <div class="relative flex w-full items-center gap-4 px-5 sm:px-6">
+      <!-- Left: Hamburger + breadcrumb -->
+      <button
+        class="melodyhub-icon-btn lg:hidden"
+        title="Open navigation"
+        @click="emit('toggle-nav')"
+      >
+        <Menu :size="19" />
       </button>
-      <span class="hidden size-1.5 rounded-full bg-[#65e78c] shadow-[0_0_12px_#1DB954] sm:block" />
-      <p class="min-w-0 truncate text-xs font-medium text-[#9aa39d] sm:text-sm">
-        {{ route.meta.breadcrumb || route.meta.title }}
-      </p>
-    </div>
 
-    <form class="ml-auto mr-auto w-full max-w-xs flex-1 sm:max-w-sm" @submit.prevent="submitSearch">
-      <label class="flex h-9 cursor-text items-center gap-2 rounded-full border border-white/[0.07] bg-white/[0.05] px-3 text-[#A3A3A3] ring-1 ring-white/[0.05] transition focus-within:border-[#1DB954]/50 focus-within:bg-black/30 focus-within:ring-[#1DB954]/30">
-        <Search :size="15" />
-        <input
-          v-model="searchInput"
-          class="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-[#737373]"
-          placeholder="Search songs, artists..."
-          aria-label="Search Melody Hub"
-          autocomplete="off"
-        />
-        <button v-if="searchInput" type="button" class="grid place-items-center" @click="searchInput = ''">
-          <X :size="14" />
-        </button>
-      </label>
-    </form>
+      <div class="flex min-w-0 items-center gap-3">
+        <p class="truncate text-xs font-medium tracking-wide text-[#5A6860] sm:text-sm">
+          {{ route.meta.breadcrumb || route.meta.title }}
+        </p>
+      </div>
 
-    <div class="flex items-center gap-2">
-      <button class="melodyhub-icon-btn xl:hidden" title="Open track information" @click="emit('toggle-info')">
-        <PanelRightOpen :size="19" />
-      </button>
-      <div ref="dropdown" class="relative">
-        <button
-          class="flex items-center gap-2 rounded-full p-1 pr-2 text-left transition hover:bg-white/5"
-          aria-haspopup="menu"
-          :aria-expanded="dropdownOpen"
-          @click.stop="dropdownOpen = !dropdownOpen"
-        >
-          <span class="relative">
-            <img :src="avatarUrl" alt="" class="size-9 rounded-full object-cover ring-2 ring-white/10" />
-            <span class="absolute -right-1 -bottom-0.5 grid size-4 place-items-center rounded-full bg-[#1DB954] text-black ring-2 ring-[#0d0d0d]">
-              <Crown :size="9" :stroke-width="3" />
-            </span>
-          </span>
-          <span class="hidden max-w-28 sm:block">
-            <span class="block truncate text-xs font-bold text-white">{{ displayName }}</span>
-            <span class="block text-[9px] font-black tracking-wider text-[#1DB954]">{{ badgeLabel }}</span>
-          </span>
-          <ChevronDown :size="14" class="hidden text-[#777] sm:block" />
-        </button>
-
-        <div
-          v-if="dropdownOpen"
-          class="absolute right-0 mt-2 w-64 overflow-hidden rounded-lg border border-white/10 bg-[#171717]/95 p-2 shadow-2xl shadow-black/60 backdrop-blur-xl"
-          role="menu"
-        >
-          <div class="border-b border-white/5 px-3 py-3">
-            <p class="text-sm font-bold text-white">{{ displayName }}</p>
-            <p class="mt-0.5 truncate text-xs text-[#777]">{{ email }}</p>
-            <span class="mt-2 inline-flex items-center gap-1 rounded-full bg-[#1DB954]/10 px-2 py-1 text-[10px] font-black text-[#1DB954]">
-              <Crown :size="11" /> {{ badgeLabel }}
-            </span>
-          </div>
-          <RouterLink :to="{ name: 'library' }" class="melodyhub-menu-item" @click="dropdownOpen = false">
-            <Library :size="16" /> Library
-          </RouterLink>
-          <RouterLink v-if="authStore.isAuthenticated" :to="{ name: 'playlists' }" class="melodyhub-menu-item" @click="dropdownOpen = false">
-            <ListMusic :size="16" /> My playlists
-          </RouterLink>
-          <RouterLink v-if="authStore.isAuthenticated" :to="{ name: 'library-history' }" class="melodyhub-menu-item" @click="dropdownOpen = false">
-            <History :size="16" /> Listen history
-          </RouterLink>
-          <RouterLink v-if="authStore.isUser" :to="{ name: 'become-an-artist' }" class="melodyhub-menu-item" @click="dropdownOpen = false">
-            <Mic2 :size="16" /> Become an Artist
-          </RouterLink>
-          <RouterLink v-if="authStore.isArtist" :to="{ name: 'artist-dashboard' }" class="melodyhub-menu-item" @click="dropdownOpen = false">
-            <Mic2 :size="16" /> Artist Dashboard
-          </RouterLink>
-          <RouterLink v-if="authStore.isAdmin" :to="{ name: 'admin-dashboard' }" class="melodyhub-menu-item" @click="dropdownOpen = false">
-            <ShieldCheck :size="16" /> Admin Dashboard
-          </RouterLink>
-          <RouterLink :to="{ name: 'profile' }" class="melodyhub-menu-item" @click="dropdownOpen = false">
-            <UserRound :size="16" /> Profile
-          </RouterLink>
-          <button class="melodyhub-menu-item"><AudioLines :size="16" /> Audio settings</button>
-          <button class="melodyhub-menu-item"><Settings2 :size="16" /> Preferences</button>
-          <button class="melodyhub-menu-item mt-1 border-t border-white/5 pt-3" @click="signOut">
-            <component :is="authStore.isAuthenticated ? LogOut : LogIn" :size="16" />
-            {{ authStore.isAuthenticated ? 'Log out' : 'Log in' }}
+      <!-- Center: Search -->
+      <form
+        class="ml-auto mr-auto w-full max-w-[300px] flex-1 sm:max-w-[380px]"
+        @submit.prevent="submitSearch"
+      >
+        <div class="group flex h-9 items-center gap-2.5 rounded-lg border border-white/[0.06] bg-white/[0.03] px-3.5 transition-all duration-200 hover:border-white/[0.10] focus-within:border-[#3DDE7C]/50 focus-within:bg-white/[0.04]">
+          <Search :size="14" class="shrink-0 text-[#4E5A52] transition-colors group-focus-within:text-[#3DDE7C]" />
+          <input
+            v-model="searchInput"
+            class="min-w-0 flex-1 bg-transparent text-sm text-[#EDE9E0] outline-none placeholder:text-[#3A4238]"
+            placeholder="Search songs, artists..."
+            aria-label="Search Melody Hub"
+            autocomplete="off"
+          />
+          <button
+            v-if="searchInput"
+            type="button"
+            class="grid size-5 shrink-0 place-items-center rounded text-[#4E5A52] transition-colors hover:text-[#EDE9E0]"
+            @click="searchInput = ''"
+          >
+            <X :size="12" />
           </button>
+        </div>
+      </form>
+
+      <!-- Right: Avatar + dropdown -->
+      <div class="flex items-center gap-2">
+        <button
+          class="melodyhub-icon-btn xl:hidden"
+          title="Open track info"
+          @click="emit('toggle-info')"
+        >
+          <PanelRightOpen :size="18" />
+        </button>
+
+        <div ref="dropdown" class="relative">
+          <button
+            class="flex items-center gap-2.5 rounded-lg p-1 pr-3 text-left transition-all duration-200 hover:bg-white/[0.05]"
+            :class="dropdownOpen ? 'bg-white/[0.06]' : ''"
+            aria-haspopup="menu"
+            :aria-expanded="dropdownOpen"
+            @click.stop="dropdownOpen = !dropdownOpen"
+          >
+            <span class="relative block shrink-0">
+              <img
+                :src="avatarUrl"
+                alt=""
+                class="size-8 rounded-lg object-cover ring-1 ring-white/[0.08] transition-all duration-200"
+                :class="dropdownOpen ? 'ring-[#3DDE7C]/40' : ''"
+              />
+              <span class="absolute -right-0.5 -bottom-0.5 grid size-4 place-items-center rounded bg-[#3DDE7C] text-[#0B0D0F]">
+                <Crown :size="9" :stroke-width="3" />
+              </span>
+            </span>
+            <span class="hidden max-w-[88px] sm:block">
+              <span class="block truncate text-xs font-semibold text-[#EDE9E0]">{{ displayName }}</span>
+              <span class="block text-[9px] font-bold uppercase tracking-widest text-[#3DDE7C]">{{ badgeLabel }}</span>
+            </span>
+            <ChevronDown
+              :size="13"
+              class="hidden text-[#4E5A52] transition-transform duration-200 sm:block"
+              :class="dropdownOpen ? 'rotate-180 text-[#3DDE7C]' : ''"
+            />
+          </button>
+
+          <!-- Dropdown -->
+          <Transition
+            enter-active-class="transition-all duration-200 ease-out"
+            enter-from-class="opacity-0 translate-y-1"
+            enter-to-class="opacity-100 translate-y-0"
+            leave-active-class="transition-all duration-150 ease-in"
+            leave-from-class="opacity-100 translate-y-0"
+            leave-to-class="opacity-0 translate-y-1"
+          >
+            <div
+              v-if="dropdownOpen"
+              class="surface-glass absolute right-0 top-full z-50 mt-2 w-[260px] overflow-hidden rounded-xl"
+            >
+              <!-- User card -->
+              <div class="flex items-center gap-3 border-b border-white/[0.06] px-4 py-4">
+                <img
+                  :src="avatarUrl"
+                  alt=""
+                  class="size-9 shrink-0 rounded-lg object-cover ring-1 ring-white/8"
+                />
+                <div class="min-w-0 flex-1">
+                  <p class="truncate text-sm font-semibold text-[#EDE9E0]">{{ displayName }}</p>
+                  <p class="truncate text-xs text-[#4E5A52]">{{ email }}</p>
+                </div>
+              </div>
+
+              <!-- Nav -->
+              <nav class="p-2">
+                <RouterLink :to="{ name: 'library' }" class="melodyhub-menu-item" @click="dropdownOpen = false">
+                  <Library :size="15" /> Library
+                </RouterLink>
+                <RouterLink v-if="authStore.isAuthenticated" :to="{ name: 'playlists' }" class="melodyhub-menu-item" @click="dropdownOpen = false">
+                  <ListMusic :size="15" /> My playlists
+                </RouterLink>
+                <RouterLink v-if="authStore.isAuthenticated" :to="{ name: 'library-history' }" class="melodyhub-menu-item" @click="dropdownOpen = false">
+                  <History :size="15" /> Listen history
+                </RouterLink>
+
+                <div v-if="authStore.isUser || authStore.isArtist || authStore.isAdmin" class="my-1.5 border-t border-white/[0.05]" />
+
+                <RouterLink v-if="authStore.isUser" :to="{ name: 'become-an-artist' }" class="melodyhub-menu-item" @click="dropdownOpen = false">
+                  <Mic2 :size="15" /> Become an Artist
+                </RouterLink>
+                <RouterLink v-if="authStore.isArtist" :to="{ name: 'artist-dashboard' }" class="melodyhub-menu-item" @click="dropdownOpen = false">
+                  <Mic2 :size="15" /> Artist Dashboard
+                </RouterLink>
+                <RouterLink v-if="authStore.isAdmin" :to="{ name: 'admin-dashboard' }" class="melodyhub-menu-item" @click="dropdownOpen = false">
+                  <ShieldCheck :size="15" /> Admin Dashboard
+                </RouterLink>
+
+                <div class="my-1.5 border-t border-white/[0.05]" />
+
+                <RouterLink :to="{ name: 'profile' }" class="melodyhub-menu-item" @click="dropdownOpen = false">
+                  <UserRound :size="15" /> Profile
+                </RouterLink>
+                <button class="melodyhub-menu-item">
+                  <AudioLines :size="15" /> Audio settings
+                </button>
+                <button class="melodyhub-menu-item">
+                  <Settings2 :size="15" /> Preferences
+                </button>
+
+                <div class="my-1.5 border-t border-white/[0.05]" />
+
+                <button class="melodyhub-menu-item w-full" @click="signOut">
+                  <component :is="authStore.isAuthenticated ? LogOut : LogIn" :size="15" />
+                  {{ authStore.isAuthenticated ? 'Log out' : 'Log in' }}
+                </button>
+              </nav>
+            </div>
+          </Transition>
         </div>
       </div>
     </div>

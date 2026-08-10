@@ -114,8 +114,8 @@ onMounted(load);
       <div class="space-y-5 border border-white/10 bg-[#121212] p-5 sm:p-6">
         <label class="melodyhub-field">
           <span>Title</span>
-          <div>
-            <Music2 :size="16" />
+          <div class="field-inline">
+            <Music2 :size="16" class="shrink-0 text-[#3A4A3E]" />
             <input v-model="form.title" maxlength="255" placeholder="Song title" @input="fieldErrors.title = ''" />
           </div>
           <small v-if="fieldErrors.title" class="mt-1 block text-red-300">{{ fieldErrors.title }}</small>
@@ -123,7 +123,7 @@ onMounted(load);
 
         <label class="melodyhub-field">
           <span>Slug <span class="font-normal text-[#666]">(not editable)</span></span>
-          <div>
+          <div class="field-inline">
             <span class="select-none text-xs text-[#666]">/</span>
             <input :value="form.slug" disabled class="opacity-60" />
           </div>

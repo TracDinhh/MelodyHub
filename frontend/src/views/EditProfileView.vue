@@ -171,8 +171,8 @@ async function submit() {
       <div class="space-y-5 border border-white/10 bg-[#121212] p-5 sm:p-6">
         <label class="melodyhub-field">
           <span>Display name</span>
-          <div>
-            <UserRound :size="16" />
+          <div class="field-inline">
+            <UserRound :size="16" class="shrink-0 text-[#3A4A3E]" />
             <input
               v-model="form.displayName"
               maxlength="100"
@@ -187,8 +187,8 @@ async function submit() {
 
         <label class="melodyhub-field">
           <span>Email</span>
-          <div>
-            <Mail :size="16" />
+          <div class="field-inline">
+            <Mail :size="16" class="shrink-0 text-[#3A4A3E]" />
             <input
               v-model="form.email"
               type="email"

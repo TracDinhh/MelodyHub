@@ -225,8 +225,8 @@ onMounted(loadRequest);
         <div class="space-y-5 border border-white/10 bg-[#121212] p-5 sm:p-6">
           <label class="melodyhub-field">
             <span>Artist name</span>
-            <div>
-              <Music2 :size="16" />
+            <div class="field-inline">
+              <Music2 :size="16" class="shrink-0 text-[#3A4A3E]" />
               <input
                 v-model="form.artistName"
                 maxlength="200"
