@@ -9,6 +9,7 @@ import com.melodyHub.dto.response.PagedResponse;
 import com.melodyHub.dto.response.PlaylistDetailResponse;
 import com.melodyHub.dto.response.PlaylistResponse;
 import com.melodyHub.entity.Artist;
+import com.melodyHub.entity.LyricsType;
 import com.melodyHub.entity.Playlist;
 import com.melodyHub.entity.Song;
 import com.melodyHub.entity.SongStatus;
@@ -191,7 +192,7 @@ class PlaylistServiceTest {
         LocalDateTime timestamp = LocalDateTime.of(2026, 7, 22, 10, 0);
         return new Song(
                 id, title, "slug-" + id, null, null, 180,
-                "/audio/" + id + ".mp3", null, null, SongStatus.PUBLISHED,
+                "/audio/" + id + ".mp3", null, null, LyricsType.PLAIN, SongStatus.PUBLISHED,
                 0L, timestamp, timestamp, null
         );
     }

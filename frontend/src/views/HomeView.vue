@@ -76,17 +76,43 @@ function toPlayerTrack(song) {
     artist: '',
     album: '',
     duration: song.durationSec || 0,
-    audioUrl: song.audioUrl
+    audioUrl: song.audioUrl,
+    lyricsType: song.lyricsType || 'PLAIN',
+    slug: song.slug
   };
+}
+
+async function loadSyncedLyrics(slug) {
+  if (!slug) return;
+  try {
+    const data = await songService.getSyncedLyrics(slug);
+    if (data.lyricsType === 'SYNCED' && data.lines) {
+      player.syncedLyrics = data.lines;
+    } else {
+      player.syncedLyrics = [];
+    }
+  } catch (e) {
+    player.syncedLyrics = [];
+  }
 }
 
 function playNewRelease(song) {
   const list = newReleases.value.map(toPlayerTrack);
   player.playTrack(toPlayerTrack(song), list);
+  if (song.lyricsType === 'SYNCED') {
+    loadSyncedLyrics(song.slug);
+  } else {
+    player.syncedLyrics = [];
+  }
 }
 
 function playSearchSong(song, list) {
   player.playTrack(toPlayerTrack(song), list);
+  if (song.lyricsType === 'SYNCED') {
+    loadSyncedLyrics(song.slug);
+  } else {
+    player.syncedLyrics = [];
+  }
 }
 
 // ── Search ─────────────────────────────────────────────────────

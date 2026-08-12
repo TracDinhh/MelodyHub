@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router';
 import { AudioLines, ImagePlus, LoaderCircle, Music2, UploadCloud } from '@lucide/vue';
 import { songService } from '../../services/songService';
 import { uploadService } from '../../services/uploadService';
+import LyricsEditor from './components/LyricsEditor.vue';
 
 const MAX_COVER_BYTES = 2 * 1024 * 1024;
 const MAX_AUDIO_BYTES = 30 * 1024 * 1024;
@@ -15,11 +16,13 @@ const ALLOWED_AUDIO_TYPES = [
 const router = useRouter();
 
 const form = reactive({ title: '', slug: '', lyrics: '' });
+const lyricsType = ref('PLAIN');
 const coverFile = ref(null);
 const coverPreview = ref('');
 const audioFile = ref(null);
 const audioName = ref('');
 const durationSec = ref(0);
+const audioPreviewUrl = ref('');
 
 const isSubmitting = ref(false);
 const progressText = ref('');
@@ -69,6 +72,10 @@ function selectAudio(event) {
   audioFile.value = null;
   audioName.value = '';
   durationSec.value = 0;
+  if (audioPreviewUrl.value) {
+    URL.revokeObjectURL(audioPreviewUrl.value);
+    audioPreviewUrl.value = '';
+  }
   fieldErrors.audio = '';
   if (!file) return;
   if (!ALLOWED_AUDIO_TYPES.includes(file.type)) {
@@ -87,9 +94,11 @@ function selectAudio(event) {
   audioEl.preload = 'metadata';
   audioEl.onloadedmetadata = () => {
     durationSec.value = Number.isFinite(audioEl.duration) ? Math.round(audioEl.duration) : 0;
-    URL.revokeObjectURL(audioEl.src);
   };
   audioEl.src = URL.createObjectURL(file);
+
+  // Store preview URL for lyrics editor
+  audioPreviewUrl.value = URL.createObjectURL(file);
 }
 
 function validate() {
@@ -137,7 +146,8 @@ async function submit() {
       audioUrl: audioUpload.imageUrl,
       coverUrl,
       durationSec: durationSec.value || 0,
-      lyrics: form.lyrics.trim() || null
+      lyrics: form.lyrics.trim() || null,
+      lyricsType: lyricsType.value
     });
 
     router.push({ name: 'artist-dashboard' });
@@ -204,11 +214,10 @@ function formatDuration(seconds) {
 
         <label class="melodyhub-field">
           <span>Lyrics <span class="font-normal text-[#666]">(optional)</span></span>
-          <textarea
+          <LyricsEditor
             v-model="form.lyrics"
-            rows="6"
-            class="w-full resize-y rounded-lg border border-white/10 bg-black/30 px-3 py-3 text-sm leading-6 text-white outline-none transition placeholder:text-[#555] focus:border-[#1DB954]/70 focus:ring-2 focus:ring-[#1DB954]/10"
-            placeholder="Song lyrics"
+            v-model:lyricsType="lyricsType"
+            :audioPreviewUrl="audioPreviewUrl"
           />
         </label>
 

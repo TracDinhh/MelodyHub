@@ -16,4 +16,5 @@ public class SongCreateRequest {
     private String coverUrl;
     private Integer durationSec;
     private String lyrics;
+    private String lyricsType; // "PLAIN" or "SYNCED"
 }

@@ -162,6 +162,8 @@ CREATE TABLE songs (
     file_path    VARCHAR(500) NOT NULL,
     cover_url    VARCHAR(500),
     lyrics       TEXT,
+    lyrics_type  VARCHAR(10) NOT NULL DEFAULT 'PLAIN'
+                 CHECK (lyrics_type IN ('PLAIN','SYNCED')),
     status       VARCHAR(10) NOT NULL DEFAULT 'PUBLISHED'
                  CHECK (status IN ('DRAFT','PUBLISHED','HIDDEN')),  -- admin duyet/an bai
     play_count   BIGINT NOT NULL DEFAULT 0,

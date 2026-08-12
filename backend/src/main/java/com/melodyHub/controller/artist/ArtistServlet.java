@@ -7,6 +7,7 @@ import com.melodyHub.dto.request.ArtistProfileUpdateRequest;
 import com.melodyHub.dto.request.BecomeArtistRequest;
 import com.melodyHub.dto.request.SongCreateRequest;
 import com.melodyHub.dto.request.SongUpdateRequest;
+import com.melodyHub.dto.request.SyncedLyricsRequest;
 import com.melodyHub.dto.response.ErrorResponse;
 import com.melodyHub.entity.Artist;
 import com.melodyHub.exception.ArtistException;
@@ -22,6 +23,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
+import java.util.Map;
 
 public class ArtistServlet extends HttpServlet {
     private static final String CONTENT_TYPE_JSON = "application/json";
@@ -249,6 +251,18 @@ public class ArtistServlet extends HttpServlet {
                 );
                 return;
             }
+            
+            Integer lyricsSongId = parseSongLyricsId(path);
+            if (lyricsSongId != null) {
+                Artist currentArtist = artistAccountService.getCurrentArtist(getBearerToken(request));
+                SyncedLyricsRequest lyricsRequest = objectMapper.readValue(
+                        request.getInputStream(),
+                        SyncedLyricsRequest.class
+                );
+                artistSongService.updateSyncedLyrics(currentArtist.getId(), lyricsSongId, lyricsRequest);
+                writeJson(response, HttpServletResponse.SC_OK, Map.of("success", true));
+                return;
+            }
 
             writeError(
                     response,
@@ -276,6 +290,24 @@ public class ArtistServlet extends HttpServlet {
                     "INVALID_JSON",
                     "Request body is invalid"
             );
+        }
+    }
+    
+    private Integer parseSongLyricsId(String path) {
+        String prefix = "/songs/";
+        String suffix = "/lyrics";
+        if (!path.startsWith(prefix) || !path.endsWith(suffix)) {
+            return null;
+        }
+        String identifier = path.substring(prefix.length(), path.length() - suffix.length());
+        if (identifier.isBlank() || identifier.contains("/")) {
+            return null;
+        }
+        try {
+            int id = Integer.parseInt(identifier);
+            return id > 0 ? id : null;
+        } catch (NumberFormatException exception) {
+            return null;
         }
     }
 

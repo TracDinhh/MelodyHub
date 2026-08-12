@@ -20,6 +20,7 @@ public class Song {
     private String filePath;
     private String coverUrl;
     private String lyrics;
+    private LyricsType lyricsType = LyricsType.PLAIN;
     private SongStatus status = SongStatus.PUBLISHED;
     private Long playCount = 0L;
     private LocalDateTime createdAt;
