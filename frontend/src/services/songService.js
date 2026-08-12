@@ -13,6 +13,12 @@ export const songService = {
       authenticated: false
     });
   },
+  
+  getSyncedLyrics(slug) {
+    return apiClient.get(`/api/songs/${encodeURIComponent(slug)}/lyrics`, {
+      authenticated: false
+    });
+  },
 
   getRelated(slug, params) {
     return apiClient.get(`/api/songs/${encodeURIComponent(slug)}/related`, {
@@ -35,5 +41,9 @@ export const songService = {
 
   updateMine(id, payload) {
     return apiClient.put(`/api/artist/songs/${encodeURIComponent(id)}`, payload);
+  },
+  
+  updateSyncedLyrics(id, payload) {
+    return apiClient.put(`/api/artist/songs/${encodeURIComponent(id)}/lyrics`, payload);
   }
 };

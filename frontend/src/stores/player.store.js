@@ -2,12 +2,12 @@ import { computed, ref } from 'vue';
 import { defineStore } from 'pinia';
 import { useListenTrackerStore } from './listenTracker.store';
 
-const EMPTY_TRACK = { id: null, title: '', artist: '', cover: '', duration: 0, audioUrl: null };
+const EMPTY_TRACK = { id: null, title: '', artist: '', cover: '', duration: 0, audioUrl: null, lyricsType: 'PLAIN', lyrics: [] };
 
 export const usePlayerStore = defineStore('player', () => {
   // Single real audio element that actually plays sound.
   const audio = typeof Audio !== 'undefined' ? new Audio() : null;
-
+  
   const currentTrack = ref({ ...EMPTY_TRACK });
   const queue = ref([]);
   const isPlaying = ref(false);
@@ -21,13 +21,32 @@ export const usePlayerStore = defineStore('player', () => {
   const fullscreenLyrics = ref(false);
   const likedIds = ref(new Set());
   const downloadedIds = ref(new Set());
-
+  
+  // Synced lyrics data
+  const syncedLyrics = ref([]); // Array of { startTime, endTime, text }
+  
   const duration = computed(() => durationSec.value || currentTrack.value?.duration || 0);
   const progress = computed(() => (duration.value ? (currentTime.value / duration.value) * 100 : 0));
   const muted = computed(() => volume.value === 0);
   const hasTrack = computed(() => Boolean(currentTrack.value?.id));
   const currentIndex = computed(() =>
     queue.value.findIndex((track) => track.id === currentTrack.value.id)
+  );
+  
+  // Current active lyric line based on currentTime
+  const currentLyricLine = computed(() => {
+    if (!syncedLyrics.value.length) return null;
+    const time = currentTime.value;
+    for (let i = syncedLyrics.value.length - 1; i >= 0; i--) {
+      if (time >= syncedLyrics.value[i].startTime) {
+        return i;
+      }
+    }
+    return null;
+  });
+  
+  const hasSyncedLyrics = computed(() => 
+    currentTrack.value?.lyricsType === 'SYNCED' && syncedLyrics.value.length > 0
   );
 
   // Listen-tracker integration: record a song once the user has actually
@@ -89,6 +108,7 @@ export const usePlayerStore = defineStore('player', () => {
     currentTrack.value = { ...EMPTY_TRACK, ...track };
     currentTime.value = 0;
     durationSec.value = track?.duration || 0;
+    syncedLyrics.value = [];
 
     if (!audio) return;
     if (track?.audioUrl) {
@@ -100,6 +120,25 @@ export const usePlayerStore = defineStore('player', () => {
       audio.removeAttribute('src');
       audio.load();
       isPlaying.value = false;
+    }
+  }
+  
+  /**
+   * Loads synced lyrics for the current track from the API.
+   * Call this after load() if the track has lyricsType: 'SYNCED'.
+   */
+  async function loadSyncedLyrics(slug) {
+    if (!slug) return;
+    try {
+      const response = await fetch(`/api/songs/${encodeURIComponent(slug)}/lyrics`);
+      if (!response.ok) return;
+      const data = await response.json();
+      if (data.lyricsType === 'SYNCED' && data.lines) {
+        syncedLyrics.value = data.lines;
+      }
+    } catch (e) {
+      // Silently fail - lyrics are optional
+      syncedLyrics.value = [];
     }
   }
 
@@ -187,11 +226,15 @@ export const usePlayerStore = defineStore('player', () => {
     fullscreenLyrics,
     likedIds,
     downloadedIds,
+    syncedLyrics,
     duration,
     progress,
     muted,
     hasTrack,
+    hasSyncedLyrics,
+    currentLyricLine,
     playTrack,
+    loadSyncedLyrics,
     togglePlayback,
     next,
     previous,

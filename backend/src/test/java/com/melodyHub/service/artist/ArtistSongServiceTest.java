@@ -6,8 +6,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.melodyHub.dto.response.PagedResponse;
 import com.melodyHub.dto.response.SongResponse;
+import com.melodyHub.entity.LyricsType;
 import com.melodyHub.entity.Song;
 import com.melodyHub.entity.SongStatus;
+import com.melodyHub.repository.SongLyricsRepository;
 import com.melodyHub.repository.SongRepository;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
@@ -25,7 +27,7 @@ class ArtistSongServiceTest {
                 song(29, "Published Song", "published-song", SongStatus.PUBLISHED)
         );
         repository.total = 3;
-        ArtistSongService service = new ArtistSongService(repository);
+        ArtistSongService service = new ArtistSongService(repository, new SongLyricsRepository());
 
         PagedResponse<SongResponse> response = service.getOwnPage(12, 2, 10);
 
@@ -45,7 +47,7 @@ class ArtistSongServiceTest {
     void findsAnOwnedSongById() throws SQLException {
         StubSongRepository repository = new StubSongRepository();
         repository.byId = Optional.of(song(31, "Draft Song", "draft-song", SongStatus.DRAFT));
-        ArtistSongService service = new ArtistSongService(repository);
+        ArtistSongService service = new ArtistSongService(repository, new SongLyricsRepository());
 
         Optional<SongResponse> response = service.getOwnByIdentifier(12, "31");
 
@@ -59,7 +61,7 @@ class ArtistSongServiceTest {
     void findsAnOwnedSongBySlugIncludingANumericSlugFallback() throws SQLException {
         StubSongRepository repository = new StubSongRepository();
         repository.bySlug = Optional.of(song(32, "2026", "2026", SongStatus.HIDDEN));
-        ArtistSongService service = new ArtistSongService(repository);
+        ArtistSongService service = new ArtistSongService(repository, new SongLyricsRepository());
 
         Optional<SongResponse> response = service.getOwnByIdentifier(12, "2026");
 
@@ -70,7 +72,7 @@ class ArtistSongServiceTest {
 
     @Test
     void rejectsAPageWhoseOffsetExceedsTheRepositoryIntegerRange() {
-        ArtistSongService service = new ArtistSongService(new StubSongRepository());
+        ArtistSongService service = new ArtistSongService(new StubSongRepository(), new SongLyricsRepository());
 
         IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
@@ -92,6 +94,7 @@ class ArtistSongServiceTest {
                 "/audio/" + slug + ".mp3",
                 null,
                 null,
+                LyricsType.PLAIN,
                 status,
                 0L,
                 timestamp,

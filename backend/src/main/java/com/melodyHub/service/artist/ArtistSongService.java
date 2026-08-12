@@ -2,16 +2,19 @@ package com.melodyHub.service.artist;
 
 import com.melodyHub.dto.request.SongCreateRequest;
 import com.melodyHub.dto.request.SongUpdateRequest;
+import com.melodyHub.dto.request.SyncedLyricsRequest;
 import com.melodyHub.dto.response.PagedResponse;
 import com.melodyHub.dto.response.SongResponse;
 import com.melodyHub.entity.LyricsType;
 import com.melodyHub.entity.Song;
 import com.melodyHub.entity.SongStatus;
 import com.melodyHub.exception.SongException;
+import com.melodyHub.repository.SongLyricsRepository;
 import com.melodyHub.repository.SongRepository;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -25,13 +28,15 @@ public class ArtistSongService {
     private static final Pattern SLUG_PATTERN = Pattern.compile("[a-z0-9]+(?:-[a-z0-9]+)*");
 
     private final SongRepository songRepository;
+    private final SongLyricsRepository lyricsRepository;
 
     public ArtistSongService() {
-        this(new SongRepository());
+        this(new SongRepository(), new SongLyricsRepository());
     }
 
-    public ArtistSongService(SongRepository songRepository) {
+    public ArtistSongService(SongRepository songRepository, SongLyricsRepository lyricsRepository) {
         this.songRepository = Objects.requireNonNull(songRepository, "songRepository must not be null");
+        this.lyricsRepository = Objects.requireNonNull(lyricsRepository, "lyricsRepository must not be null");
     }
 
     public SongResponse createOwnSong(int artistId, SongCreateRequest request)
@@ -196,6 +201,33 @@ public class ArtistSongService {
 
         return songRepository.findOwnedBySlug(artistId, normalizedIdentifier)
                 .map(SongResponse::fromEntity);
+    }
+    
+    /**
+     * Updates synced lyrics for a song. Replaces all existing lyric lines.
+     */
+    public void updateSyncedLyrics(int artistId, int songId, SyncedLyricsRequest request)
+            throws SongException, SQLException {
+        // Verify ownership
+        Optional<Song> song = songRepository.findOwnedById(artistId, songId);
+        if (song.isEmpty()) {
+            throw new SongException("SONG_NOT_FOUND", "Song was not found");
+        }
+        
+        // Parse and save synced lyrics
+        List<SongLyricsRepository.SyncedLyricLine> lines = new ArrayList<>();
+        if (request != null && request.getLines() != null) {
+            for (SyncedLyricsRequest.LyricLine line : request.getLines()) {
+                if (line.text() != null && !line.text().isBlank()) {
+                    lines.add(new SongLyricsRepository.SyncedLyricLine(
+                            Math.round(line.startTime() * 1000),  // Convert to ms
+                            line.text().trim()
+                    ));
+                }
+            }
+        }
+        
+        lyricsRepository.replaceForSong(songId, lines);
     }
 
     private Integer parsePositiveInteger(String value) {

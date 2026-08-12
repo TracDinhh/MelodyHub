@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { ImagePlus, LoaderCircle, Music2, Save } from '@lucide/vue';
 import { songService } from '../../services/songService';
 import { uploadService } from '../../services/uploadService';
+import LyricsEditor from './components/LyricsEditor.vue';
 
 const MAX_COVER_BYTES = 2 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -18,6 +19,7 @@ const error = ref('');
 const fieldErrors = reactive({ title: '', cover: '' });
 
 const form = reactive({ title: '', slug: '', lyrics: '' });
+const lyricsType = ref('PLAIN');
 const currentCover = ref('');
 const coverFile = ref(null);
 const coverPreview = ref('');
@@ -30,6 +32,7 @@ async function load() {
     form.title = song.title || '';
     form.slug = song.slug || '';
     form.lyrics = song.lyrics || '';
+    lyricsType.value = song.lyricsType || 'PLAIN';
     currentCover.value = song.coverUrl || '';
   } catch (requestError) {
     error.value = requestError.message || 'Unable to load the song.';
@@ -74,11 +77,34 @@ async function save() {
       coverUrl = uploaded.imageUrl;
     }
 
-    await songService.updateMine(songId, {
-      title: form.title.trim(),
-      coverUrl,
-      lyrics: form.lyrics.trim() || null
-    });
+    // If synced lyrics, parse and save separately
+    if (lyricsType.value === 'SYNCED' && form.lyrics) {
+      try {
+        const syncedData = JSON.parse(form.lyrics);
+        await songService.updateMine(songId, {
+          title: form.title.trim(),
+          coverUrl,
+          lyricsType: 'SYNCED'
+        });
+        // Save synced lyrics lines
+        await songService.updateSyncedLyrics(songId, { lines: syncedData.lines || [] });
+      } catch (e) {
+        // If JSON parse fails, treat as plain
+        await songService.updateMine(songId, {
+          title: form.title.trim(),
+          coverUrl,
+          lyrics: form.lyrics.trim() || null,
+          lyricsType: 'PLAIN'
+        });
+      }
+    } else {
+      await songService.updateMine(songId, {
+        title: form.title.trim(),
+        coverUrl,
+        lyrics: form.lyrics.trim() || null,
+        lyricsType: lyricsType.value
+      });
+    }
 
     router.push({ name: 'artist-dashboard' });
   } catch (requestError) {
@@ -131,11 +157,9 @@ onMounted(load);
 
         <label class="melodyhub-field">
           <span>Lyrics <span class="font-normal text-[#666]">(optional)</span></span>
-          <textarea
+          <LyricsEditor
             v-model="form.lyrics"
-            rows="6"
-            class="w-full resize-y rounded-lg border border-white/10 bg-black/30 px-3 py-3 text-sm leading-6 text-white outline-none transition placeholder:text-[#555] focus:border-[#1DB954]/70 focus:ring-2 focus:ring-[#1DB954]/10"
-            placeholder="Song lyrics"
+            v-model:lyricsType="lyricsType"
           />
         </label>
 

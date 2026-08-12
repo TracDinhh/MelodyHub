@@ -7,6 +7,10 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.melodyHub.dto.response.ErrorResponse;
 import com.melodyHub.dto.response.SongDetailResponse;
 import com.melodyHub.dto.response.SongSummaryResponse;
+import com.melodyHub.dto.response.SyncedLyricsResponse;
+import com.melodyHub.entity.LyricsType;
+import com.melodyHub.entity.Song;
+import com.melodyHub.repository.SongLyricsRepository;
 import com.melodyHub.service.song.SongService;
 import com.melodyHub.util.JwtUtil;
 
@@ -17,6 +21,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -34,10 +39,12 @@ public class SongServlet extends HttpServlet {
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
     private SongService songService;
+    private SongLyricsRepository lyricsRepository;
 
     @Override
     public void init() throws ServletException {
         songService = new SongService();
+        lyricsRepository = new SongLyricsRepository();
     }
 
     @Override
@@ -46,6 +53,12 @@ public class SongServlet extends HttpServlet {
             String path = getPath(request);
             if ("/".equals(path)) {
                 handleGetPage(request, response);
+                return;
+            }
+
+            String lyricsSegment = getLyricsSegment(path);
+            if (lyricsSegment != null) {
+                handleGetLyrics(request, response, lyricsSegment);
                 return;
             }
 
@@ -82,6 +95,58 @@ public class SongServlet extends HttpServlet {
                     "Database error occurred"
             );
         }
+    }
+    
+    private void handleGetLyrics(HttpServletRequest request, HttpServletResponse response, String slug)
+            throws IOException, SQLException {
+        Optional<SongDetailResponse> detail = songService.getDetail(slug, null);
+        
+        if (detail.isEmpty()) {
+            writeError(response, HttpServletResponse.SC_NOT_FOUND, "SONG_NOT_FOUND", "Song was not found");
+            return;
+        }
+        
+        SongDetailResponse song = detail.get();
+        
+        // If plain lyrics, return empty
+        if (song.getLyricsType() != LyricsType.SYNCED) {
+            writeJson(response, HttpServletResponse.SC_OK, new SyncedLyricsResponse(song.getId(), "PLAIN", List.of()));
+            return;
+        }
+        
+        // Get synced lyrics from song_lyrics table
+        List<SongLyricsRepository.SyncedLyricLine> dbLines = lyricsRepository.findBySongId(song.getId());
+        
+        // Convert to response format
+        List<SyncedLyricsResponse.LyricLine> lines = new ArrayList<>();
+        for (int i = 0; i < dbLines.size(); i++) {
+            SongLyricsRepository.SyncedLyricLine dbLine = dbLines.get(i);
+            double startTime = dbLine.startTimeMs() / 1000.0;
+            double endTime;
+            
+            if (i < dbLines.size() - 1) {
+                endTime = dbLines.get(i + 1).startTimeMs() / 1000.0;
+            } else {
+                // Last line - estimate 3.5 seconds
+                endTime = startTime + 3.5;
+            }
+            
+            lines.add(new SyncedLyricsResponse.LyricLine(startTime, endTime, dbLine.text()));
+        }
+        
+        writeJson(response, HttpServletResponse.SC_OK, new SyncedLyricsResponse(song.getId(), "SYNCED", lines));
+    }
+    
+    private String getLyricsSegment(String path) {
+        String suffix = "/lyrics";
+        if (!path.endsWith(suffix)) {
+            return null;
+        }
+        String slug = path.substring(1, path.length() - suffix.length());
+        if (slug.isBlank() || slug.contains("/")) {
+            return null;
+        }
+        return slug;
     }
 
     private void handleGetPage(HttpServletRequest request, HttpServletResponse response)

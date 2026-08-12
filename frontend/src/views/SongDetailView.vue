@@ -64,11 +64,26 @@ function playSong() {
   const main = toPlayerTrack(song.value);
   const queue = [main, ...relatedTrackList.value.filter((track) => track.id !== main.id)];
   player.playTrack(main, queue);
+  
+  // Load synced lyrics if available
+  if (main.lyricsType === 'SYNCED') {
+    loadSyncedLyrics(song.value.slug);
+  } else {
+    player.syncedLyrics = [];
+  }
 }
 
 function playRelated(track) {
   const queue = [toPlayerTrack(song.value), ...relatedTrackList.value.filter((t) => t.id !== track.id)];
   player.playTrack(track, queue);
+  
+  // Load synced lyrics if available
+  const relatedSong = related.value.find(s => s.id === track.id);
+  if (relatedSong?.lyricsType === 'SYNCED') {
+    loadSyncedLyrics(relatedSong.slug);
+  } else {
+    player.syncedLyrics = [];
+  }
 }
 
 function toPlayerTrack(detail) {
@@ -78,8 +93,22 @@ function toPlayerTrack(detail) {
     cover: detail.coverUrl,
     artist: (detail.artists || []).map((artist) => artist.name).join(' & '),
     duration: detail.durationSec || 0,
-    audioUrl: detail.audioUrl
+    audioUrl: detail.audioUrl,
+    lyricsType: detail.lyricsType || 'PLAIN'
   };
+}
+
+async function loadSyncedLyrics(slug) {
+  try {
+    const data = await songService.getSyncedLyrics(slug);
+    if (data.lyricsType === 'SYNCED' && data.lines) {
+      player.syncedLyrics = data.lines;
+    } else {
+      player.syncedLyrics = [];
+    }
+  } catch (e) {
+    player.syncedLyrics = [];
+  }
 }
 
 const isPlaying = computed(() => player.isPlaying && player.currentTrack.id === song.value?.id);
@@ -173,13 +202,42 @@ watch(() => route.params.slug, (slug) => slug && load(slug));
       </section>
 
       <div class="px-4 py-7 sm:px-7">
-        <section v-if="song.lyrics" class="rounded-lg border border-white/[0.06] bg-[#111] p-5">
+        <!-- Synced Lyrics Display -->
+        <section 
+          v-if="song.lyricsType === 'SYNCED' && player.syncedLyrics.length > 0" 
+          class="mb-6 rounded-lg border border-white/[0.06] bg-[#111] p-5"
+        >
+          <div class="mb-3 flex items-end justify-between">
+            <div>
+              <p class="melodyhub-kicker">LYRICS</p>
+              <h2 class="melodyhub-section-title">Synced Lyrics</h2>
+            </div>
+            <p class="text-[10px] font-bold text-[#1DB954]">● SYNCED</p>
+          </div>
+          <div class="space-y-1 text-center">
+            <div
+              v-for="(line, index) in player.syncedLyrics"
+              :key="index"
+              class="py-1.5 text-base transition-all duration-300 sm:text-xl"
+              :class="{
+                'text-[#1DB954] font-bold scale-105': player.currentLyricLine === index && player.currentTrack.id === song.id,
+                'text-[#888]': player.currentLyricLine !== index || player.currentTrack.id !== song.id,
+                'text-[#555]': player.currentLyricLine !== null && index < player.currentLyricLine
+              }"
+            >
+              {{ line.text }}
+            </div>
+          </div>
+        </section>
+
+        <!-- Plain Lyrics Display -->
+        <section v-else-if="song.lyrics" class="mb-6 rounded-lg border border-white/[0.06] bg-[#111] p-5">
           <div class="mb-3 flex items-end justify-between">
             <div>
               <p class="melodyhub-kicker">LYRICS</p>
               <h2 class="melodyhub-section-title">Words</h2>
             </div>
-            <p class="text-[10px] font-bold text-[#666]">SYNC COMING SOON</p>
+            <p v-if="song.lyricsType !== 'SYNCED'" class="text-[10px] font-bold text-[#666]">PLAIN</p>
           </div>
           <p class="whitespace-pre-line text-sm leading-7 text-[#bbb]">{{ song.lyrics }}</p>
         </section>
