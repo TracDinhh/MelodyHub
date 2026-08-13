@@ -1,6 +1,7 @@
 package com.melodyHub.dto.response;
 
 import com.melodyHub.entity.Artist;
+import com.melodyHub.entity.LyricsType;
 import com.melodyHub.entity.Song;
 import java.util.List;
 import lombok.AllArgsConstructor;
@@ -24,6 +25,7 @@ public class SongSummaryResponse {
     private Integer durationSec;
     private Long playCount;
     private String audioUrl;
+    private LyricsType lyricsType;
     private List<ArtistSummaryResponse> artists;
 
     public static SongSummaryResponse build(Song song, List<Artist> artists) {
@@ -44,6 +46,7 @@ public class SongSummaryResponse {
                 song.getDurationSec(),
                 song.getPlayCount(),
                 song.getFilePath(),
+                song.getLyricsType(),
                 artistPayload
         );
     }

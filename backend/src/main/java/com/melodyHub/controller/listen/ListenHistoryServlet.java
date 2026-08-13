@@ -19,8 +19,11 @@ import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.util.Map;
 import java.util.Optional;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class ListenHistoryServlet extends HttpServlet {
+    private static final Logger LOGGER = Logger.getLogger(ListenHistoryServlet.class.getName());
     private static final String CONTENT_TYPE_JSON = "application/json";
     private static final int DEFAULT_PAGE = 1;
     private static final int DEFAULT_SIZE = 20;
@@ -63,6 +66,7 @@ public class ListenHistoryServlet extends HttpServlet {
                     exception.getMessage()
             );
         } catch (SQLException exception) {
+            LOGGER.log(Level.SEVERE, "Could not load listening history", exception);
             writeError(
                     response,
                     HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
@@ -109,6 +113,7 @@ public class ListenHistoryServlet extends HttpServlet {
             long historyId = listenHistoryService.record(userId.get(), payload.getSongId(), playedSec);
             writeJson(response, HttpServletResponse.SC_CREATED, Map.of("id", historyId));
         } catch (SQLException exception) {
+            LOGGER.log(Level.SEVERE, "Could not record listening history", exception);
             writeError(
                     response,
                     HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
@@ -164,6 +169,7 @@ public class ListenHistoryServlet extends HttpServlet {
                     exception.getMessage()
             );
         } catch (SQLException exception) {
+            LOGGER.log(Level.SEVERE, "Could not update listening history", exception);
             writeError(
                     response,
                     HttpServletResponse.SC_INTERNAL_SERVER_ERROR,

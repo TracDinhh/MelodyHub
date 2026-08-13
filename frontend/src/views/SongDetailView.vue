@@ -11,11 +11,13 @@ import {
 } from '@lucide/vue';
 import { songService } from '../services/songService';
 import { usePlayerStore } from '../stores/player.store';
+import { useAuthStore } from '../stores/auth.store';
 import AddToPlaylistButton from '../components/music/AddToPlaylistButton.vue';
 import { formatDuration } from '../utils/formatDate';
 
 const route = useRoute();
 const player = usePlayerStore();
+const authStore = useAuthStore();
 
 const song = ref(null);
 const related = ref([]);
@@ -44,6 +46,9 @@ async function load(slug) {
       songService.getRelated(slug, { size: 8 }).catch(() => ({ items: [] }))
     ]);
     song.value = detail;
+    if (authStore.isAuthenticated) {
+      player.setLiked(detail.id, Boolean(detail.isLiked));
+    }
     related.value = relatedResponse?.items || [];
 
     if (detail.lyricsType === 'SYNCED') {
@@ -64,6 +69,12 @@ function playSong() {
   const main = toPlayerTrack(song.value);
   const queue = [main, ...relatedTrackList.value.filter((track) => track.id !== main.id)];
   player.playTrack(main, queue);
+}
+
+async function toggleLike() {
+  if (!authStore.isAuthenticated || !song.value) return;
+  const liked = await player.toggleLike(song.value.id);
+  song.value = { ...song.value, isLiked: liked, likeCount: Math.max(0, (song.value.likeCount || 0) + (liked ? 1 : -1)) };
 }
 
 function playRelated(track) {
@@ -181,7 +192,8 @@ watch(() => route.params.slug, (slug) => slug && load(slug));
               <button
                 class="melodyhub-icon-btn !size-11"
                 :title="song.isLiked ? 'You liked this song' : 'Like this song'"
-                disabled
+                :disabled="!authStore.isAuthenticated"
+                @click="toggleLike"
               >
                 <Heart :size="18" :class="song.isLiked ? 'fill-[#1DB954] text-[#1DB954]' : ''" />
               </button>

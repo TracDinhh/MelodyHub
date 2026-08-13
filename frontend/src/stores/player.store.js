@@ -1,6 +1,7 @@
 import { computed, ref } from 'vue';
 import { defineStore } from 'pinia';
 import { useListenTrackerStore } from './listenTracker.store';
+import { userService } from '../services/userService';
 
 const EMPTY_TRACK = { id: null, title: '', artist: '', cover: '', duration: 0, audioUrl: null, lyricsType: 'PLAIN', lyrics: [] };
 
@@ -50,10 +51,8 @@ export const usePlayerStore = defineStore('player', () => {
     currentTrack.value?.lyricsType === 'SYNCED' && syncedLyrics.value.length > 0
   );
 
-  // Listen-tracker integration: record a song once the user has actually
-  // listened past MIN_LISTEN_SECONDS. Calling useListenTrackerStore() at store
-  // init would force all components that import the player to also import the
-  // tracker (which pulls in auth + http + services), so we resolve it lazily.
+  // Resolve the listener lazily so loading the player does not eagerly load
+  // auth, HTTP, and history services.
   let trackerInstance = null;
 
   function getTracker() {
@@ -84,8 +83,7 @@ export const usePlayerStore = defineStore('player', () => {
       isPlaying.value = true;
       const tracker = getTracker();
       if (tracker && currentTrack.value?.id) {
-        tracker.resetOnTrackChange(currentTrack.value.id);
-        tracker.tryRecord(currentTrack.value.id);
+        tracker.recordStartedTrack(currentTrack.value.id);
       }
     });
     audio.addEventListener('pause', () => {
@@ -158,6 +156,8 @@ export const usePlayerStore = defineStore('player', () => {
       togglePlayback();
       return;
     }
+    const tracker = getTracker();
+    if (tracker) tracker.recordStartedTrack(track.id);
     load(track);
   }
 
@@ -212,11 +212,25 @@ export const usePlayerStore = defineStore('player', () => {
     }
   }
 
-  function toggleInSet(target, id) {
-    const nextSet = new Set(target.value);
-    if (nextSet.has(id)) nextSet.delete(id);
-    else nextSet.add(id);
-    target.value = nextSet;
+  function setLiked(id, liked) {
+    const nextSet = new Set(likedIds.value);
+    if (liked) nextSet.add(id);
+    else nextSet.delete(id);
+    likedIds.value = nextSet;
+  }
+
+  function clearLikedSongs() {
+    likedIds.value = new Set();
+  }
+
+  window.addEventListener('melodyhub:session-cleared', clearLikedSongs);
+
+  async function toggleLike(id) {
+    if (!id) return false;
+    const liked = likedIds.value.has(id);
+    const response = liked ? await userService.unlikeSong(id) : await userService.likeSong(id);
+    setLiked(id, response?.liked ?? !liked);
+    return response?.liked ?? !liked;
   }
 
   return {
@@ -247,7 +261,14 @@ export const usePlayerStore = defineStore('player', () => {
     tick,
     setVolume,
     toggleMute,
-    toggleLike: (id) => toggleInSet(likedIds, id),
-    toggleDownload: (id) => toggleInSet(downloadedIds, id)
+    setLiked,
+    clearLikedSongs,
+    toggleLike,
+    toggleDownload: (id) => {
+      const nextSet = new Set(downloadedIds.value);
+      if (nextSet.has(id)) nextSet.delete(id);
+      else nextSet.add(id);
+      downloadedIds.value = nextSet;
+    }
   };
 });

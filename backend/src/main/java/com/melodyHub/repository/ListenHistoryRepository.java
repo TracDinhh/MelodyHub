@@ -23,7 +23,7 @@ import javax.sql.DataSource;
 public class ListenHistoryRepository {
     private static final String SONG_COLUMNS = """
             s.id, s.title, s.slug, s.album_id, s.track_number, s.duration_sec,
-            s.file_path, s.cover_url, s.lyrics, s.status, s.play_count,
+            s.file_path, s.cover_url, s.lyrics, s.lyrics_type, s.status, s.play_count,
             s.created_at, s.updated_at, s.deleted_at
             """;
 
@@ -62,7 +62,7 @@ public class ListenHistoryRepository {
 
     public long countByUser(int userId) throws SQLException {
         String sql = """
-                SELECT COUNT(*) FROM listen_history lh
+                SELECT COUNT(DISTINCT lh.song_id) FROM listen_history lh
                 JOIN songs s ON s.id = lh.song_id
                 WHERE lh.user_id = ? AND s.deleted_at IS NULL AND s.status = ?
                 """;
@@ -85,21 +85,22 @@ public class ListenHistoryRepository {
      */
     public List<HistoryRow> getPageByUser(int userId, int size, int offset) throws SQLException {
         String sql = """
-                SELECT lh.id AS lh_id, lh.played_sec, lh.listened_at,
+                SELECT latest.id AS lh_id, latest.played_sec, latest.listened_at,
                        """ + SONG_COLUMNS + """
-                FROM listen_history lh
-                JOIN (
-                    SELECT song_id, MAX(listened_at) AS latest_at
+                FROM (
+                    SELECT id, song_id, played_sec, listened_at,
+                           ROW_NUMBER() OVER (
+                               PARTITION BY song_id
+                               ORDER BY listened_at DESC, id DESC
+                           ) AS latest_rank
                     FROM listen_history
                     WHERE user_id = ?
-                    GROUP BY song_id
-                ) latest ON latest.song_id = lh.song_id AND latest.latest_at = lh.listened_at
-                JOIN songs s ON s.id = lh.song_id
-                WHERE lh.user_id = ?
+                ) latest
+                JOIN songs s ON s.id = latest.song_id
+                WHERE latest.latest_rank = 1
                   AND s.deleted_at IS NULL
                   AND s.status = ?
-                GROUP BY s.id, lh.id, lh.played_sec, lh.listened_at
-                ORDER BY lh.listened_at DESC, lh.id DESC
+                ORDER BY latest.listened_at DESC, latest.id DESC
                 LIMIT ? OFFSET ?
                 """;
 
@@ -107,10 +108,9 @@ public class ListenHistoryRepository {
         try (var connection = getConnection();
              var statement = connection.prepareStatement(sql)) {
             statement.setInt(1, userId);
-            statement.setInt(2, userId);
-            statement.setString(3, SongStatus.PUBLISHED.name());
-            statement.setInt(4, size);
-            statement.setInt(5, offset);
+            statement.setString(2, SongStatus.PUBLISHED.name());
+            statement.setInt(3, size);
+            statement.setInt(4, offset);
 
             try (var resultSet = statement.executeQuery()) {
                 while (resultSet.next()) {

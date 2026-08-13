@@ -452,6 +452,77 @@ public class SongRepository {
         }
     }
 
+    public boolean isPublishedSong(int songId) throws SQLException {
+        String sql = "SELECT 1 FROM songs WHERE id = ? AND status = ? AND deleted_at IS NULL LIMIT 1";
+        try (var connection = getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, songId);
+            statement.setString(2, SongStatus.PUBLISHED.name());
+            try (var resultSet = statement.executeQuery()) {
+                return resultSet.next();
+            }
+        }
+    }
+
+    public void addLike(int userId, int songId) throws SQLException {
+        String sql = "INSERT IGNORE INTO song_likes (user_id, song_id) VALUES (?, ?)";
+        try (var connection = getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, userId);
+            statement.setInt(2, songId);
+            statement.executeUpdate();
+        }
+    }
+
+    public void removeLike(int userId, int songId) throws SQLException {
+        String sql = "DELETE FROM song_likes WHERE user_id = ? AND song_id = ?";
+        try (var connection = getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, userId);
+            statement.setInt(2, songId);
+            statement.executeUpdate();
+        }
+    }
+
+    public List<Song> getLikedPage(int userId, int size, int offset) throws SQLException {
+        String sql = """
+                SELECT s.id, s.title, s.slug, s.album_id, s.track_number, s.duration_sec,
+                       s.file_path, s.cover_url, s.lyrics, s.lyrics_type, s.status, s.play_count,
+                       s.created_at, s.updated_at, s.deleted_at
+                FROM song_likes sl
+                """
+                + "JOIN songs s ON s.id = sl.song_id "
+                + "WHERE sl.user_id = ? AND s.status = ? AND s.deleted_at IS NULL "
+                + "ORDER BY sl.created_at DESC, s.id DESC LIMIT ? OFFSET ?";
+        try (var connection = getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, userId);
+            statement.setString(2, SongStatus.PUBLISHED.name());
+            statement.setInt(3, size);
+            statement.setInt(4, offset);
+            try (var resultSet = statement.executeQuery()) {
+                List<Song> songs = new ArrayList<>();
+                while (resultSet.next()) {
+                    songs.add(mapRow(resultSet));
+                }
+                return songs;
+            }
+        }
+    }
+
+    public long countLikedBy(int userId) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM song_likes sl JOIN songs s ON s.id = sl.song_id "
+                + "WHERE sl.user_id = ? AND s.status = ? AND s.deleted_at IS NULL";
+        try (var connection = getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, userId);
+            statement.setString(2, SongStatus.PUBLISHED.name());
+            try (var resultSet = statement.executeQuery()) {
+                return resultSet.next() ? resultSet.getLong(1) : 0L;
+            }
+        }
+    }
+
     public void incrementPlayCount(int songId) throws SQLException {
         String sql = """
                 UPDATE songs

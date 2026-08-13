@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import { Heart, MoreHorizontal, Pause, Play } from '@lucide/vue';
 import { useRouter } from 'vue-router';
 import AddToPlaylistButton from './AddToPlaylistButton.vue';
+import { useAuthStore } from '../../stores/auth.store';
 import { usePlayerStore } from '../../stores/player.store';
 import { formatDuration } from '../../utils/formatDate';
 
@@ -12,16 +13,30 @@ const props = defineProps({
   showAlbum: { type: Boolean, default: false },
   songSlug: { type: String, default: null }
 });
+const emit = defineEmits(['liked-change']);
 
+const auth = useAuthStore();
 const player = usePlayerStore();
 const router = useRouter();
 const menuOpen = ref(false);
 const isCurrent = computed(() => player.currentTrack.id === props.track.id);
 const isLiked = computed(() => player.likedIds.has(props.track.id));
+const likeBusy = ref(false);
 
 function openDetail() {
   if (!props.songSlug) return;
   router.push({ name: 'song-detail', params: { slug: props.songSlug } });
+}
+
+async function toggleLike() {
+  if (!auth.isAuthenticated || likeBusy.value) return;
+  likeBusy.value = true;
+  try {
+    const liked = await player.toggleLike(props.track.id);
+    emit('liked-change', { songId: props.track.id, liked });
+  } finally {
+    likeBusy.value = false;
+  }
 }
 </script>
 
@@ -53,7 +68,7 @@ function openDetail() {
     </div>
     <p class="truncate text-xs text-[#777]">{{ showAlbum ? track.album : track.plays }}</p>
     <p class="text-xs text-[#777]">{{ formatDuration(track.duration) }}</p>
-    <button class="melodyhub-icon-btn !size-8" :title="isLiked ? 'Remove from favorites' : 'Add to favorites'" @click="player.toggleLike(track.id)">
+    <button class="melodyhub-icon-btn !size-8" :disabled="!auth.isAuthenticated || likeBusy" :title="isLiked ? 'Remove from favorites' : 'Add to favorites'" @click="toggleLike">
       <Heart :size="16" :class="isLiked ? 'fill-[#1DB954] text-[#1DB954]' : ''" />
     </button>
     <AddToPlaylistButton

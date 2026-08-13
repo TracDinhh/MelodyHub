@@ -5,6 +5,7 @@ import {
   AudioLines,
   ChevronDown,
   Crown,
+  Heart,
   History,
   Library,
   ListMusic,
@@ -181,6 +182,9 @@ onBeforeUnmount(() => document.removeEventListener('click', closeOnOutsideClick)
               <nav class="p-2">
                 <RouterLink :to="{ name: 'library' }" class="melodyhub-menu-item" @click="dropdownOpen = false">
                   <Library :size="15" /> Library
+                </RouterLink>
+                <RouterLink v-if="authStore.isAuthenticated" :to="{ name: 'liked-songs' }" class="melodyhub-menu-item" @click="dropdownOpen = false">
+                  <Heart :size="15" /> Liked songs
                 </RouterLink>
                 <RouterLink v-if="authStore.isAuthenticated" :to="{ name: 'playlists' }" class="melodyhub-menu-item" @click="dropdownOpen = false">
                   <ListMusic :size="15" /> My playlists

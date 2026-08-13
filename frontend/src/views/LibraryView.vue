@@ -1,46 +1,48 @@
 <script setup>
-import { ref } from 'vue';
-import { ListMusic, Play, Trash2 } from '@lucide/vue';
-import TrackRow from '../components/music/TrackRow.vue';
-import { playlists, tracks } from '../data/music';
-import { usePlayerStore } from '../stores/player.store';
-
-const player = usePlayerStore();
-const deleted = ref(false);
+import { Heart, History, ListMusic } from '@lucide/vue';
 </script>
 
 <template>
-  <div class="pb-10">
-    <section class="relative overflow-hidden px-5 py-8 sm:px-8">
-      <div class="absolute inset-0 bg-gradient-to-b from-[#1DB954]/15 to-transparent" />
-      <div class="relative flex flex-col gap-6 sm:flex-row sm:items-end">
-        <div class="grid aspect-square w-44 shrink-0 place-items-center overflow-hidden rounded-lg bg-[#181818] shadow-2xl shadow-black/50">
-          <img v-if="!deleted" :src="playlists[0].cover" alt="Night Drive playlist cover" class="h-full w-full object-cover" />
-          <ListMusic v-else :size="54" class="text-[#444]" />
-        </div>
-        <div>
-          <p class="text-xs font-black tracking-[0.14em] text-white">PLAYLIST</p>
-          <h1 class="mt-2 text-4xl font-black text-white sm:text-6xl">{{ deleted ? 'Playlist removed' : 'Night Drive' }}</h1>
-          <p class="mt-3 text-sm text-[#999]">{{ deleted ? 'Create another playlist from the sidebar.' : '42 tracks · 2 hr 48 min · Made by Alex Morgan' }}</p>
-          <div v-if="!deleted" class="mt-5 flex flex-wrap gap-3">
-            <button class="inline-flex h-11 items-center gap-2 rounded-full bg-[#1DB954] px-6 text-xs font-black text-black" @click="player.playTrack(tracks[0])">
-              <Play :size="17" class="fill-current" /> PLAY ALL
-            </button>
-            <button class="inline-flex h-11 items-center gap-2 rounded-full border border-white/15 px-5 text-xs font-bold text-[#aaa] hover:border-red-400/60 hover:text-red-400" @click="deleted = true">
-              <Trash2 :size="16" /> Delete playlist
-            </button>
-          </div>
-        </div>
-      </div>
-    </section>
+  <main class="mx-auto max-w-[1260px] px-4 py-8 sm:px-7">
+    <header class="border-b border-white/[0.06] pb-7">
+      <p class="melodyhub-kicker">YOUR LIBRARY</p>
+      <h1 class="mt-2 text-3xl font-black text-white sm:text-4xl">My library</h1>
+      <p class="mt-2 text-sm text-[#87918a]">Keep the music and collections you want to return to close at hand.</p>
+    </header>
 
-    <section v-if="!deleted" class="px-4 py-5 sm:px-7">
-      <div class="mb-3 grid min-w-[680px] grid-cols-[40px_minmax(240px,1.5fr)_minmax(130px,0.8fr)_100px_50px_40px] gap-3 px-3 text-[10px] font-black tracking-wider text-[#606060]">
-        <span>#</span><span>TITLE</span><span>ALBUM</span><span>DURATION</span><span></span><span></span>
-      </div>
-      <div class="overflow-x-auto">
-        <TrackRow v-for="(track, index) in tracks" :key="track.id" :track="track" :index="index" show-album />
-      </div>
-    </section>
-  </div>
+    <nav class="mt-6 grid gap-3 sm:grid-cols-3" aria-label="Library sections">
+      <RouterLink
+        :to="{ name: 'liked-songs' }"
+        class="group flex min-h-32 flex-col justify-between border border-white/[0.08] bg-white/[0.02] p-5 transition hover:border-[#65e78c]/45 hover:bg-white/[0.045]"
+      >
+        <span class="grid size-10 place-items-center rounded-full bg-[#3DDE7C]/15 text-[#65e78c]"><Heart :size="18" class="fill-current" /></span>
+        <span>
+          <span class="block text-sm font-black text-white group-hover:text-[#8be8a8]">Liked songs</span>
+          <span class="mt-1 block text-xs text-[#87918a]">Songs saved to your library</span>
+        </span>
+      </RouterLink>
+
+      <RouterLink
+        :to="{ name: 'library-history' }"
+        class="group flex min-h-32 flex-col justify-between border border-white/[0.08] bg-white/[0.02] p-5 transition hover:border-[#65e78c]/45 hover:bg-white/[0.045]"
+      >
+        <span class="grid size-10 place-items-center rounded-full bg-sky-400/10 text-sky-300"><History :size="19" /></span>
+        <span>
+          <span class="block text-sm font-black text-white group-hover:text-[#8be8a8]">Listen history</span>
+          <span class="mt-1 block text-xs text-[#87918a]">Recently played songs</span>
+        </span>
+      </RouterLink>
+
+      <RouterLink
+        :to="{ name: 'playlists' }"
+        class="group flex min-h-32 flex-col justify-between border border-white/[0.08] bg-white/[0.02] p-5 transition hover:border-[#65e78c]/45 hover:bg-white/[0.045]"
+      >
+        <span class="grid size-10 place-items-center rounded-full bg-amber-300/10 text-amber-200"><ListMusic :size="19" /></span>
+        <span>
+          <span class="block text-sm font-black text-white group-hover:text-[#8be8a8]">Playlists</span>
+          <span class="mt-1 block text-xs text-[#87918a]">Your saved collections</span>
+        </span>
+      </RouterLink>
+    </nav>
+  </main>
 </template>

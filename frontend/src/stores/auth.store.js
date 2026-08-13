@@ -51,6 +51,7 @@ export const useAuthStore = defineStore('auth', () => {
     tokenStorage.clear();
     refreshTokenStorage.clear();
     sessionStorage.removeItem(USER_KEY);
+    window.dispatchEvent(new CustomEvent('melodyhub:session-cleared'));
   }
 
   window.addEventListener('melodyhub:unauthorized', clearSession);

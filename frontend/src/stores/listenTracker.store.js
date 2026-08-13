@@ -19,9 +19,8 @@ function writePending(value) {
 }
 
 /**
- * Tracks the user's listening progress and records an entry once a track has
- * been played for at least {@code MIN_LISTEN_SECONDS} seconds. Uses an
- * in-flight set so a song is only recorded once per session.
+ * Records a history entry as soon as a user starts a track. Uses an in-flight
+ * set so a song is only recorded once per session.
  */
 export const useListenTrackerStore = defineStore('listen-tracker', () => {
   const auth = useAuthStore();
@@ -53,6 +52,12 @@ export const useListenTrackerStore = defineStore('listen-tracker', () => {
     }
   }
 
+  function recordStartedTrack(songId) {
+    if (!songId) return;
+    resetOnTrackChange(songId);
+    void tryRecord(songId);
+  }
+
   function resetOnTrackChange(newSongId) {
     if (!newSongId) return;
     if (recordedIds.value.has(newSongId)) return;
@@ -80,6 +85,7 @@ export const useListenTrackerStore = defineStore('listen-tracker', () => {
     pendingBySongId,
     noteProgress,
     tryRecord,
+    recordStartedTrack,
     resetOnTrackChange,
     clear,
     MIN_LISTEN_SECONDS

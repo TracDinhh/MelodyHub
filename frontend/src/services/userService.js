@@ -15,5 +15,17 @@ export const userService = {
 
   updateMyProfile(payload) {
     return apiClient.patch('/api/users/me', payload);
+  },
+
+  getLikedSongs(params) {
+    return apiClient.get('/api/users/me/liked-songs', { params });
+  },
+
+  likeSong(songId) {
+    return apiClient.post(`/api/users/me/liked-songs/${encodeURIComponent(songId)}`);
+  },
+
+  unlikeSong(songId) {
+    return apiClient.delete(`/api/users/me/liked-songs/${encodeURIComponent(songId)}`);
   }
 };

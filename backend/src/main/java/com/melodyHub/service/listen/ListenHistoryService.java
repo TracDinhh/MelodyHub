@@ -38,7 +38,11 @@ public class ListenHistoryService {
     }
 
     public PagedResponse<ListenHistoryResponse> getPage(int userId, int page, int size) throws SQLException {
-        int offset = (page - 1) * size;
+        long calculatedOffset = (long) (page - 1) * size;
+        if (calculatedOffset > Integer.MAX_VALUE) {
+            throw new IllegalArgumentException("page is too large");
+        }
+        int offset = (int) calculatedOffset;
         List<HistoryRow> rows = listenHistoryRepository.getPageByUser(userId, size, offset);
         long total = listenHistoryRepository.countByUser(userId);
 

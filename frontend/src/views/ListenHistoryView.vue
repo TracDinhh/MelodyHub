@@ -107,7 +107,7 @@ onMounted(load);
         <h1 class="text-3xl font-black text-white sm:text-4xl">Listen history</h1>
       </div>
       <p class="text-sm text-[#87918a]">
-        Songs you've listened to are recorded here once you've played at least 30 seconds.
+        Songs are added here as soon as you start playing them.
       </p>
     </header>
 

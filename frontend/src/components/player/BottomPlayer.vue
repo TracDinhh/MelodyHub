@@ -12,9 +12,11 @@ import {
 } from '@lucide/vue';
 import { tracks } from '../../data/music';
 import { usePlayerStore } from '../../stores/player.store';
+import { useAuthStore } from '../../stores/auth.store';
 import { formatDuration } from '../../utils/formatDate';
 
 const player = usePlayerStore();
+const authStore = useAuthStore();
 let timer;
 
 const isLiked = computed(() => player.likedIds.has(player.currentTrack.id));
@@ -37,6 +39,11 @@ const activeLyricLine = computed(() => {
   if (!count || !player.duration) return null;
   return Math.min(count - 1, Math.floor((player.currentTime / player.duration) * count));
 });
+
+async function toggleLike() {
+  if (!authStore.isAuthenticated || !player.currentTrack.id) return;
+  await player.toggleLike(player.currentTrack.id);
+}
 
 function seekTo(e) {
   const rect = e.currentTarget.getBoundingClientRect();
@@ -76,7 +83,8 @@ function seekTo(e) {
         <button
           class="melodyhub-icon-btn size-9"
           :class="isLiked ? 'text-[#3DDE7C]' : 'text-[#4E5A52]'"
-          @click="player.toggleLike(player.currentTrack.id)"
+          :disabled="!authStore.isAuthenticated"
+          @click="toggleLike"
         >
           <Heart :size="17" :class="isLiked ? 'fill-current' : ''" />
         </button>
