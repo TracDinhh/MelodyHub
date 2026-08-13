@@ -1,8 +1,9 @@
 <script setup>
 import { ref } from 'vue';
 import { RouterLink, useRouter } from 'vue-router';
-import { Disc3, LayoutDashboard, LogOut, Menu, Mic2, ShieldCheck, UserCheck, Users, X } from '@lucide/vue';
+import { LayoutDashboard, LogOut, Menu, Mic2, ShieldCheck, UserCheck, Users, X } from '@lucide/vue';
 import { useAuthStore } from '../stores/auth.store';
+import logoUrl from '../assets/styles/icons/logo.png';
 
 const authStore = useAuthStore();
 const router = useRouter();
@@ -35,15 +36,7 @@ async function logout() {
         :class="navOpen ? 'translate-x-0' : '-translate-x-full'"
       >
         <header class="flex h-18 items-center justify-between px-5">
-          <div class="flex items-center gap-2.5">
-            <span class="grid size-9 place-items-center rounded-full bg-[#1DB954] text-black">
-              <Disc3 :size="21" :stroke-width="2.5" />
-            </span>
-            <div class="leading-tight">
-              <span class="block text-lg font-black tracking-[0.18em] text-white">Melody Hub</span>
-              <span class="block text-[10px] font-bold tracking-[0.2em] text-[#1DB954]">ADMIN</span>
-            </div>
-          </div>
+          <img :src="logoUrl" alt="MelodyHub logo" class="h-12 w-40 object-contain object-left" />
           <button class="melodyhub-icon-btn lg:hidden" title="Close menu" @click="navOpen = false">
             <X :size="19" />
           </button>

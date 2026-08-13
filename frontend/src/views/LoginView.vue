@@ -1,9 +1,10 @@
 <script setup>
 import { computed, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { AtSign, Check, Disc3, Eye, EyeOff, Mail, Music2, UserRound, KeyRound } from '@lucide/vue';
+import { AtSign, Check, Eye, EyeOff, Mail, Music2, UserRound, KeyRound } from '@lucide/vue';
 import { useAuthStore } from '../stores/auth.store';
 import { canAccessRoute, getRoleHomeRouteName } from '../utils/roleRouting';
+import logoUrl from '../assets/styles/icons/logo.png';
 
 const router = useRouter();
 const route = useRoute();
@@ -184,9 +185,8 @@ watch(() => registerForm.terms, () => clearFieldError('terms'));
 <template>
   <section class="w-full max-w-md">
     <div class="mb-8 text-center">
-      <RouterLink :to="{ name: 'home' }" class="inline-flex items-center gap-2">
-        <span class="grid size-10 place-items-center rounded-full bg-[#1DB954] text-black"><Disc3 :size="23" :stroke-width="2.5" /></span>
-        <span class="text-xl font-black tracking-[0.18em] text-white">Melody Hub</span>
+      <RouterLink :to="{ name: 'home' }" class="inline-flex items-center">
+        <img :src="logoUrl" alt="MelodyHub logo" class="h-20 w-56 object-contain" />
       </RouterLink>
       <h1 class="mt-7 text-3xl font-black text-white">{{ title }}</h1>
       <p class="mt-2 text-sm text-[#858585]">Your next favorite sound is one sign-in away.</p>
