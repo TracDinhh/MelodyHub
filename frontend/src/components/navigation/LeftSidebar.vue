@@ -15,6 +15,7 @@ import {
   X
 } from '@lucide/vue';
 import { playlists, tracks } from '../../data/music';
+import logoUrl from '../../assets/styles/icons/logo.png';
 
 defineProps({ mobileOpen: Boolean });
 const emit = defineEmits(['close']);
@@ -57,14 +58,8 @@ function deletePlaylist(id) {
   >
     <!-- Logo strip -->
     <header class="flex h-[3.75rem] shrink-0 items-center justify-between border-b border-white/[0.05] px-4">
-      <RouterLink :to="{ name: 'home' }" class="flex items-center gap-2" @click="emit('close')">
-        <span class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#3DDE7C] text-[#0B0D0F]">
-          <Disc3 :size="19" :stroke-width="2.5" />
-        </span>
-        <div class="leading-none">
-          <p class="font-display text-base tracking-[0.18em] text-[#EDE9E0]">MELODY</p>
-          <p class="text-[9px] font-bold uppercase tracking-[0.32em] text-[#3DDE7C]">Hub</p>
-        </div>
+      <RouterLink :to="{ name: 'home' }" class="flex min-w-0 flex-1 items-center" @click="emit('close')">
+        <img :src="logoUrl" alt="MelodyHub logo" class="h-[50px] w-[150px] shrink-0 object-contain object-left" />
       </RouterLink>
       <button class="melodyhub-icon-btn hidden lg:grid" title="More options">
         <MoreHorizontal :size="17" />

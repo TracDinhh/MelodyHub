@@ -1,8 +1,9 @@
 <script setup>
 import { reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { ArrowLeft, Check, Disc3, Mail } from '@lucide/vue';
+import { ArrowLeft, Check, Mail } from '@lucide/vue';
 import { authService } from '../services/authService';
+import logoUrl from '../assets/styles/icons/logo.png';
 
 const router = useRouter();
 const step = ref('request'); // 'request' | 'success'
@@ -48,9 +49,8 @@ async function requestReset() {
 <template>
   <section class="w-full max-w-md">
     <div class="mb-8 text-center">
-      <RouterLink :to="{ name: 'home' }" class="inline-flex items-center gap-2">
-        <span class="grid size-10 place-items-center rounded-full bg-[#1DB954] text-black"><Disc3 :size="23" :stroke-width="2.5" /></span>
-        <span class="text-xl font-black tracking-[0.18em] text-white">Melody Hub</span>
+      <RouterLink :to="{ name: 'home' }" class="inline-flex items-center">
+        <img :src="logoUrl" alt="MelodyHub logo" class="h-20 w-56 object-contain" />
       </RouterLink>
     </div>
 
