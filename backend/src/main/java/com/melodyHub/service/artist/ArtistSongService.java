@@ -1,5 +1,8 @@
 package com.melodyHub.service.artist;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.melodyHub.dto.request.SongCreateRequest;
 import com.melodyHub.dto.request.SongUpdateRequest;
 import com.melodyHub.dto.request.SyncedLyricsRequest;
@@ -15,6 +18,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -29,6 +33,7 @@ public class ArtistSongService {
 
     private final SongRepository songRepository;
     private final SongLyricsRepository lyricsRepository;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public ArtistSongService() {
         this(new SongRepository(), new SongLyricsRepository());
@@ -54,12 +59,66 @@ public class ArtistSongService {
         song.setStatus(SongStatus.PUBLISHED);
 
         try {
-            return SongResponse.fromEntity(songRepository.create(song, artistId));
+            Song created = songRepository.create(song, artistId);
+            // Persist synced lyric lines into song_lyrics so the lyrics API can serve them.
+            if (created.getLyricsType() == LyricsType.SYNCED) {
+                persistSyncedLyrics(created.getId(), request.getLyrics());
+            }
+            return SongResponse.fromEntity(created);
         } catch (SQLException exception) {
             if (exception.getErrorCode() == DUPLICATE_KEY_ERROR_CODE) {
                 throw new SongException("SONG_SLUG_EXISTS", "A song with this slug already exists");
             }
             throw exception;
+        }
+    }
+
+    /**
+     * Parses the synced-lyrics JSON ({"lines":[{startTime,endTime,text}],...})
+     * and stores the lines in the song_lyrics table (replacing any existing).
+     */
+    private void persistSyncedLyrics(int songId, String lyricsJson) throws SQLException, SongException {
+        lyricsRepository.replaceForSong(songId, parseSyncedLyrics(lyricsJson));
+    }
+
+    private List<SongLyricsRepository.SyncedLyricLine> parseSyncedLyrics(String lyricsJson)
+            throws SongException {
+        if (lyricsJson == null || lyricsJson.isBlank()) {
+            return List.of();
+        }
+
+        try {
+            JsonNode root = objectMapper.readTree(lyricsJson);
+            JsonNode lyricLines = root.get("lines");
+            if (!root.isObject() || lyricLines == null || !lyricLines.isArray()) {
+                throw new SongException("INVALID_SYNCED_LYRICS", "Synced lyrics must contain a lines array");
+            }
+
+            List<SongLyricsRepository.SyncedLyricLine> lines = new ArrayList<>();
+            for (JsonNode node : lyricLines) {
+                String text = node.path("text").asText("").trim();
+                if (text.isEmpty()) {
+                    continue;
+                }
+
+                JsonNode startTimeNode = node.get("startTime");
+                if (startTimeNode == null || !startTimeNode.isNumber()) {
+                    throw new SongException("INVALID_SYNCED_LYRICS", "Each lyric line needs a numeric start time");
+                }
+                double startTime = startTimeNode.asDouble();
+                if (!Double.isFinite(startTime) || startTime < 0) {
+                    throw new SongException("INVALID_SYNCED_LYRICS", "Lyric start times must be zero or greater");
+                }
+
+                lines.add(new SongLyricsRepository.SyncedLyricLine(
+                        Math.round(startTime * 1000),
+                        text
+                ));
+            }
+            lines.sort(Comparator.comparingLong(SongLyricsRepository.SyncedLyricLine::startTimeMs));
+            return lines;
+        } catch (JsonProcessingException exception) {
+            throw new SongException("INVALID_SYNCED_LYRICS", "Synced lyrics must be valid JSON");
         }
     }
 
@@ -81,10 +140,21 @@ public class ArtistSongService {
 
         String lyrics = normalizeOptional(request.getLyrics());
         String lyricsType = normalizeOptional(request.getLyricsType());
+        if (parseLyricsType(lyricsType) == LyricsType.SYNCED) {
+            parseSyncedLyrics(lyrics);
+        }
 
-        return songRepository.updateOwn(artistId, songId, title.trim(), coverUrl, lyrics, lyricsType)
-                .map(SongResponse::fromEntity)
+        Song updated = songRepository.updateOwn(artistId, songId, title.trim(), coverUrl, lyrics, lyricsType)
                 .orElseThrow(() -> new SongException("SONG_NOT_FOUND", "Song was not found"));
+
+        // Keep song_lyrics in sync with the chosen mode.
+        if (parseLyricsType(lyricsType) == LyricsType.SYNCED) {
+            persistSyncedLyrics(songId, lyrics);
+        } else {
+            lyricsRepository.deleteBySongId(songId);
+        }
+
+        return SongResponse.fromEntity(updated);
     }
 
     private void validateCreateRequest(SongCreateRequest request) throws SongException {
@@ -133,6 +203,9 @@ public class ArtistSongService {
             } catch (IllegalArgumentException e) {
                 throw new SongException("INVALID_LYRICS_TYPE", "Lyrics type must be PLAIN or SYNCED");
             }
+        }
+        if (parseLyricsType(lyricsType) == LyricsType.SYNCED) {
+            parseSyncedLyrics(request.getLyrics());
         }
     }
 
@@ -218,7 +291,16 @@ public class ArtistSongService {
         List<SongLyricsRepository.SyncedLyricLine> lines = new ArrayList<>();
         if (request != null && request.getLines() != null) {
             for (SyncedLyricsRequest.LyricLine line : request.getLines()) {
+                if (line == null) {
+                    continue;
+                }
                 if (line.text() != null && !line.text().isBlank()) {
+                    if (!Double.isFinite(line.startTime()) || line.startTime() < 0) {
+                        throw new SongException(
+                                "INVALID_SYNCED_LYRICS",
+                                "Lyric start times must be zero or greater"
+                        );
+                    }
                     lines.add(new SongLyricsRepository.SyncedLyricLine(
                             Math.round(line.startTime() * 1000),  // Convert to ms
                             line.text().trim()
@@ -226,7 +308,7 @@ public class ArtistSongService {
                 }
             }
         }
-        
+        lines.sort(Comparator.comparingLong(SongLyricsRepository.SyncedLyricLine::startTimeMs));
         lyricsRepository.replaceForSong(songId, lines);
     }
 

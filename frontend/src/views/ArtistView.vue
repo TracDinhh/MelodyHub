@@ -23,7 +23,8 @@ const playerTracks = computed(() =>
     cover: song.coverUrl,
     plays: (song.playCount ?? 0).toLocaleString(),
     duration: song.durationSec || 0,
-    audioUrl: song.audioUrl
+    audioUrl: song.audioUrl,
+    lyricsType: song.lyricsType || 'PLAIN'
   }))
 );
 

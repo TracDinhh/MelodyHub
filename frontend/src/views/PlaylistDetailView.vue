@@ -24,7 +24,9 @@ function toPlayerTrack(song) {
     artist: artistNames(song),
     album: '',
     duration: song?.durationSec || 0,
-    audioUrl: song?.audioUrl
+    audioUrl: song?.audioUrl,
+    lyricsType: song?.lyricsType || 'PLAIN',
+    slug: song?.slug
   };
 }
 

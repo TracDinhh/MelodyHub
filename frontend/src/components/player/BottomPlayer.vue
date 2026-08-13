@@ -26,6 +26,18 @@ const progress = computed(() =>
   player.duration > 0 ? (player.currentTime / player.duration) * 100 : 0
 );
 
+const lyricLines = computed(() => {
+  if (player.hasSyncedLyrics) return player.syncedLyrics;
+  return Array.isArray(player.currentTrack.lyrics) ? player.currentTrack.lyrics : [];
+});
+
+const activeLyricLine = computed(() => {
+  if (player.hasSyncedLyrics) return player.currentLyricLine;
+  const count = lyricLines.value.length;
+  if (!count || !player.duration) return null;
+  return Math.min(count - 1, Math.floor((player.currentTime / player.duration) * count));
+});
+
 function seekTo(e) {
   const rect = e.currentTarget.getBoundingClientRect();
   const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
@@ -217,19 +229,14 @@ function seekTo(e) {
 
         <div class="m-auto flex max-w-2xl flex-col items-center justify-center gap-5 overflow-y-auto py-12">
           <p
-            v-for="(line, index) in (player.currentTrack.lyrics || [])"
+            v-for="(line, index) in lyricLines"
             :key="index"
             class="text-center text-xl font-bold transition-all duration-500 sm:text-3xl"
-            :class="
-              index === Math.min(
-                (player.currentTrack.lyrics || []).length - 1,
-                Math.floor((player.currentTime / Math.max(player.duration, 1)) * (player.currentTrack.lyrics || []).length)
-              )
-                ? 'text-[#3DDE7C]'
-                : 'text-[#EDE9E0]/[0.15]'"          >
-            {{ line }}
+            :class="index === activeLyricLine ? 'text-[#3DDE7C]' : 'text-[#EDE9E0]/[0.15]'"
+          >
+            {{ player.hasSyncedLyrics ? line.text : line }}
           </p>
-          <p v-if="!(player.currentTrack.lyrics || []).length" class="text-sm text-[#3A4A3E]">
+          <p v-if="!lyricLines.length" class="text-sm text-[#3A4A3E]">
             No lyrics available for this track.
           </p>
         </div>

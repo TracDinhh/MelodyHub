@@ -14,13 +14,15 @@ const tabs = [
   { id: 'recommended', label: 'Recommended' }
 ];
 
-const lyrics = computed(() =>
-  Array.isArray(player.currentTrack?.lyrics) ? player.currentTrack.lyrics : []
-);
+const lyrics = computed(() => {
+  if (player.hasSyncedLyrics) return player.syncedLyrics;
+  return Array.isArray(player.currentTrack?.lyrics) ? player.currentTrack.lyrics : [];
+});
 
 const activeLine = computed(() => {
+  if (player.hasSyncedLyrics) return player.currentLyricLine;
   const count = lyrics.value.length;
-  if (!count || !player.duration) return 0;
+  if (!count || !player.duration) return null;
   return Math.min(count - 1, Math.floor((player.currentTime / player.duration) * count));
 });
 
@@ -80,7 +82,7 @@ watch(activeLine, async (index) => {
           class="origin-left transition-all duration-500"
           :class="index === activeLine ? 'text-lg font-black text-[#1DB954]' : 'text-sm font-semibold text-[#6d6d6d]'"
         >
-          {{ line }}
+          {{ player.hasSyncedLyrics ? line.text : line }}
         </p>
         <p v-if="!lyrics.length" class="text-sm text-[#6d6d6d]">No lyrics available.</p>
       </div>

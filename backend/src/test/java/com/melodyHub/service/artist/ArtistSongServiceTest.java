@@ -4,11 +4,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.melodyHub.dto.request.SongCreateRequest;
 import com.melodyHub.dto.response.PagedResponse;
 import com.melodyHub.dto.response.SongResponse;
 import com.melodyHub.entity.LyricsType;
 import com.melodyHub.entity.Song;
 import com.melodyHub.entity.SongStatus;
+import com.melodyHub.exception.SongException;
 import com.melodyHub.repository.SongLyricsRepository;
 import com.melodyHub.repository.SongRepository;
 import java.sql.SQLException;
@@ -18,6 +20,27 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 class ArtistSongServiceTest {
+    @Test
+    void rejectsInvalidSyncedLyricsBeforeCreatingTheSong() {
+        ArtistSongService service = new ArtistSongService(new StubSongRepository(), new SongLyricsRepository());
+        SongCreateRequest request = new SongCreateRequest(
+                "Synced Song",
+                "synced-song",
+                "https://example.com/song.mp3",
+                null,
+                180,
+                "{\"lines\":[{\"startTime\":-1,\"text\":\"Too early\"}]}",
+                "SYNCED"
+        );
+
+        SongException exception = assertThrows(
+                SongException.class,
+                () -> service.createOwnSong(12, request)
+        );
+
+        assertEquals("INVALID_SYNCED_LYRICS", exception.getCode());
+    }
+
     @Test
     void preservesAllSongStatusesInThePrivatePage() throws SQLException {
         StubSongRepository repository = new StubSongRepository();
