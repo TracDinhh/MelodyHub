@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import {
   ArrowLeft,
@@ -19,6 +19,7 @@ const player = usePlayerStore();
 
 const song = ref(null);
 const related = ref([]);
+const lyricLines = ref([]);
 const isLoading = ref(true);
 const notFound = ref(false);
 
@@ -29,22 +30,14 @@ const artistLabel = computed(() => {
 
 const artistList = computed(() => song.value?.artists ?? []);
 
-const relatedTrackList = computed(() =>
-  related.value.map((item) => ({
-    id: item.id,
-    title: item.title,
-    cover: item.coverUrl,
-    artist: (item.artists || []).map((artist) => artist.name).join(' & '),
-    duration: item.durationSec || 0,
-    audioUrl: item.audioUrl
-  }))
-);
+const relatedTrackList = computed(() => related.value.map(toPlayerTrack));
 
 async function load(slug) {
   isLoading.value = true;
   notFound.value = false;
   song.value = null;
   related.value = [];
+  lyricLines.value = [];
   try {
     const [detail, relatedResponse] = await Promise.all([
       songService.getPublic(slug),
@@ -52,6 +45,13 @@ async function load(slug) {
     ]);
     song.value = detail;
     related.value = relatedResponse?.items || [];
+
+    if (detail.lyricsType === 'SYNCED') {
+      const lyricsResponse = await songService.getSyncedLyrics(detail.slug).catch(() => null);
+      if (song.value?.id === detail.id && lyricsResponse?.lyricsType === 'SYNCED') {
+        lyricLines.value = lyricsResponse.lines || [];
+      }
+    }
   } catch (error) {
     if (error.status === 404) notFound.value = true;
   } finally {
@@ -64,26 +64,11 @@ function playSong() {
   const main = toPlayerTrack(song.value);
   const queue = [main, ...relatedTrackList.value.filter((track) => track.id !== main.id)];
   player.playTrack(main, queue);
-  
-  // Load synced lyrics if available
-  if (main.lyricsType === 'SYNCED') {
-    loadSyncedLyrics(song.value.slug);
-  } else {
-    player.syncedLyrics = [];
-  }
 }
 
 function playRelated(track) {
   const queue = [toPlayerTrack(song.value), ...relatedTrackList.value.filter((t) => t.id !== track.id)];
   player.playTrack(track, queue);
-  
-  // Load synced lyrics if available
-  const relatedSong = related.value.find(s => s.id === track.id);
-  if (relatedSong?.lyricsType === 'SYNCED') {
-    loadSyncedLyrics(relatedSong.slug);
-  } else {
-    player.syncedLyrics = [];
-  }
 }
 
 function toPlayerTrack(detail) {
@@ -94,24 +79,29 @@ function toPlayerTrack(detail) {
     artist: (detail.artists || []).map((artist) => artist.name).join(' & '),
     duration: detail.durationSec || 0,
     audioUrl: detail.audioUrl,
-    lyricsType: detail.lyricsType || 'PLAIN'
+    lyricsType: detail.lyricsType || 'PLAIN',
+    slug: detail.slug
   };
 }
 
-async function loadSyncedLyrics(slug) {
-  try {
-    const data = await songService.getSyncedLyrics(slug);
-    if (data.lyricsType === 'SYNCED' && data.lines) {
-      player.syncedLyrics = data.lines;
-    } else {
-      player.syncedLyrics = [];
-    }
-  } catch (e) {
-    player.syncedLyrics = [];
-  }
-}
-
 const isPlaying = computed(() => player.isPlaying && player.currentTrack.id === song.value?.id);
+
+// Auto-scroll the active lyric line to the middle of the lyrics box while playing.
+const lyricsBox = ref(null);
+watch(
+  () => player.currentLyricLine,
+  (index) => {
+    if (index == null || !lyricsBox.value) return;
+    if (player.currentTrack.id !== song.value?.id) return;
+    nextTick(() => {
+      const el = lyricsBox.value?.querySelector(`[data-line="${index}"]`);
+      if (el) {
+        lyricsBox.value.scrollTop =
+          el.offsetTop - lyricsBox.value.clientHeight / 2 + el.clientHeight / 2;
+      }
+    });
+  }
+);
 
 onMounted(() => load(route.params.slug));
 watch(() => route.params.slug, (slug) => slug && load(slug));
@@ -204,7 +194,7 @@ watch(() => route.params.slug, (slug) => slug && load(slug));
       <div class="px-4 py-7 sm:px-7">
         <!-- Synced Lyrics Display -->
         <section 
-          v-if="song.lyricsType === 'SYNCED' && player.syncedLyrics.length > 0" 
+          v-if="song.lyricsType === 'SYNCED' && lyricLines.length > 0"
           class="mb-6 rounded-lg border border-white/[0.06] bg-[#111] p-5"
         >
           <div class="mb-3 flex items-end justify-between">
@@ -214,15 +204,16 @@ watch(() => route.params.slug, (slug) => slug && load(slug));
             </div>
             <p class="text-[10px] font-bold text-[#1DB954]">● SYNCED</p>
           </div>
-          <div class="space-y-1 text-center">
+          <div ref="lyricsBox" class="max-h-[340px] space-y-1 overflow-y-auto scroll-smooth text-center">
             <div
-              v-for="(line, index) in player.syncedLyrics"
+              v-for="(line, index) in lyricLines"
               :key="index"
+              :data-line="index"
               class="py-1.5 text-base transition-all duration-300 sm:text-xl"
               :class="{
-                'text-[#1DB954] font-bold scale-105': player.currentLyricLine === index && player.currentTrack.id === song.id,
-                'text-[#888]': player.currentLyricLine !== index || player.currentTrack.id !== song.id,
-                'text-[#555]': player.currentLyricLine !== null && index < player.currentLyricLine
+                'scale-105 font-bold text-[#1DB954]': player.currentLyricLine === index && player.currentTrack.id === song.id,
+                'text-[#555]': player.currentTrack.id === song.id && player.currentLyricLine !== null && index < player.currentLyricLine,
+                'text-[#888]': !(player.currentLyricLine === index && player.currentTrack.id === song.id) && !(player.currentTrack.id === song.id && player.currentLyricLine !== null && index < player.currentLyricLine)
               }"
             >
               {{ line.text }}
@@ -230,8 +221,8 @@ watch(() => route.params.slug, (slug) => slug && load(slug));
           </div>
         </section>
 
-        <!-- Plain Lyrics Display -->
-        <section v-else-if="song.lyrics" class="mb-6 rounded-lg border border-white/[0.06] bg-[#111] p-5">
+        <!-- Plain Lyrics Display (never used for SYNCED songs, so JSON never leaks) -->
+        <section v-else-if="song.lyricsType !== 'SYNCED' && song.lyrics" class="mb-6 rounded-lg border border-white/[0.06] bg-[#111] p-5">
           <div class="mb-3 flex items-end justify-between">
             <div>
               <p class="melodyhub-kicker">LYRICS</p>

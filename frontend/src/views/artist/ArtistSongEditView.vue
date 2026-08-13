@@ -18,7 +18,7 @@ const isSaving = ref(false);
 const error = ref('');
 const fieldErrors = reactive({ title: '', cover: '' });
 
-const form = reactive({ title: '', slug: '', lyrics: '' });
+const form = reactive({ title: '', slug: '', lyrics: '', audioUrl: '' });
 const lyricsType = ref('PLAIN');
 const currentCover = ref('');
 const coverFile = ref(null);
@@ -31,9 +31,24 @@ async function load() {
     const song = await songService.getMine(songId);
     form.title = song.title || '';
     form.slug = song.slug || '';
-    form.lyrics = song.lyrics || '';
+    form.audioUrl = song.audioUrl || '';
     lyricsType.value = song.lyricsType || 'PLAIN';
     currentCover.value = song.coverUrl || '';
+
+    // For synced songs, load the authoritative lines from song_lyrics and rebuild
+    // the editor JSON — songs.lyrics alone is not the source of truth.
+    if (lyricsType.value === 'SYNCED') {
+      try {
+        const data = await songService.getSyncedLyrics(song.slug);
+        form.lyrics = data?.lines?.length
+          ? JSON.stringify({ lines: data.lines, language: 'en' })
+          : (song.lyrics || '');
+      } catch {
+        form.lyrics = song.lyrics || '';
+      }
+    } else {
+      form.lyrics = song.lyrics || '';
+    }
   } catch (requestError) {
     error.value = requestError.message || 'Unable to load the song.';
   } finally {
@@ -77,34 +92,14 @@ async function save() {
       coverUrl = uploaded.imageUrl;
     }
 
-    // If synced lyrics, parse and save separately
-    if (lyricsType.value === 'SYNCED' && form.lyrics) {
-      try {
-        const syncedData = JSON.parse(form.lyrics);
-        await songService.updateMine(songId, {
-          title: form.title.trim(),
-          coverUrl,
-          lyricsType: 'SYNCED'
-        });
-        // Save synced lyrics lines
-        await songService.updateSyncedLyrics(songId, { lines: syncedData.lines || [] });
-      } catch (e) {
-        // If JSON parse fails, treat as plain
-        await songService.updateMine(songId, {
-          title: form.title.trim(),
-          coverUrl,
-          lyrics: form.lyrics.trim() || null,
-          lyricsType: 'PLAIN'
-        });
-      }
-    } else {
-      await songService.updateMine(songId, {
-        title: form.title.trim(),
-        coverUrl,
-        lyrics: form.lyrics.trim() || null,
-        lyricsType: lyricsType.value
-      });
-    }
+    // Pass the lyrics payload as-is (JSON for SYNCED, plain text otherwise).
+    // The backend stores songs.lyrics AND persists parsed lines into song_lyrics.
+    await songService.updateMine(songId, {
+      title: form.title.trim(),
+      coverUrl,
+      lyrics: form.lyrics.trim() || null,
+      lyricsType: lyricsType.value
+    });
 
     router.push({ name: 'artist-dashboard' });
   } catch (requestError) {
@@ -160,6 +155,7 @@ onMounted(load);
           <LyricsEditor
             v-model="form.lyrics"
             v-model:lyricsType="lyricsType"
+            :audio-preview-url="form.audioUrl"
           />
         </label>
 

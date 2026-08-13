@@ -23,17 +23,25 @@ const emit = defineEmits(['update:modelValue', 'update:lyricsType']);
 const audioPreview = ref(null);
 const isPlaying = ref(false);
 const currentTime = ref(0);
+const duration = ref(0);
 
 // Parse lyrics from JSON
 const lines = ref([]);
 
-// Parse existing lyrics when modelValue changes
+// Tracks the exact JSON we last emitted so we can ignore the echo coming back
+// through modelValue (otherwise every SET/keystroke rebuilds `lines` and the
+// timestamps appear to jump/reset).
+let lastEmitted = null;
+
+// Parse incoming lyrics into editable lines — but only when the value did NOT
+// originate from this editor.
 watch(() => props.modelValue, (val) => {
+  if (val === lastEmitted) return; // our own echo, keep local editing state
   if (val && props.lyricsType === 'SYNCED') {
     try {
       const parsed = JSON.parse(val);
       if (parsed.lines && Array.isArray(parsed.lines)) {
-        lines.value = parsed.lines.map(l => ({
+        lines.value = parsed.lines.map((l) => ({
           startTime: l.startTime || 0,
           endTime: l.endTime || 0,
           text: l.text || ''
@@ -45,40 +53,50 @@ watch(() => props.modelValue, (val) => {
   }
 }, { immediate: true });
 
-// Update audio source when preview URL changes
-watch(() => props.audioPreviewUrl, (url) => {
-  if (audioPreview.value && url) {
-    audioPreview.value.src = url;
-    audioPreview.value.load();
-  }
-});
+function emitSynced() {
+  const payload = JSON.stringify({
+    lines: lines.value.filter((l) => l.text.trim()),
+    language: 'en'
+  });
+  lastEmitted = payload;
+  emit('update:modelValue', payload);
+}
 
 // Sync lines back to modelValue
 watch(lines, () => {
   if (props.lyricsType === 'SYNCED') {
-    const syncedLyrics = {
-      lines: lines.value.filter(l => l.text.trim()),
-      language: 'en'
-    };
-    emit('update:modelValue', JSON.stringify(syncedLyrics));
+    emitSynced();
   }
 }, { deep: true });
 
 // Audio preview
 function togglePlayPause() {
-  if (!audioPreview.value) return;
-  if (isPlaying.value) {
-    audioPreview.value.pause();
-    isPlaying.value = false;
+  const el = audioPreview.value;
+  if (!el || !props.audioPreviewUrl) return; // no audio chosen yet
+  if (el.paused) {
+    el.play().catch(() => {});
   } else {
-    audioPreview.value.play();
-    isPlaying.value = true;
+    el.pause();
   }
 }
 
 function onTimeUpdate() {
   if (audioPreview.value) {
     currentTime.value = audioPreview.value.currentTime;
+  }
+}
+
+function onLoadedMetadata() {
+  if (audioPreview.value && Number.isFinite(audioPreview.value.duration)) {
+    duration.value = audioPreview.value.duration;
+  }
+}
+
+function seek(event) {
+  const time = Number(event.target.value);
+  currentTime.value = time;
+  if (audioPreview.value) {
+    audioPreview.value.currentTime = time;
   }
 }
 
@@ -97,14 +115,12 @@ function removeLine(index) {
 }
 
 function captureTime(index) {
-  if (lines.value[index]) {
-    lines.value[index].startTime = parseFloat(currentTime.value.toFixed(1));
-    // Auto-continue: set endTime = next line's startTime, or current + 3.5s if last
-    if (index === lines.value.length - 1) {
-      lines.value[index].endTime = lines.value[index].startTime + 3.5;
-    } else if (index < lines.value.length - 1) {
-      lines.value[index].endTime = lines.value[index + 1].startTime;
-    }
+  const line = lines.value[index];
+  if (!line) return;
+  // Capture the current playback time for THIS line only.
+  line.startTime = parseFloat(currentTime.value.toFixed(1));
+  if (line.endTime <= line.startTime) {
+    line.endTime = parseFloat((line.startTime + 3.5).toFixed(1));
   }
 }
 
@@ -128,20 +144,43 @@ function parseTime(str) {
 // Current active line index based on currentTime
 const activeLineIndex = computed(() => {
   if (props.lyricsType !== 'SYNCED') return -1;
-  for (let i = lines.value.length - 1; i >= 0; i--) {
-    if (currentTime.value >= lines.value[i].startTime) {
-      return i;
+  // Latest line whose (set) start time has been reached. It stays highlighted
+  // until the next line starts — standard karaoke behaviour.
+  let active = -1;
+  for (let i = 0; i < lines.value.length; i++) {
+    const line = lines.value[i];
+    if (line.startTime > 0 && currentTime.value >= line.startTime) {
+      active = i;
     }
   }
-  return -1;
+  return active;
 });
 
 function toggleLyricsType() {
   const newType = props.lyricsType === 'PLAIN' ? 'SYNCED' : 'PLAIN';
-  emit('update:lyricsType', newType);
-  
-  if (newType === 'SYNCED' && lines.value.length === 0) {
-    addLine();
+
+  if (newType === 'SYNCED') {
+    // Seed synced lines from any existing plain text (each line -> a lyric line).
+    if (lines.value.length === 0) {
+      const plain = (props.modelValue || '').trim();
+      if (plain && !plain.startsWith('{')) {
+        lines.value = plain
+          .split('\n')
+          .map((text) => ({ startTime: 0, endTime: 0, text }));
+      } else {
+        lines.value = [{ startTime: 0, endTime: 0, text: '' }];
+      }
+    }
+    emit('update:lyricsType', newType);
+    emitSynced();
+  } else {
+    // SYNCED -> PLAIN: convert lines back to plain text so the textarea is clean.
+    const plain = lines.value
+      .filter((l) => l.text.trim())
+      .map((l) => l.text)
+      .join('\n');
+    emit('update:lyricsType', newType);
+    emit('update:modelValue', plain);
   }
 }
 
@@ -187,28 +226,35 @@ onUnmounted(() => {
       <div class="flex items-center gap-3 rounded-lg border border-white/10 bg-black/20 p-3">
         <audio
           ref="audioPreview"
+          :src="audioPreviewUrl"
+          preload="metadata"
           @timeupdate="onTimeUpdate"
+          @loadedmetadata="onLoadedMetadata"
           @ended="onAudioEnded"
+          @pause="isPlaying = false"
+          @play="isPlaying = true"
           class="hidden"
         />
         <button
           type="button"
           @click="togglePlayPause"
-          class="flex h-8 w-8 items-center justify-center rounded-full bg-[#1DB954] text-black transition hover:bg-[#20ca5c]"
+          class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#1DB954] text-black transition hover:bg-[#20ca5c]"
         >
           <Pause v-if="isPlaying" :size="16" />
           <Play v-else :size="16" class="ml-0.5" />
         </button>
-        <div class="flex-1">
-          <div class="h-1.5 overflow-hidden rounded-full bg-white/10">
-            <div
-              class="h-full rounded-full bg-[#1DB954] transition-all"
-              :style="{ width: audioPreview ? `${(currentTime / audioPreview.duration) * 100 || 0}%` : '0%' }"
-            />
-          </div>
-        </div>
-        <span class="min-w-[70px] text-right text-xs text-[#888]">
-          {{ formatTime(currentTime) }}
+        <input
+          type="range"
+          min="0"
+          :max="duration || 0"
+          step="0.1"
+          :value="currentTime"
+          @input="seek"
+          class="h-1.5 flex-1 cursor-pointer accent-[#1DB954]"
+          aria-label="Seek preview audio"
+        />
+        <span class="min-w-[92px] text-right text-xs tabular-nums text-[#888]">
+          {{ formatTime(currentTime) }} / {{ formatTime(duration) }}
         </span>
       </div>
 
@@ -286,21 +332,21 @@ onUnmounted(() => {
         💡 Click <strong>SET</strong> while playing audio to capture the timestamp for that line.
       </p>
 
-      <!-- Preview -->
+      <!-- Preview (karaoke — highlights the line that matches current playback time) -->
       <div v-if="lines.length > 0" class="rounded-lg border border-white/10 bg-black/20 p-4">
         <p class="mb-3 text-xs font-bold text-[#888]">Preview</p>
         <div class="space-y-1 text-center">
-          <div
-            v-for="(line, index) in lines.filter(l => l.text.trim())"
-            :key="index"
-            class="py-1 text-sm transition-all"
-            :class="{
-              'text-white': activeLineIndex === lines.findIndex(l => l.text === line.text && l.startTime === line.startTime),
-              'text-[#888]': activeLineIndex !== lines.findIndex(l => l.text === line.text && l.startTime === line.startTime)
-            }"
-          >
-            {{ line.text }}
-          </div>
+          <template v-for="(line, index) in lines" :key="index">
+            <div
+              v-if="line.text.trim()"
+              class="py-1 transition-all duration-300"
+              :class="activeLineIndex === index
+                ? 'text-base font-black text-[#1DB954]'
+                : 'text-sm text-[#888]'"
+            >
+              {{ line.text }}
+            </div>
+          </template>
         </div>
       </div>
     </div>

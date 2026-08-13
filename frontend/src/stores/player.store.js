@@ -24,6 +24,7 @@ export const usePlayerStore = defineStore('player', () => {
   
   // Synced lyrics data
   const syncedLyrics = ref([]); // Array of { startTime, endTime, text }
+  let lyricsRequestId = 0;
   
   const duration = computed(() => durationSec.value || currentTrack.value?.duration || 0);
   const progress = computed(() => (duration.value ? (currentTime.value / duration.value) * 100 : 0));
@@ -69,11 +70,11 @@ export const usePlayerStore = defineStore('player', () => {
   if (audio) {
     audio.volume = volume.value / 100;
     audio.addEventListener('timeupdate', () => {
-      const seconds = Math.floor(audio.currentTime);
-      currentTime.value = seconds;
+      // Keep fractional time so synced lyrics highlight at sub-second precision.
+      currentTime.value = audio.currentTime;
       const tracker = getTracker();
       if (tracker && currentTrack.value?.id) {
-        tracker.noteProgress(currentTrack.value.id, seconds);
+        tracker.noteProgress(currentTrack.value.id, Math.floor(audio.currentTime));
       }
     });
     audio.addEventListener('loadedmetadata', () => {
@@ -109,6 +110,11 @@ export const usePlayerStore = defineStore('player', () => {
     currentTime.value = 0;
     durationSec.value = track?.duration || 0;
     syncedLyrics.value = [];
+    const requestId = ++lyricsRequestId;
+
+    if (track?.lyricsType === 'SYNCED' && track?.slug) {
+      void loadSyncedLyrics(track.slug, track.id, requestId);
+    }
 
     if (!audio) return;
     if (track?.audioUrl) {
@@ -123,21 +129,20 @@ export const usePlayerStore = defineStore('player', () => {
     }
   }
   
-  /**
-   * Loads synced lyrics for the current track from the API.
-   * Call this after load() if the track has lyricsType: 'SYNCED'.
-   */
-  async function loadSyncedLyrics(slug) {
-    if (!slug) return;
+  async function loadSyncedLyrics(slug, trackId = currentTrack.value?.id, requestId = ++lyricsRequestId) {
+    if (!slug || !trackId) return;
     try {
       const response = await fetch(`/api/songs/${encodeURIComponent(slug)}/lyrics`);
-      if (!response.ok) return;
+      if (!response.ok) throw new Error('Could not load synced lyrics');
       const data = await response.json();
+      if (requestId !== lyricsRequestId || currentTrack.value?.id !== trackId) return;
       if (data.lyricsType === 'SYNCED' && data.lines) {
         syncedLyrics.value = data.lines;
+      } else {
+        syncedLyrics.value = [];
       }
-    } catch (e) {
-      // Silently fail - lyrics are optional
+    } catch {
+      if (requestId !== lyricsRequestId || currentTrack.value?.id !== trackId) return;
       syncedLyrics.value = [];
     }
   }
