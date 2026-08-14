@@ -91,7 +91,7 @@ onMounted(load);
 <template>
   <div class="mx-auto w-full max-w-6xl px-5 py-8 pb-12 sm:px-8">
     <div class="mb-6 flex items-center gap-3">
-      <ShieldCheck :size="28" class="text-[#1DB954]" />
+      <ShieldCheck :size="28" class="text-[#16C65A]" />
       <div>
         <p class="melodyhub-kicker">ADMIN</p>
         <h1 class="melodyhub-section-title">Artist Requests</h1>
@@ -106,15 +106,15 @@ onMounted(load);
           :key="tab.key"
           class="h-9 rounded-full px-4 text-xs font-bold transition"
           :class="activeTab === tab.key
-            ? 'bg-[#1DB954] text-black'
-            : 'border border-white/15 text-[#bbb] hover:border-[#1DB954]/70 hover:text-white'"
+            ? 'bg-[#16C65A] text-black'
+            : 'border border-white/15 text-[#bbb] hover:border-[#16C65A]/70 hover:text-white'"
           @click="switchTab(tab.key)"
         >
           {{ tab.label }}
         </button>
       </div>
       <button
-        class="inline-flex h-9 items-center gap-2 rounded-full border border-white/15 px-4 text-xs font-bold text-[#bbb] transition hover:border-[#1DB954]/70 hover:text-white disabled:opacity-50"
+        class="inline-flex h-9 items-center gap-2 rounded-full border border-white/15 px-4 text-xs font-bold text-[#bbb] transition hover:border-[#16C65A]/70 hover:text-white disabled:opacity-50"
         :disabled="isLoading"
         @click="load"
       >
@@ -127,10 +127,10 @@ onMounted(load);
     </p>
 
     <div v-if="isLoading" class="flex min-h-64 items-center justify-center text-sm text-[#888]">
-      <LoaderCircle :size="20" class="mr-3 animate-spin text-[#1DB954]" /> Loading requests
+      <LoaderCircle :size="20" class="mr-3 animate-spin text-[#16C65A]" /> Loading requests
     </div>
 
-    <div v-else-if="isEmpty" class="flex min-h-48 items-center justify-center border border-white/10 bg-[#121212] text-sm text-[#888]">
+    <div v-else-if="isEmpty" class="flex min-h-48 items-center justify-center border border-white/10 bg-[#111827] text-sm text-[#888]">
       No {{ activeTab.toLowerCase() }} requests.
     </div>
 
@@ -138,7 +138,7 @@ onMounted(load);
       <li
         v-for="item in requests"
         :key="item.id"
-        class="flex flex-col gap-4 border border-white/10 bg-[#121212] p-4 sm:flex-row sm:items-center sm:p-5"
+        class="flex flex-col gap-4 border border-white/10 bg-[#111827] p-4 sm:flex-row sm:items-center sm:p-5"
       >
         <!-- Avatar -->
         <div class="size-16 shrink-0 overflow-hidden rounded-lg bg-white/[0.04]">
@@ -163,7 +163,7 @@ onMounted(load);
         <!-- Actions (only for pending) -->
         <div v-if="activeTab === 'PENDING'" class="flex shrink-0 gap-2">
           <button
-            class="inline-flex h-9 items-center gap-2 rounded-full bg-[#1DB954] px-4 text-xs font-black text-black transition hover:bg-[#20ca5c] disabled:opacity-50"
+            class="inline-flex h-9 items-center gap-2 rounded-full bg-[#16C65A] px-4 text-xs font-black text-black transition hover:bg-[#22C55E] disabled:opacity-50"
             :disabled="actingId !== null"
             @click="approve(item)"
           >

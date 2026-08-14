@@ -28,14 +28,14 @@ const memberSince = computed(() => {
       </div>
       <RouterLink
         :to="{ name: 'profile-edit' }"
-        class="inline-flex h-10 items-center gap-2 rounded-full bg-[#1DB954] px-5 text-xs font-black text-black shadow-[0_8px_22px_rgba(29,185,84,0.26)] transition hover:scale-[1.03]"
+        class="inline-flex h-10 items-center gap-2 rounded-full bg-[#16C65A] px-5 text-xs font-black text-black shadow-[0_8px_22px_rgba(29,185,84,0.26)] transition hover:scale-[1.03]"
       >
         <PenLine :size="14" /> EDIT PROFILE
       </RouterLink>
     </div>
 
     <article class="overflow-hidden rounded-xl border border-white/10 bg-[#121719]">
-      <div class="relative h-28 bg-gradient-to-br from-[#1DB954]/25 via-[#101417] to-[#101417]" />
+      <div class="relative h-28 bg-gradient-to-br from-[#16C65A]/25 via-[#101417] to-[#101417]" />
       <div class="px-6 pb-6 sm:px-8">
         <div class="-mt-12 flex flex-col items-start gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div class="flex items-end gap-4">
@@ -56,7 +56,7 @@ const memberSince = computed(() => {
               </p>
             </div>
           </div>
-          <span class="inline-flex items-center gap-1 rounded-full bg-[#1DB954]/10 px-3 py-1 text-[10px] font-black tracking-wider text-[#1DB954]">
+          <span class="inline-flex items-center gap-1 rounded-full bg-[#16C65A]/10 px-3 py-1 text-[10px] font-black tracking-wider text-[#16C65A]">
             <Crown :size="11" /> {{ role }}
           </span>
         </div>
@@ -83,7 +83,7 @@ const memberSince = computed(() => {
         </dl>
 
         <div class="mt-7 flex items-start gap-3 rounded-lg border border-white/10 bg-white/[0.02] p-4 text-xs text-[#888]">
-          <CheckCircle2 :size="16" class="mt-0.5 shrink-0 text-[#65e78c]" />
+          <CheckCircle2 :size="16" class="mt-0.5 shrink-0 text-[#20E878]" />
           <p>
             Your avatar is stored in your personal ImageKit folder (<code class="text-[#aaa]">/users/{{ user.id }}/uploads/</code>).
             Display name and email updates are immediately reflected across the app.

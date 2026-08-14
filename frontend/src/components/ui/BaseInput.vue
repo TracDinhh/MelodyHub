@@ -38,8 +38,8 @@ const errorId = computed(() => `${id}-error`);
   <div class="mb-4">
     <label :for="id" class="mb-2 block text-xs font-bold text-[#aaa]">{{ label }}</label>
     <div
-      class="flex h-11 items-center gap-2 rounded-lg border bg-black/30 px-3 transition focus-within:ring-2 focus-within:ring-[#1DB954]/10"
-      :class="error ? 'border-red-400/70' : 'border-white/10 focus-within:border-[#1DB954]/70'"
+      class="flex h-11 items-center gap-2 rounded-lg border bg-black/30 px-3 transition focus-within:ring-2 focus-within:ring-[#16C65A]/10"
+      :class="error ? 'border-red-400/70' : 'border-white/10 focus-within:border-[#16C65A]/70'"
     >
       <span v-if="$slots.icon" class="grid text-[#666]" aria-hidden="true">
         <slot name="icon" />

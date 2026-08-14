@@ -3,8 +3,9 @@ import { defineStore } from 'pinia';
 import { useAuthStore } from '../stores/auth.store';
 import { listenHistoryService } from '../services/listenHistoryService';
 
-const MIN_LISTEN_SECONDS = 0;
+const MIN_LISTEN_SECONDS = 30;
 const PENDING_TRACK_KEY = 'melodyhub.listen_history_pending';
+const PERSIST_DEBOUNCE_MS = 1000;
 
 function readPending() {
   try {
@@ -29,15 +30,33 @@ export const useListenTrackerStore = defineStore('listen-tracker', () => {
   const recordedIds = ref(new Set());
   const pendingBySongId = ref(readPending());
 
+  // Debounce sessionStorage writes so we don't stringify + persist on every
+  // timeupdate (~4x/sec). The latest value is flushed at most once per second.
+  let persistTimer = null;
+  function schedulePersist() {
+    if (persistTimer) return;
+    persistTimer = setTimeout(() => {
+      persistTimer = null;
+      writePending(pendingBySongId.value);
+    }, PERSIST_DEBOUNCE_MS);
+  }
+
   function pendingFor(songId) {
     return pendingBySongId.value[songId] || 0;
   }
 
   function noteProgress(songId, currentTime) {
     if (!isAuthenticated.value || !songId || recordedIds.value.has(songId)) return;
-    const next = { ...pendingBySongId.value, [songId]: Math.floor(currentTime || 0) };
-    pendingBySongId.value = next;
-    writePending(next);
+    const sec = Math.floor(currentTime || 0);
+    // Only touch reactive state / storage when the whole-second value changes.
+    if (pendingBySongId.value[songId] === sec) return;
+    pendingBySongId.value = { ...pendingBySongId.value, [songId]: sec };
+    schedulePersist();
+    // Record as soon as the listen threshold is crossed, rather than waiting
+    // for the pause/ended events (which may never fire if the user navigates).
+    if (sec >= MIN_LISTEN_SECONDS) {
+      void tryRecord(songId);
+    }
   }
 
   async function tryRecord(songId) {
@@ -63,6 +82,10 @@ export const useListenTrackerStore = defineStore('listen-tracker', () => {
   }
 
   function clear() {
+    if (persistTimer) {
+      clearTimeout(persistTimer);
+      persistTimer = null;
+    }
     recordedIds.value = new Set();
     pendingBySongId.value = {};
     sessionStorage.removeItem(PENDING_TRACK_KEY);

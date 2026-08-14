@@ -53,13 +53,13 @@ function deletePlaylist(id) {
 
   <!-- Sidebar: console housing -->
   <aside
-    class="surface-panel fixed inset-y-0 left-0 z-50 flex w-[224px] flex-col transition-transform duration-300 lg:static lg:z-auto lg:translate-x-0"
+    class="surface-panel fixed inset-y-0 left-0 z-50 flex w-[240px] flex-col border-r border-white/[0.06] transition-transform duration-300 lg:static lg:z-auto lg:translate-x-0"
     :class="mobileOpen ? 'translate-x-0' : '-translate-x-full'"
   >
     <!-- Logo strip -->
-    <header class="flex h-[3.75rem] shrink-0 items-center justify-between border-b border-white/[0.05] px-4">
+    <header class="flex h-[4.5rem] shrink-0 items-center justify-between px-5">
       <RouterLink :to="{ name: 'home' }" class="flex min-w-0 flex-1 items-center" @click="emit('close')">
-        <img :src="logoUrl" alt="MelodyHub logo" class="h-[50px] w-[150px] shrink-0 object-contain object-left" />
+        <img :src="logoUrl" alt="MelodyHub logo" class="h-[54px] w-[164px] shrink-0 object-contain object-left" />
       </RouterLink>
       <button class="melodyhub-icon-btn hidden lg:grid" title="More options">
         <MoreHorizontal :size="17" />
@@ -70,12 +70,12 @@ function deletePlaylist(id) {
     </header>
 
     <!-- Section label -->
-    <div class="px-4 pt-4">
-      <p class="text-[9px] font-bold uppercase tracking-[0.28em] text-[#3A4A3E]">Navigation</p>
+    <div class="px-5 pt-4">
+      <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-[#A1A1AA]">Menu</p>
     </div>
 
     <!-- Nav items -->
-    <nav class="mt-1.5 space-y-0.5 px-3" aria-label="Primary navigation">
+    <nav class="mt-2 space-y-1 px-3" aria-label="Primary navigation">
       <RouterLink
         v-for="item in navItems"
         :key="item.route"
@@ -90,11 +90,11 @@ function deletePlaylist(id) {
     </nav>
 
     <!-- Section label -->
-    <div class="mt-5 px-4">
+    <div class="mt-7 px-5">
       <div class="flex items-center justify-between">
-        <p class="text-[9px] font-bold uppercase tracking-[0.28em] text-[#3A4A3E]">Playlists</p>
+        <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-[#A1A1AA]">Your library</p>
         <button
-          class="grid size-6 place-items-center rounded text-[#3A4A3E] transition-colors duration-200 hover:bg-white/[0.04] hover:text-[#EDE9E0]"
+          class="grid size-7 place-items-center rounded-full bg-white/[0.05] text-[#C4C4CC] transition-colors duration-200 hover:bg-[#20E878] hover:text-[#09090B]"
           title="Create playlist"
           @click="addPlaylist"
         >
@@ -104,16 +104,16 @@ function deletePlaylist(id) {
     </div>
 
     <!-- Playlist list -->
-    <div class="mt-1.5 flex-1 space-y-0.5 overflow-y-auto px-3 pr-1">
+    <div class="mt-2 flex-1 space-y-1 overflow-y-auto px-3 pr-2">
       <div
         v-for="playlist in playlistItems"
         :key="playlist.id"
-        class="group flex h-9 cursor-pointer items-center gap-2 rounded-lg px-2.5 text-[#5A6860] transition-all duration-200 hover:bg-white/[0.04] hover:text-[#EDE9E0]"
+        class="group flex h-10 cursor-pointer items-center gap-2.5 rounded-xl px-3 text-[#A1A1AA] transition-all duration-200 hover:bg-white/[0.05] hover:text-[#F4FFF7]"
       >
-        <ListMusic :size="14" class="shrink-0 text-[#3A4A3E] transition-colors group-hover:text-[#3DDE7C]" />
+        <ListMusic :size="15" class="shrink-0 text-[#71717A] transition-colors group-hover:text-[#20E878]" />
         <span class="min-w-0 flex-1 truncate text-xs font-medium">{{ playlist.title }}</span>
         <button
-          class="grid size-6 shrink-0 place-items-center rounded text-[#2A3830] opacity-0 transition-all duration-200 hover:bg-white/10 hover:text-red-400 group-hover:opacity-100"
+          class="grid size-6 shrink-0 place-items-center rounded text-[#27272A] opacity-0 transition-all duration-200 hover:bg-white/10 hover:text-red-400 group-hover:opacity-100"
           @click.stop="deletePlaylist(playlist.id)"
         >
           <Trash2 :size="12" />
@@ -122,17 +122,17 @@ function deletePlaylist(id) {
     </div>
 
     <!-- Recently saved widget -->
-    <div class="mx-3 mb-3 mt-2 overflow-hidden rounded-xl border border-white/[0.05]">
+    <div class="mx-3 mb-4 mt-3 overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.025]">
       <img
         :src="tracks[2].cover"
         :alt="`${tracks[2].title} cover`"
-        class="h-14 w-full object-cover"
-        style="opacity: 0.65;"
+        class="h-16 w-full object-cover"
+        style="opacity: 0.72;"
       />
-      <div class="border-t border-white/[0.04] px-3.5 py-3">
-        <p class="text-[9px] font-bold uppercase tracking-[0.18em] text-[#3A4A3E]">Recently saved</p>
-        <p class="mt-1 truncate text-xs font-semibold text-[#EDE9E0]">{{ tracks[2].title }}</p>
-        <p class="mt-0.5 truncate text-[11px] text-[#3A4A3E]">{{ tracks[2].artist }}</p>
+      <div class="border-t border-white/[0.05] px-3.5 py-3.5">
+        <p class="text-[9px] font-bold uppercase tracking-[0.16em] text-[#A1A1AA]">Recently saved</p>
+        <p class="mt-1 truncate text-xs font-semibold text-[#F4FFF7]">{{ tracks[2].title }}</p>
+        <p class="mt-0.5 truncate text-[11px] text-[#A1A1AA]">{{ tracks[2].artist }}</p>
       </div>
     </div>
   </aside>

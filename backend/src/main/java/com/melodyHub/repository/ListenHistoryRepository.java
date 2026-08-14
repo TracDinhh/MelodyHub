@@ -5,25 +5,22 @@ import com.melodyHub.entity.ListenHistory;
 import com.melodyHub.entity.LyricsType;
 import com.melodyHub.entity.Song;
 import com.melodyHub.entity.SongStatus;
+import com.melodyHub.util.SqlSupport;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import javax.sql.DataSource;
 
 public class ListenHistoryRepository {
     private static final String SONG_COLUMNS = """
             s.id, s.title, s.slug, s.album_id, s.track_number, s.duration_sec,
             s.file_path, s.cover_url, s.lyrics, s.status, s.play_count,
+            s.lyrics_type,
             s.created_at, s.updated_at, s.deleted_at
             """;
 
@@ -169,18 +166,15 @@ public class ListenHistoryRepository {
     }
 
     private Integer getNullableInteger(ResultSet resultSet, String columnName) throws SQLException {
-        int value = resultSet.getInt(columnName);
-        return resultSet.wasNull() ? null : value;
+        return SqlSupport.getNullableInteger(resultSet, columnName);
     }
 
     private Short getNullableShort(ResultSet resultSet, String columnName) throws SQLException {
-        short value = resultSet.getShort(columnName);
-        return resultSet.wasNull() ? null : value;
+        return SqlSupport.getNullableShort(resultSet, columnName);
     }
 
     private LocalDateTime getLocalDateTime(ResultSet resultSet, String columnName) throws SQLException {
-        Timestamp timestamp = resultSet.getTimestamp(columnName);
-        return timestamp == null ? null : timestamp.toLocalDateTime();
+        return SqlSupport.getLocalDateTime(resultSet, columnName);
     }
 
     /** Pairs a song with the user's latest listen timestamp and the listen_history id. */

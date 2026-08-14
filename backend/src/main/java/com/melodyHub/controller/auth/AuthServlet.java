@@ -1,34 +1,23 @@
 package com.melodyHub.controller.auth;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.melodyHub.controller.JsonServlet;
 import com.melodyHub.dto.request.ForgotPasswordRequest;
 import com.melodyHub.dto.request.LoginRequest;
 import com.melodyHub.dto.request.RefreshTokenRequest;
 import com.melodyHub.dto.request.RegisterRequest;
 import com.melodyHub.dto.request.ResetPasswordRequest;
-import com.melodyHub.dto.response.ErrorResponse;
 import com.melodyHub.exception.AuthException;
 import com.melodyHub.service.auth.AuthService;
 import com.melodyHub.service.auth.PasswordResetService;
 
 import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 
-public class AuthServlet extends HttpServlet {
-    private static final String CONTENT_TYPE_JSON = "application/json";
-    private static final String BEARER_PREFIX = "Bearer ";
-
-    private final ObjectMapper objectMapper = new ObjectMapper()
-            .registerModule(new JavaTimeModule())
-            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-
+public class AuthServlet extends JsonServlet {
     private AuthService authService;
     private PasswordResetService passwordResetService;
 
@@ -162,20 +151,6 @@ public class AuthServlet extends HttpServlet {
         writeJson(response, HttpServletResponse.SC_OK, java.util.Map.of("message", "Password has been reset successfully."));
     }
 
-    private String getPath(HttpServletRequest request) {
-        String pathInfo = request.getPathInfo();
-        return pathInfo == null || pathInfo.isBlank() ? "/" : pathInfo;
-    }
-
-    private String getBearerToken(HttpServletRequest request) {
-        String authorization = request.getHeader("Authorization");
-        if (authorization == null || !authorization.startsWith(BEARER_PREFIX)) {
-            return null;
-        }
-
-        return authorization.substring(BEARER_PREFIX.length()).trim();
-    }
-
     private int getStatusCode(AuthException exception) {
         return switch (exception.getCode()) {
             case "INVALID_REQUEST",
@@ -195,17 +170,5 @@ public class AuthServlet extends HttpServlet {
                     "ARTIST_PROFILE_NOT_FOUND" -> HttpServletResponse.SC_NOT_FOUND;
             default -> HttpServletResponse.SC_BAD_REQUEST;
         };
-    }
-
-    private void writeJson(HttpServletResponse response, int statusCode, Object body) throws IOException {
-        response.setStatus(statusCode);
-        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
-        response.setContentType(CONTENT_TYPE_JSON);
-        objectMapper.writeValue(response.getWriter(), body);
-    }
-
-    private void writeError(HttpServletResponse response, int statusCode, String code, String message)
-            throws IOException {
-        writeJson(response, statusCode, new ErrorResponse(code, message));
     }
 }

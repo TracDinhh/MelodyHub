@@ -3,6 +3,7 @@ import { onMounted, ref } from 'vue';
 import { History, Music2, Play, Trash2 } from '@lucide/vue';
 import { listenHistoryService } from '../services/listenHistoryService';
 import { usePlayerStore } from '../stores/player.store';
+import { toPlayerTrack } from '../utils/playerTrack';
 
 const player = usePlayerStore();
 
@@ -16,19 +17,8 @@ const busy = ref(new Set());
 
 const hasMore = ref(false);
 
-function toPlayerTrack(entry) {
-  const song = entry?.song;
-  return {
-    id: song?.id,
-    title: song?.title,
-    cover: song?.coverUrl,
-    artist: '',
-    album: '',
-    duration: song?.durationSec || 0,
-    audioUrl: song?.audioUrl,
-    lyricsType: song?.lyricsType || 'PLAIN',
-    slug: song?.slug
-  };
+function toTrack(entry) {
+  return toPlayerTrack(entry?.song, { artist: '' });
 }
 
 function artistNames(entry) {
@@ -58,8 +48,8 @@ async function load() {
 }
 
 function play(entry) {
-  const tracks = items.value.map(toPlayerTrack).filter((track) => track.id);
-  player.playTrack(toPlayerTrack(entry), tracks);
+  const tracks = items.value.map(toTrack).filter((track) => track.id);
+  player.playTrack(toTrack(entry), tracks);
 }
 
 async function remove(entry) {
@@ -103,10 +93,10 @@ onMounted(load);
     <header class="flex flex-col gap-2">
       <p class="melodyhub-kicker">YOUR LIBRARY</p>
       <div class="flex items-center gap-3">
-        <History :size="32" class="text-[#65e78c]" />
+        <History :size="32" class="text-[#20E878]" />
         <h1 class="text-3xl font-black text-white sm:text-4xl">Listen history</h1>
       </div>
-      <p class="text-sm text-[#87918a]">
+      <p class="text-sm text-[#8EA696]">
         Songs you've listened to are recorded here once you've played at least 30 seconds.
       </p>
     </header>
@@ -120,14 +110,14 @@ onMounted(load);
 
     <div v-else-if="error" class="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-6 text-center text-sm text-red-200">
       {{ error }}
-      <button class="ml-3 text-xs font-bold text-[#65e78c] hover:underline" @click="load">Retry</button>
+      <button class="ml-3 text-xs font-bold text-[#20E878] hover:underline" @click="load">Retry</button>
     </div>
 
     <div v-else-if="items.length === 0" class="rounded-lg border border-white/10 bg-white/[0.02] px-6 py-16 text-center">
       <Music2 :size="42" class="mx-auto mb-4 text-[#444]" />
       <p class="text-sm font-bold text-white">No listening history yet</p>
       <p class="mt-2 text-xs text-[#777]">Start playing a song and we'll track it here.</p>
-      <RouterLink :to="{ name: 'home' }" class="mt-5 inline-flex h-10 items-center gap-2 rounded-full bg-[#65e78c] px-5 text-xs font-black text-[#071108]">
+      <RouterLink :to="{ name: 'home' }" class="mt-5 inline-flex h-10 items-center gap-2 rounded-full bg-[#20E878] px-5 text-xs font-black text-[#0F0F12]">
         <Play :size="14" class="fill-current" /> Discover music
       </RouterLink>
     </div>
@@ -158,11 +148,11 @@ onMounted(load);
           <div class="min-w-0 flex-1">
             <RouterLink
               :to="{ name: 'song-detail', params: { slug: entry.song?.slug } }"
-              class="block truncate text-sm font-bold text-white transition group-hover:text-[#8be8a8]"
+              class="block truncate text-sm font-bold text-white transition group-hover:text-[#FDA4AF]"
             >
               {{ entry.song?.title }}
             </RouterLink>
-            <p class="mt-1 truncate text-xs text-[#87918a]">
+            <p class="mt-1 truncate text-xs text-[#8EA696]">
               {{ artistNames(entry) || 'Unknown artist' }}
             </p>
           </div>
@@ -195,7 +185,7 @@ onMounted(load);
         <span>{{ total }} {{ total === 1 ? 'song' : 'songs' }} in your history</span>
         <button
           v-if="hasMore"
-          class="text-[#65e78c] transition hover:underline disabled:opacity-50"
+          class="text-[#20E878] transition hover:underline disabled:opacity-50"
           :disabled="loading"
           @click="loadMore"
         >

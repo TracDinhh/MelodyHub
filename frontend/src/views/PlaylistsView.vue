@@ -63,13 +63,13 @@ onMounted(() => store.loadPage(1));
       <div class="flex flex-col gap-2">
         <p class="melodyhub-kicker">YOUR LIBRARY</p>
         <div class="flex items-center gap-3">
-          <ListMusic :size="32" class="text-[#65e78c]" />
+          <ListMusic :size="32" class="text-[#20E878]" />
           <h1 class="text-3xl font-black text-white sm:text-4xl">My playlists</h1>
         </div>
-        <p class="text-sm text-[#87918a]">Collections of the songs you love, in the order you want them.</p>
+        <p class="text-sm text-[#8EA696]">Collections of the songs you love, in the order you want them.</p>
       </div>
       <button
-        class="inline-flex h-11 items-center gap-2 rounded-full bg-[#65e78c] px-5 text-sm font-black text-[#071108] transition hover:bg-[#54d67b]"
+        class="inline-flex h-11 items-center gap-2 rounded-full bg-[#20E878] px-5 text-sm font-black text-[#0F0F12] transition hover:bg-[#54d67b]"
         @click="openCreate"
       >
         <Plus :size="16" /> New playlist
@@ -82,7 +82,7 @@ onMounted(() => store.loadPage(1));
 
     <div v-else-if="store.error" class="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-6 text-center text-sm text-red-200">
       {{ store.error }}
-      <button class="ml-3 text-xs font-bold text-[#65e78c] hover:underline" @click="store.loadPage(1)">Retry</button>
+      <button class="ml-3 text-xs font-bold text-[#20E878] hover:underline" @click="store.loadPage(1)">Retry</button>
     </div>
 
     <div v-else-if="store.playlists.length === 0" class="rounded-lg border border-white/10 bg-white/[0.02] px-6 py-16 text-center">
@@ -90,7 +90,7 @@ onMounted(() => store.loadPage(1));
       <p class="text-sm font-bold text-white">No playlists yet</p>
       <p class="mt-2 text-xs text-[#777]">Create your first playlist and start adding songs.</p>
       <button
-        class="mt-5 inline-flex h-10 items-center gap-2 rounded-full bg-[#65e78c] px-5 text-xs font-black text-[#071108]"
+        class="mt-5 inline-flex h-10 items-center gap-2 rounded-full bg-[#20E878] px-5 text-xs font-black text-[#0F0F12]"
         @click="openCreate"
       >
         <Plus :size="14" /> New playlist
@@ -115,10 +115,10 @@ onMounted(() => store.loadPage(1));
               <Music2 :size="40" />
             </span>
           </div>
-          <p class="truncate text-sm font-bold text-white group-hover:text-[#8be8a8]">{{ playlist.name }}</p>
-          <p class="mt-1 text-xs text-[#87918a]">
+          <p class="truncate text-sm font-bold text-white group-hover:text-[#FDA4AF]">{{ playlist.name }}</p>
+          <p class="mt-1 text-xs text-[#8EA696]">
             {{ playlist.songCount }} {{ playlist.songCount === 1 ? 'song' : 'songs' }}
-            <span v-if="playlist.isPublic" class="ml-1 text-[#65e78c]">· Public</span>
+            <span v-if="playlist.isPublic" class="ml-1 text-[#20E878]">· Public</span>
           </p>
         </RouterLink>
         <button
@@ -142,40 +142,40 @@ onMounted(() => store.loadPage(1));
         <h2 class="text-lg font-black text-white">New playlist</h2>
         <form class="mt-5 space-y-4" @submit.prevent="submitCreate">
           <div>
-            <label class="mb-1 block text-xs font-bold text-[#87918a]">Name</label>
+            <label class="mb-1 block text-xs font-bold text-[#8EA696]">Name</label>
             <input
               v-model="form.name"
               type="text"
               maxlength="150"
               placeholder="My favourite songs"
-              class="w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-[#65e78c]"
+              class="w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-[#20E878]"
             />
           </div>
           <div>
-            <label class="mb-1 block text-xs font-bold text-[#87918a]">Description (optional)</label>
+            <label class="mb-1 block text-xs font-bold text-[#8EA696]">Description (optional)</label>
             <textarea
               v-model="form.description"
               rows="3"
               maxlength="500"
-              class="w-full resize-none rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-[#65e78c]"
+              class="w-full resize-none rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-[#20E878]"
             />
           </div>
           <label class="flex items-center gap-2 text-sm text-[#c8d2cc]">
-            <input v-model="form.isPublic" type="checkbox" class="size-4 accent-[#65e78c]" />
+            <input v-model="form.isPublic" type="checkbox" class="size-4 accent-[#20E878]" />
             Make this playlist public
           </label>
           <p v-if="createError" class="text-xs text-red-300">{{ createError }}</p>
           <div class="flex justify-end gap-3 pt-2">
             <button
               type="button"
-              class="h-10 rounded-full px-4 text-sm font-bold text-[#87918a] hover:text-white"
+              class="h-10 rounded-full px-4 text-sm font-bold text-[#8EA696] hover:text-white"
               @click="showCreate = false"
             >
               Cancel
             </button>
             <button
               type="submit"
-              class="inline-flex h-10 items-center gap-2 rounded-full bg-[#65e78c] px-5 text-sm font-black text-[#071108] disabled:opacity-50"
+              class="inline-flex h-10 items-center gap-2 rounded-full bg-[#20E878] px-5 text-sm font-black text-[#0F0F12] disabled:opacity-50"
               :disabled="creating"
             >
               {{ creating ? 'Creating…' : 'Create' }}

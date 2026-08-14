@@ -119,7 +119,7 @@ onBeforeUnmount(() => {
         <p v-else-if="error" class="px-3 py-3 text-xs text-red-300">{{ error }}</p>
         <div v-else-if="store.playlists.length === 0" class="px-3 py-4 text-center text-xs text-[#777]">
           No playlists yet.
-          <RouterLink :to="{ name: 'playlists' }" class="mt-1 block font-bold text-[#65e78c] hover:underline" @click="open = false">
+          <RouterLink :to="{ name: 'playlists' }" class="mt-1 block font-bold text-[#20E878] hover:underline" @click="open = false">
             Create one
           </RouterLink>
         </div>
@@ -133,7 +133,7 @@ onBeforeUnmount(() => {
             >
               <ListMusic :size="15" class="shrink-0 text-[#777]" />
               <span class="min-w-0 flex-1 truncate">{{ playlist.name }}</span>
-              <Check v-if="addedId === playlist.id" :size="15" class="shrink-0 text-[#65e78c]" />
+              <Check v-if="addedId === playlist.id" :size="15" class="shrink-0 text-[#20E878]" />
             </button>
           </li>
         </ul>

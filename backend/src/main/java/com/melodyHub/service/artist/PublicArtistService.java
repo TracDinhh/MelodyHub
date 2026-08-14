@@ -6,6 +6,7 @@ import com.melodyHub.dto.response.SongResponse;
 import com.melodyHub.entity.Artist;
 import com.melodyHub.repository.ArtistRepository;
 import com.melodyHub.repository.SongRepository;
+import com.melodyHub.util.Pagination;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Objects;
@@ -28,7 +29,7 @@ public class PublicArtistService {
     }
 
     public PagedResponse<ArtistPublicResponse> list(int page, int size, String query) throws SQLException {
-        int offset = (page - 1) * size;
+        int offset = Pagination.offset(page, size);
         List<ArtistPublicResponse> items = artistRepository.findPage(normalize(query), size, offset)
                 .stream()
                 .map(row -> ArtistPublicResponse.fromEntity(row.artist()))
@@ -56,7 +57,7 @@ public class PublicArtistService {
         }
 
         int artistId = artist.get().getId();
-        int offset = (page - 1) * size;
+        int offset = Pagination.offset(page, size);
         List<SongResponse> items = songRepository.getPublishedByArtist(artistId, size, offset)
                 .stream()
                 .map(SongResponse::fromEntity)

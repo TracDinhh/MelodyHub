@@ -67,10 +67,10 @@ onBeforeUnmount(() => document.removeEventListener('click', closeOnOutsideClick)
 </script>
 
 <template>
-  <header class="relative z-30 flex h-[3.75rem] items-center border-b border-white/[0.05]">
+  <header class="relative z-30 flex h-[4.5rem] items-center border-b border-white/[0.06] bg-[#0F0F12]/72 backdrop-blur-xl">
 
     <!-- Content -->
-    <div class="relative flex w-full items-center gap-4 px-5 sm:px-6">
+    <div class="relative flex w-full items-center gap-4 px-5 sm:px-8">
       <!-- Left: Hamburger + breadcrumb -->
       <button
         class="melodyhub-icon-btn lg:hidden"
@@ -81,29 +81,29 @@ onBeforeUnmount(() => document.removeEventListener('click', closeOnOutsideClick)
       </button>
 
       <div class="flex min-w-0 items-center gap-3">
-        <p class="truncate text-xs font-medium tracking-wide text-[#5A6860] sm:text-sm">
+        <p class="truncate text-sm font-bold tracking-tight text-[#F4FFF7] sm:text-base">
           {{ route.meta.breadcrumb || route.meta.title }}
         </p>
       </div>
 
       <!-- Center: Search -->
       <form
-        class="ml-auto mr-auto w-full max-w-[300px] flex-1 sm:max-w-[380px]"
+        class="ml-auto mr-auto w-full max-w-[320px] flex-1 sm:max-w-[480px]"
         @submit.prevent="submitSearch"
       >
-        <div class="group flex h-9 items-center gap-2.5 rounded-lg border border-white/[0.06] bg-white/[0.03] px-3.5 transition-all duration-200 hover:border-white/[0.10] focus-within:border-[#3DDE7C]/50 focus-within:bg-white/[0.04]">
-          <Search :size="14" class="shrink-0 text-[#4E5A52] transition-colors group-focus-within:text-[#3DDE7C]" />
+        <div class="group flex h-10 items-center gap-2.5 rounded-full border border-white/[0.08] bg-black/20 px-4 transition-all duration-200 hover:border-white/[0.16] focus-within:border-[#20E878]/70 focus-within:bg-[#121214] focus-within:shadow-[0_0_0_3px_rgba(32,232,120,0.10)]">
+          <Search :size="15" class="shrink-0 text-[#A1A1AA] transition-colors group-focus-within:text-[#20E878]" />
           <input
             v-model="searchInput"
-            class="min-w-0 flex-1 bg-transparent text-sm text-[#EDE9E0] outline-none placeholder:text-[#3A4238]"
-            placeholder="Search songs, artists..."
+            class="min-w-0 flex-1 bg-transparent text-sm text-[#F4FFF7] outline-none placeholder:text-[#71717A]"
+            placeholder="What do you want to play?"
             aria-label="Search Melody Hub"
             autocomplete="off"
           />
           <button
             v-if="searchInput"
             type="button"
-            class="grid size-5 shrink-0 place-items-center rounded text-[#4E5A52] transition-colors hover:text-[#EDE9E0]"
+            class="grid size-5 shrink-0 place-items-center rounded text-[#A1A1AA] transition-colors hover:text-[#F4FFF7]"
             @click="searchInput = ''"
           >
             <X :size="12" />
@@ -123,7 +123,7 @@ onBeforeUnmount(() => document.removeEventListener('click', closeOnOutsideClick)
 
         <div ref="dropdown" class="relative">
           <button
-            class="flex items-center gap-2.5 rounded-lg p-1 pr-3 text-left transition-all duration-200 hover:bg-white/[0.05]"
+            class="flex items-center gap-2.5 rounded-full p-1 pr-3 text-left transition-all duration-200 hover:bg-white/[0.06]"
             :class="dropdownOpen ? 'bg-white/[0.06]' : ''"
             aria-haspopup="menu"
             :aria-expanded="dropdownOpen"
@@ -134,20 +134,20 @@ onBeforeUnmount(() => document.removeEventListener('click', closeOnOutsideClick)
                 :src="avatarUrl"
                 alt=""
                 class="size-8 rounded-lg object-cover ring-1 ring-white/[0.08] transition-all duration-200"
-                :class="dropdownOpen ? 'ring-[#3DDE7C]/40' : ''"
+                :class="dropdownOpen ? 'ring-[#20E878]/40' : ''"
               />
-              <span class="absolute -right-0.5 -bottom-0.5 grid size-4 place-items-center rounded bg-[#3DDE7C] text-[#0B0D0F]">
+              <span class="absolute -right-0.5 -bottom-0.5 grid size-4 place-items-center rounded bg-[#20E878] text-[#09090B]">
                 <Crown :size="9" :stroke-width="3" />
               </span>
             </span>
             <span class="hidden max-w-[88px] sm:block">
-              <span class="block truncate text-xs font-semibold text-[#EDE9E0]">{{ displayName }}</span>
-              <span class="block text-[9px] font-bold uppercase tracking-widest text-[#3DDE7C]">{{ badgeLabel }}</span>
+              <span class="block truncate text-xs font-semibold text-[#F4FFF7]">{{ displayName }}</span>
+              <span class="block text-[9px] font-bold uppercase tracking-widest text-[#20E878]">{{ badgeLabel }}</span>
             </span>
             <ChevronDown
               :size="13"
-              class="hidden text-[#4E5A52] transition-transform duration-200 sm:block"
-              :class="dropdownOpen ? 'rotate-180 text-[#3DDE7C]' : ''"
+              class="hidden text-[#A1A1AA] transition-transform duration-200 sm:block"
+              :class="dropdownOpen ? 'rotate-180 text-[#20E878]' : ''"
             />
           </button>
 
@@ -172,8 +172,8 @@ onBeforeUnmount(() => document.removeEventListener('click', closeOnOutsideClick)
                   class="size-9 shrink-0 rounded-lg object-cover ring-1 ring-white/8"
                 />
                 <div class="min-w-0 flex-1">
-                  <p class="truncate text-sm font-semibold text-[#EDE9E0]">{{ displayName }}</p>
-                  <p class="truncate text-xs text-[#4E5A52]">{{ email }}</p>
+                  <p class="truncate text-sm font-semibold text-[#F4FFF7]">{{ displayName }}</p>
+                  <p class="truncate text-xs text-[#A1A1AA]">{{ email }}</p>
                 </div>
               </div>
 

@@ -3,11 +3,11 @@ package com.melodyHub.repository;
 import com.melodyHub.config.DatabaseConfig;
 import com.melodyHub.entity.ArtistRequest;
 import com.melodyHub.entity.ArtistRequestStatus;
+import com.melodyHub.util.SqlSupport;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -200,13 +200,11 @@ public class ArtistRequestRepository {
     }
 
     private Integer getNullableInteger(ResultSet resultSet, String columnName) throws SQLException {
-        int value = resultSet.getInt(columnName);
-        return resultSet.wasNull() ? null : value;
+        return SqlSupport.getNullableInteger(resultSet, columnName);
     }
 
     private LocalDateTime getLocalDateTime(ResultSet resultSet, String columnName) throws SQLException {
-        Timestamp timestamp = resultSet.getTimestamp(columnName);
-        return timestamp == null ? null : timestamp.toLocalDateTime();
+        return SqlSupport.getLocalDateTime(resultSet, columnName);
     }
 
     public record AdminRow(ArtistRequest request, String username, String displayName, String email) {

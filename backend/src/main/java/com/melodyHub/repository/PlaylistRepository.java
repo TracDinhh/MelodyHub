@@ -5,11 +5,11 @@ import com.melodyHub.entity.LyricsType;
 import com.melodyHub.entity.Playlist;
 import com.melodyHub.entity.Song;
 import com.melodyHub.entity.SongStatus;
+import com.melodyHub.util.SqlSupport;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -262,6 +262,50 @@ public class PlaylistRepository {
         }
     }
 
+    /**
+     * Batched variant of {@link #countSongs(int)}: counts published songs for
+     * many playlists in a single grouped query, avoiding the N+1 pattern when
+     * listing playlists. Playlist ids with zero songs are absent from the map.
+     */
+    public java.util.Map<Integer, Integer> countSongsFor(java.util.Collection<Integer> playlistIds)
+            throws SQLException {
+        java.util.Map<Integer, Integer> counts = new java.util.HashMap<>();
+        if (playlistIds == null || playlistIds.isEmpty()) {
+            return counts;
+        }
+        List<Integer> ids = playlistIds.stream().filter(Objects::nonNull).distinct().toList();
+        if (ids.isEmpty()) {
+            return counts;
+        }
+
+        String placeholders = SqlSupport.placeholders(ids.size());
+        String sql = """
+                SELECT ps.playlist_id, COUNT(*) AS song_count
+                FROM playlist_songs ps
+                JOIN songs s ON s.id = ps.song_id
+                WHERE ps.playlist_id IN (""" + placeholders + """
+                )
+                  AND s.deleted_at IS NULL
+                  AND s.status = ?
+                GROUP BY ps.playlist_id
+                """;
+
+        try (var connection = getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            int index = 1;
+            for (Integer id : ids) {
+                statement.setInt(index++, id);
+            }
+            statement.setString(index, SongStatus.PUBLISHED.name());
+            try (var resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    counts.put(resultSet.getInt("playlist_id"), resultSet.getInt("song_count"));
+                }
+            }
+        }
+        return counts;
+    }
+
     // ---- Internals ------------------------------------------------------
 
     private boolean containsSong(Connection connection, int playlistId, int songId) throws SQLException {
@@ -321,17 +365,14 @@ public class PlaylistRepository {
     }
 
     private Integer getNullableInteger(ResultSet resultSet, String columnName) throws SQLException {
-        int value = resultSet.getInt(columnName);
-        return resultSet.wasNull() ? null : value;
+        return SqlSupport.getNullableInteger(resultSet, columnName);
     }
 
     private Short getNullableShort(ResultSet resultSet, String columnName) throws SQLException {
-        short value = resultSet.getShort(columnName);
-        return resultSet.wasNull() ? null : value;
+        return SqlSupport.getNullableShort(resultSet, columnName);
     }
 
     private LocalDateTime getLocalDateTime(ResultSet resultSet, String columnName) throws SQLException {
-        Timestamp timestamp = resultSet.getTimestamp(columnName);
-        return timestamp == null ? null : timestamp.toLocalDateTime();
+        return SqlSupport.getLocalDateTime(resultSet, columnName);
     }
 }

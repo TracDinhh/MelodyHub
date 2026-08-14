@@ -9,9 +9,11 @@ import com.melodyHub.entity.Playlist;
 import com.melodyHub.entity.Song;
 import com.melodyHub.repository.PlaylistRepository;
 import com.melodyHub.repository.SongRepository;
+import com.melodyHub.util.Pagination;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -54,13 +56,17 @@ public class PlaylistService {
     }
 
     public PagedResponse<PlaylistResponse> getPage(int userId, int page, int size) throws SQLException {
-        int offset = offset(page, size);
+        int offset = Pagination.offset(page, size);
         List<Playlist> playlists = playlistRepository.getPageByUser(userId, size, offset);
         long total = playlistRepository.countByUser(userId);
 
+        // Batch-load song counts for all playlists on the page in one query (avoids N+1).
+        List<Integer> playlistIds = playlists.stream().map(Playlist::getId).toList();
+        Map<Integer, Integer> songCounts = playlistRepository.countSongsFor(playlistIds);
+
         List<PlaylistResponse> items = new ArrayList<>(playlists.size());
         for (Playlist playlist : playlists) {
-            int songCount = playlistRepository.countSongs(playlist.getId());
+            int songCount = songCounts.getOrDefault(playlist.getId(), 0);
             items.add(PlaylistResponse.fromEntity(playlist, songCount));
         }
         return new PagedResponse<>(items, total, page, size);
@@ -127,14 +133,6 @@ public class PlaylistService {
 
     // ---- Helpers --------------------------------------------------------
 
-    private int offset(int page, int size) {
-        long offset = (long) (page - 1) * size;
-        if (offset > Integer.MAX_VALUE) {
-            throw new IllegalArgumentException("page is too large");
-        }
-        return (int) offset;
-    }
-
     private String requireName(String name) {
         String trimmed = name == null ? "" : name.trim();
         if (trimmed.isEmpty()) {
@@ -166,9 +164,13 @@ public class PlaylistService {
     }
 
     private List<SongSummaryResponse> toSummaries(List<Song> songs) throws SQLException {
+        // Batch-load artists for all songs in one query (avoids N+1).
+        List<Integer> songIds = songs.stream().map(Song::getId).toList();
+        Map<Integer, List<Artist>> artistsBySong = songRepository.findArtistsForSongs(songIds);
+
         List<SongSummaryResponse> items = new ArrayList<>(songs.size());
         for (Song song : songs) {
-            List<Artist> artists = songRepository.findArtistsForSong(song.getId());
+            List<Artist> artists = artistsBySong.getOrDefault(song.getId(), List.of());
             items.add(SongSummaryResponse.build(song, artists));
         }
         return items;

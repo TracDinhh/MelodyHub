@@ -4,10 +4,10 @@ import com.melodyHub.config.DatabaseConfig;
 import com.melodyHub.entity.User;
 import com.melodyHub.entity.UserRole;
 import com.melodyHub.entity.UserStatus;
+import com.melodyHub.util.SqlSupport;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -263,7 +263,6 @@ public class UserRepository {
     }
 
     private LocalDateTime getLocalDateTime(ResultSet resultSet, String columnName) throws SQLException {
-        Timestamp timestamp = resultSet.getTimestamp(columnName);
-        return timestamp == null ? null : timestamp.toLocalDateTime();
+        return SqlSupport.getLocalDateTime(resultSet, columnName);
     }
 }

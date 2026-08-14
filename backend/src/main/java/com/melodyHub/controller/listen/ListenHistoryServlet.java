@@ -1,34 +1,24 @@
 package com.melodyHub.controller.listen;
 
 import com.auth0.jwt.exceptions.JWTVerificationException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.melodyHub.controller.JsonServlet;
 import com.melodyHub.dto.request.ListenHistoryCreateRequest;
-import com.melodyHub.dto.response.ErrorResponse;
 import com.melodyHub.dto.response.PagedResponse;
 import com.melodyHub.dto.response.ListenHistoryResponse;
 import com.melodyHub.service.listen.ListenHistoryService;
 import com.melodyHub.util.JwtUtil;
 import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.util.Map;
 import java.util.Optional;
 
-public class ListenHistoryServlet extends HttpServlet {
-    private static final String CONTENT_TYPE_JSON = "application/json";
+public class ListenHistoryServlet extends JsonServlet {
     private static final int DEFAULT_PAGE = 1;
     private static final int DEFAULT_SIZE = 20;
     private static final int MAX_SIZE = 50;
-
-    private final ObjectMapper objectMapper = new ObjectMapper()
-            .registerModule(new JavaTimeModule())
-            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
     private ListenHistoryService listenHistoryService;
 
@@ -174,12 +164,8 @@ public class ListenHistoryServlet extends HttpServlet {
     }
 
     private Optional<Integer> requireUserId(HttpServletRequest request) {
-        String header = request.getHeader("Authorization");
-        if (header == null || !header.startsWith("Bearer ")) {
-            return Optional.empty();
-        }
-        String token = header.substring("Bearer ".length()).trim();
-        if (token.isEmpty()) {
+        String token = getBearerToken(request);
+        if (token == null) {
             return Optional.empty();
         }
         try {
@@ -187,30 +173,6 @@ public class ListenHistoryServlet extends HttpServlet {
         } catch (JWTVerificationException | IllegalArgumentException exception) {
             return Optional.empty();
         }
-    }
-
-    private int parsePositiveInt(String value, String name, int defaultValue) throws InvalidQueryParamException {
-        if (value == null || value.isBlank()) {
-            return defaultValue;
-        }
-
-        int parsed;
-        try {
-            parsed = Integer.parseInt(value.trim());
-        } catch (NumberFormatException exception) {
-            throw new InvalidQueryParamException(name + " must be a positive integer");
-        }
-
-        if (parsed < 1) {
-            throw new InvalidQueryParamException(name + " must be a positive integer");
-        }
-
-        return parsed;
-    }
-
-    private String getPath(HttpServletRequest request) {
-        String pathInfo = request.getPathInfo();
-        return pathInfo == null || pathInfo.isBlank() ? "/" : pathInfo;
     }
 
     private Long getHistoryId(String path) throws InvalidQueryParamException {
@@ -222,33 +184,6 @@ public class ListenHistoryServlet extends HttpServlet {
             return Long.parseLong(trimmed);
         } catch (NumberFormatException exception) {
             throw new InvalidQueryParamException("history id must be a positive integer");
-        }
-    }
-
-    private void writeJson(HttpServletResponse response, int statusCode, Object body) throws IOException {
-        response.setStatus(statusCode);
-        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
-        response.setContentType(CONTENT_TYPE_JSON);
-        objectMapper.writeValue(response.getWriter(), body);
-    }
-
-    private void writeError(HttpServletResponse response, int statusCode, String code, String message)
-            throws IOException {
-        writeJson(response, statusCode, new ErrorResponse(code, message));
-    }
-
-    private void writeUnauthorized(HttpServletResponse response) throws IOException {
-        writeError(
-                response,
-                HttpServletResponse.SC_UNAUTHORIZED,
-                "UNAUTHORIZED",
-                "Authentication required"
-        );
-    }
-
-    private static final class InvalidQueryParamException extends Exception {
-        private InvalidQueryParamException(String message) {
-            super(message);
         }
     }
 }

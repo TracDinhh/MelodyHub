@@ -12,6 +12,7 @@ import com.melodyHub.repository.ArtistRepository;
 import com.melodyHub.repository.ArtistRequestRepository;
 import com.melodyHub.repository.UserRepository;
 import com.melodyHub.service.auth.AuthorizationService;
+import com.melodyHub.util.Pagination;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Objects;
@@ -61,7 +62,7 @@ public class AdminArtistRequestService {
     ) throws AuthException, SQLException {
         authorizationService.requireRole(token, UserRole.ADMIN);
 
-        int offset = (page - 1) * size;
+        int offset = Pagination.offset(page, size);
         List<ArtistRequestAdminResponse> items = artistRequestRepository.findPageByStatus(status, size, offset)
                 .stream()
                 .map(ArtistRequestAdminResponse::fromRow)

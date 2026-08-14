@@ -157,13 +157,13 @@ onMounted(loadRequest);
     </div>
 
     <div v-if="isLoading" class="flex min-h-64 items-center justify-center text-sm text-[#888]">
-      <LoaderCircle :size="20" class="mr-3 animate-spin text-[#1DB954]" /> Loading
+      <LoaderCircle :size="20" class="mr-3 animate-spin text-[#16C65A]" /> Loading
     </div>
 
     <!-- PENDING -->
-    <div v-else-if="status === 'PENDING'" class="max-w-2xl border border-[#1DB954]/20 bg-[#1DB954]/5 p-6">
+    <div v-else-if="status === 'PENDING'" class="max-w-2xl border border-[#16C65A]/20 bg-[#16C65A]/5 p-6">
       <div class="flex items-start gap-4">
-        <span class="grid size-11 shrink-0 place-items-center rounded-full bg-[#1DB954]/15 text-[#1DB954]">
+        <span class="grid size-11 shrink-0 place-items-center rounded-full bg-[#16C65A]/15 text-[#16C65A]">
           <LoaderCircle :size="21" class="animate-spin" />
         </span>
         <div>
@@ -177,9 +177,9 @@ onMounted(loadRequest);
     </div>
 
     <!-- APPROVED -->
-    <div v-else-if="status === 'APPROVED'" class="max-w-2xl border border-[#1DB954]/20 bg-[#1DB954]/5 p-6">
+    <div v-else-if="status === 'APPROVED'" class="max-w-2xl border border-[#16C65A]/20 bg-[#16C65A]/5 p-6">
       <div class="flex items-start gap-4">
-        <span class="grid size-11 shrink-0 place-items-center rounded-full bg-[#1DB954] text-black">
+        <span class="grid size-11 shrink-0 place-items-center rounded-full bg-[#16C65A] text-black">
           <CheckCircle2 :size="22" />
         </span>
         <div>
@@ -189,7 +189,7 @@ onMounted(loadRequest);
             Artist dashboard.
           </p>
           <button
-            class="mt-4 inline-flex h-10 items-center gap-2 rounded-full bg-[#1DB954] px-5 text-xs font-black text-black"
+            class="mt-4 inline-flex h-10 items-center gap-2 rounded-full bg-[#16C65A] px-5 text-xs font-black text-black"
             @click="signInAgain()"
           >
             <Music2 :size="16" /> SIGN IN AGAIN
@@ -222,11 +222,11 @@ onMounted(loadRequest);
         novalidate
         @submit.prevent="submit"
       >
-        <div class="space-y-5 border border-white/10 bg-[#121212] p-5 sm:p-6">
+        <div class="space-y-5 border border-white/10 bg-[#111827] p-5 sm:p-6">
           <label class="melodyhub-field">
             <span>Artist name</span>
             <div class="field-inline">
-              <Music2 :size="16" class="shrink-0 text-[#3A4A3E]" />
+              <Music2 :size="16" class="shrink-0 text-[#71717A]" />
               <input
                 v-model="form.artistName"
                 maxlength="200"
@@ -245,7 +245,7 @@ onMounted(loadRequest);
               v-model="form.bio"
               maxlength="1500"
               rows="5"
-              class="w-full resize-y rounded-lg border border-white/10 bg-black/30 px-3 py-3 text-sm leading-6 text-white outline-none transition placeholder:text-[#555] focus:border-[#1DB954]/70 focus:ring-2 focus:ring-[#1DB954]/10"
+              class="w-full resize-y rounded-lg border border-white/10 bg-black/30 px-3 py-3 text-sm leading-6 text-white outline-none transition placeholder:text-[#555] focus:border-[#16C65A]/70 focus:ring-2 focus:ring-[#16C65A]/10"
               placeholder="Tell listeners about your music."
             />
           </label>
@@ -256,7 +256,7 @@ onMounted(loadRequest);
 
           <button
             type="submit"
-            class="inline-flex h-11 items-center gap-2 rounded-full bg-[#1DB954] px-6 text-xs font-black text-black transition hover:bg-[#20ca5c] disabled:cursor-not-allowed disabled:opacity-60"
+            class="inline-flex h-11 items-center gap-2 rounded-full bg-[#16C65A] px-6 text-xs font-black text-black transition hover:bg-[#22C55E] disabled:cursor-not-allowed disabled:opacity-60"
             :disabled="isSubmitting"
           >
             <LoaderCircle v-if="isSubmitting" :size="16" class="animate-spin" />
@@ -270,7 +270,7 @@ onMounted(loadRequest);
             Avatar <span class="font-normal text-[#666]">(optional)</span>
           </p>
           <label
-            class="group flex aspect-square w-full cursor-pointer items-center justify-center overflow-hidden border border-dashed border-white/20 bg-white/[0.03] transition hover:border-[#1DB954]/70"
+            class="group flex aspect-square w-full cursor-pointer items-center justify-center overflow-hidden border border-dashed border-white/20 bg-white/[0.03] transition hover:border-[#16C65A]/70"
           >
             <img
               v-if="avatarPreview"
@@ -279,7 +279,7 @@ onMounted(loadRequest);
               class="h-full w-full object-cover"
             />
             <span v-else class="flex flex-col items-center gap-3 text-center text-xs font-bold text-[#777]">
-              <ImagePlus :size="28" class="text-[#1DB954]" /> Choose image
+              <ImagePlus :size="28" class="text-[#16C65A]" /> Choose image
             </span>
             <input class="sr-only" type="file" accept="image/*" @change="selectAvatar" />
           </label>

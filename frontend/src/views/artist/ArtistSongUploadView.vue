@@ -187,12 +187,12 @@ function formatDuration(seconds) {
     </div>
 
     <form class="grid max-w-4xl gap-8 lg:grid-cols-[minmax(0,1fr)_220px]" novalidate @submit.prevent="submit">
-      <div class="space-y-5 border border-white/10 bg-[#121212] p-5 sm:p-6">
+      <div class="space-y-5 border border-white/10 bg-[#111827] p-5 sm:p-6">
         <!-- Audio -->
         <div>
           <p class="mb-2 text-xs font-black text-[#aaa]">Audio file</p>
-          <label class="flex cursor-pointer items-center gap-3 rounded-lg border border-dashed border-white/20 bg-white/[0.03] px-4 py-4 transition hover:border-[#1DB954]/70">
-            <AudioLines :size="22" class="shrink-0 text-[#1DB954]" />
+          <label class="flex cursor-pointer items-center gap-3 rounded-lg border border-dashed border-white/20 bg-white/[0.03] px-4 py-4 transition hover:border-[#16C65A]/70">
+            <AudioLines :size="22" class="shrink-0 text-[#16C65A]" />
             <span class="min-w-0 flex-1">
               <span v-if="audioName" class="block truncate text-sm text-white">{{ audioName }}</span>
               <span v-else class="block text-sm text-[#888]">Choose an MP3/WAV/OGG file</span>
@@ -206,7 +206,7 @@ function formatDuration(seconds) {
         <label class="melodyhub-field">
           <span>Title</span>
           <div class="field-inline">
-            <Music2 :size="16" class="shrink-0 text-[#3A4A3E]" />
+            <Music2 :size="16" class="shrink-0 text-[#71717A]" />
             <input v-model="form.title" maxlength="255" placeholder="Song title" @input="onTitleInput" />
           </div>
           <small v-if="fieldErrors.title" class="mt-1 block text-red-300">{{ fieldErrors.title }}</small>
@@ -225,7 +225,7 @@ function formatDuration(seconds) {
 
         <button
           type="submit"
-          class="inline-flex h-11 items-center gap-2 rounded-full bg-[#1DB954] px-6 text-xs font-black text-black transition hover:bg-[#20ca5c] disabled:cursor-not-allowed disabled:opacity-60"
+          class="inline-flex h-11 items-center gap-2 rounded-full bg-[#16C65A] px-6 text-xs font-black text-black transition hover:bg-[#22C55E] disabled:cursor-not-allowed disabled:opacity-60"
           :disabled="isSubmitting"
         >
           <LoaderCircle v-if="isSubmitting" :size="16" class="animate-spin" />
@@ -237,10 +237,10 @@ function formatDuration(seconds) {
       <!-- Cover -->
       <div>
         <p class="mb-3 text-xs font-black text-[#aaa]">Cover art <span class="font-normal text-[#666]">(optional)</span></p>
-        <label class="group flex aspect-square w-full cursor-pointer items-center justify-center overflow-hidden border border-dashed border-white/20 bg-white/[0.03] transition hover:border-[#1DB954]/70">
+        <label class="group flex aspect-square w-full cursor-pointer items-center justify-center overflow-hidden border border-dashed border-white/20 bg-white/[0.03] transition hover:border-[#16C65A]/70">
           <img v-if="coverPreview" :src="coverPreview" alt="Cover preview" class="h-full w-full object-cover" />
           <span v-else class="flex flex-col items-center gap-3 text-center text-xs font-bold text-[#777]">
-            <ImagePlus :size="28" class="text-[#1DB954]" /> Choose image
+            <ImagePlus :size="28" class="text-[#16C65A]" /> Choose image
           </span>
           <input class="sr-only" type="file" accept="image/*" @change="selectCover" />
         </label>

@@ -24,10 +24,11 @@ public class SongLyricsRepository {
     }
     
     /**
-     * Returns all synced lyric lines for a song, ordered by line_number.
+     * Returns all synced lyric lines for a song in playback order.
      */
     public List<SyncedLyricLine> findBySongId(int songId) throws SQLException {
-        String sql = "SELECT " + COLUMNS + " FROM song_lyrics WHERE song_id = ? ORDER BY line_number";
+        String sql = "SELECT " + COLUMNS
+                + " FROM song_lyrics WHERE song_id = ? ORDER BY start_time_ms, line_number";
         
         try (var connection = getConnection();
              var statement = connection.prepareStatement(sql)) {

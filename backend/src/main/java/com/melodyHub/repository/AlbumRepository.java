@@ -2,11 +2,11 @@ package com.melodyHub.repository;
 
 import com.melodyHub.config.DatabaseConfig;
 import com.melodyHub.entity.Album;
+import com.melodyHub.util.SqlSupport;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
@@ -54,8 +54,7 @@ public class AlbumRepository {
     }
 
     private LocalDateTime getLocalDateTime(ResultSet resultSet, String columnName) throws SQLException {
-        Timestamp timestamp = resultSet.getTimestamp(columnName);
-        return timestamp == null ? null : timestamp.toLocalDateTime();
+        return SqlSupport.getLocalDateTime(resultSet, columnName);
     }
 
     private LocalDateTime getLocalDate(ResultSet resultSet, String columnName) throws SQLException {

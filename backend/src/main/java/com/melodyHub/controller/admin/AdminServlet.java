@@ -1,10 +1,7 @@
 package com.melodyHub.controller.admin;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.melodyHub.controller.JsonServlet;
 import com.melodyHub.dto.request.ArtistRequestReviewRequest;
-import com.melodyHub.dto.response.ErrorResponse;
 import com.melodyHub.entity.ArtistRequestStatus;
 import com.melodyHub.entity.UserRole;
 import com.melodyHub.exception.ArtistException;
@@ -13,23 +10,16 @@ import com.melodyHub.service.admin.AdminArtistRequestService;
 import com.melodyHub.service.admin.AdminStatsService;
 import com.melodyHub.service.admin.AdminUserService;
 import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 
-public class AdminServlet extends HttpServlet {
-    private static final String CONTENT_TYPE_JSON = "application/json";
-    private static final String BEARER_PREFIX = "Bearer ";
+public class AdminServlet extends JsonServlet {
     private static final int DEFAULT_PAGE = 1;
     private static final int DEFAULT_SIZE = 20;
     private static final int MAX_SIZE = 50;
-
-    private final ObjectMapper objectMapper = new ObjectMapper()
-            .registerModule(new JavaTimeModule())
-            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
     private AdminArtistRequestService adminArtistRequestService;
     private AdminUserService adminUserService;
@@ -224,35 +214,6 @@ public class AdminServlet extends HttpServlet {
         }
     }
 
-    private int parsePositiveInt(String value, String name, int defaultValue) throws InvalidQueryParamException {
-        if (value == null || value.isBlank()) {
-            return defaultValue;
-        }
-        int parsed;
-        try {
-            parsed = Integer.parseInt(value.trim());
-        } catch (NumberFormatException exception) {
-            throw new InvalidQueryParamException(name + " must be a positive integer");
-        }
-        if (parsed < 1) {
-            throw new InvalidQueryParamException(name + " must be a positive integer");
-        }
-        return parsed;
-    }
-
-    private String getPath(HttpServletRequest request) {
-        String pathInfo = request.getPathInfo();
-        return pathInfo == null || pathInfo.isBlank() ? "/" : pathInfo;
-    }
-
-    private String getBearerToken(HttpServletRequest request) {
-        String authorization = request.getHeader("Authorization");
-        if (authorization == null || !authorization.startsWith(BEARER_PREFIX)) {
-            return null;
-        }
-        return authorization.substring(BEARER_PREFIX.length()).trim();
-    }
-
     private int getStatusCode(AuthException exception) {
         return switch (exception.getCode()) {
             case "MISSING_TOKEN", "INVALID_TOKEN" -> HttpServletResponse.SC_UNAUTHORIZED;
@@ -270,23 +231,5 @@ public class AdminServlet extends HttpServlet {
             case "ARTIST_REQUEST_NOT_FOUND" -> HttpServletResponse.SC_NOT_FOUND;
             default -> HttpServletResponse.SC_BAD_REQUEST;
         };
-    }
-
-    private void writeJson(HttpServletResponse response, int statusCode, Object body) throws IOException {
-        response.setStatus(statusCode);
-        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
-        response.setContentType(CONTENT_TYPE_JSON);
-        objectMapper.writeValue(response.getWriter(), body);
-    }
-
-    private void writeError(HttpServletResponse response, int statusCode, String code, String message)
-            throws IOException {
-        writeJson(response, statusCode, new ErrorResponse(code, message));
-    }
-
-    private static final class InvalidQueryParamException extends Exception {
-        private InvalidQueryParamException(String message) {
-            super(message);
-        }
     }
 }

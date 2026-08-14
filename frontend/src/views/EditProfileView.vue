@@ -168,11 +168,11 @@ async function submit() {
     </div>
 
     <form class="grid max-w-4xl gap-8 lg:grid-cols-[minmax(0,1fr)_220px]" novalidate @submit.prevent="submit">
-      <div class="space-y-5 border border-white/10 bg-[#121212] p-5 sm:p-6">
+      <div class="space-y-5 border border-white/10 bg-[#111827] p-5 sm:p-6">
         <label class="melodyhub-field">
           <span>Display name</span>
           <div class="field-inline">
-            <UserRound :size="16" class="shrink-0 text-[#3A4A3E]" />
+            <UserRound :size="16" class="shrink-0 text-[#71717A]" />
             <input
               v-model="form.displayName"
               maxlength="100"
@@ -188,7 +188,7 @@ async function submit() {
         <label class="melodyhub-field">
           <span>Email</span>
           <div class="field-inline">
-            <Mail :size="16" class="shrink-0 text-[#3A4A3E]" />
+            <Mail :size="16" class="shrink-0 text-[#71717A]" />
             <input
               v-model="form.email"
               type="email"
@@ -209,7 +209,7 @@ async function submit() {
 
         <button
           type="submit"
-          class="inline-flex h-11 items-center gap-2 rounded-full bg-[#1DB954] px-6 text-xs font-black text-black transition hover:bg-[#20ca5c] disabled:cursor-not-allowed disabled:opacity-60"
+          class="inline-flex h-11 items-center gap-2 rounded-full bg-[#16C65A] px-6 text-xs font-black text-black transition hover:bg-[#22C55E] disabled:cursor-not-allowed disabled:opacity-60"
           :disabled="isSubmitting || !hasChanges"
         >
           <LoaderCircle v-if="isSubmitting" :size="16" class="animate-spin" />
@@ -220,10 +220,10 @@ async function submit() {
 
       <div>
         <p class="mb-3 text-xs font-black text-[#aaa]">Avatar</p>
-        <label class="group relative flex aspect-square w-full cursor-pointer items-center justify-center overflow-hidden rounded-full border border-dashed border-white/20 bg-white/[0.03] transition hover:border-[#1DB954]/70">
+        <label class="group relative flex aspect-square w-full cursor-pointer items-center justify-center overflow-hidden rounded-full border border-dashed border-white/20 bg-white/[0.03] transition hover:border-[#16C65A]/70">
           <img v-if="avatarPreview" :src="avatarPreview" alt="Avatar preview" class="h-full w-full object-cover" />
           <span v-else class="flex flex-col items-center gap-3 text-center text-xs font-bold text-[#777]">
-            <ImagePlus :size="28" class="text-[#1DB954]" /> Choose image
+            <ImagePlus :size="28" class="text-[#16C65A]" /> Choose image
           </span>
           <input class="sr-only" type="file" accept="image/*" @change="selectAvatar" />
           <button
@@ -240,7 +240,7 @@ async function submit() {
         <p v-if="fieldErrors.avatar" class="mt-2 text-center text-xs text-red-300">
           {{ fieldErrors.avatar }}
         </p>
-        <p v-if="avatarFile" class="mt-2 text-center text-xs text-[#65e78c]">
+        <p v-if="avatarFile" class="mt-2 text-center text-xs text-[#20E878]">
           New image ready to upload
         </p>
       </div>

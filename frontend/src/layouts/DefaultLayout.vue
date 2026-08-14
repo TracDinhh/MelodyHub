@@ -8,12 +8,12 @@ const navOpen = ref(false);
 </script>
 
 <template>
-  <div class="melodyhub-app-shell h-screen overflow-hidden p-2 text-white sm:p-3">
-    <div class="grid h-[calc(100vh-7rem)] grid-cols-1 gap-2 lg:grid-cols-[224px_minmax(0,1fr)]">
+  <div class="melodyhub-app-shell h-screen overflow-hidden text-white">
+    <div class="grid h-[calc(100vh-5.5rem)] grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)]">
       <LeftSidebar :mobile-open="navOpen" @close="navOpen = false" />
-      <section class="melodyhub-main-panel melodyhub-panel-edge min-w-0 overflow-hidden rounded-2xl">
+      <section class="melodyhub-main-panel melodyhub-panel-edge min-w-0 overflow-hidden lg:rounded-tl-3xl">
         <TopHeader @toggle-nav="navOpen = true" />
-        <main class="h-[calc(100%-3.75rem)] overflow-y-auto rounded-b-2xl">
+        <main class="h-[calc(100%-4.5rem)] overflow-y-auto">
           <slot />
         </main>
       </section>

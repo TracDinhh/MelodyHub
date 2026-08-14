@@ -12,7 +12,7 @@ const ROLE_TABS = [
 
 const ROLE_BADGE = {
   USER: 'bg-white/10 text-[#ccc]',
-  ARTIST: 'bg-[#1DB954]/15 text-[#1DB954]',
+  ARTIST: 'bg-[#16C65A]/15 text-[#16C65A]',
   ADMIN: 'bg-amber-400/15 text-amber-300'
 };
 
@@ -56,7 +56,7 @@ onMounted(load);
 <template>
   <div class="mx-auto w-full max-w-6xl px-5 py-8 pb-12 sm:px-8">
     <div class="mb-6 flex items-center gap-3">
-      <Users :size="28" class="text-[#1DB954]" />
+      <Users :size="28" class="text-[#16C65A]" />
       <div>
         <p class="melodyhub-kicker">ADMIN</p>
         <h1 class="melodyhub-section-title">Users <span class="text-sm font-normal text-[#666]">({{ total }})</span></h1>
@@ -70,15 +70,15 @@ onMounted(load);
           :key="tab.key"
           class="h-9 rounded-full px-4 text-xs font-bold transition"
           :class="activeRole === tab.key
-            ? 'bg-[#1DB954] text-black'
-            : 'border border-white/15 text-[#bbb] hover:border-[#1DB954]/70 hover:text-white'"
+            ? 'bg-[#16C65A] text-black'
+            : 'border border-white/15 text-[#bbb] hover:border-[#16C65A]/70 hover:text-white'"
           @click="switchRole(tab.key)"
         >
           {{ tab.label }}
         </button>
       </div>
       <div class="flex gap-2">
-        <label class="flex h-9 items-center gap-2 rounded-full bg-white/5 px-3 ring-1 ring-white/10 focus-within:ring-[#1DB954]/60">
+        <label class="flex h-9 items-center gap-2 rounded-full bg-white/5 px-3 ring-1 ring-white/10 focus-within:ring-[#16C65A]/60">
           <Search :size="15" class="text-[#888]" />
           <input
             v-model="search"
@@ -88,7 +88,7 @@ onMounted(load);
           />
         </label>
         <button
-          class="inline-flex h-9 items-center gap-2 rounded-full border border-white/15 px-4 text-xs font-bold text-[#bbb] transition hover:border-[#1DB954]/70 hover:text-white disabled:opacity-50"
+          class="inline-flex h-9 items-center gap-2 rounded-full border border-white/15 px-4 text-xs font-bold text-[#bbb] transition hover:border-[#16C65A]/70 hover:text-white disabled:opacity-50"
           :disabled="isLoading"
           @click="load"
         >
@@ -100,14 +100,14 @@ onMounted(load);
     <p v-if="error" class="mb-4 rounded-md bg-red-500/10 px-3 py-2 text-xs text-red-300" role="alert">{{ error }}</p>
 
     <div v-if="isLoading" class="flex min-h-64 items-center justify-center text-sm text-[#888]">
-      <LoaderCircle :size="20" class="mr-3 animate-spin text-[#1DB954]" /> Loading users
+      <LoaderCircle :size="20" class="mr-3 animate-spin text-[#16C65A]" /> Loading users
     </div>
 
-    <div v-else-if="isEmpty" class="flex min-h-48 items-center justify-center border border-white/10 bg-[#121212] text-sm text-[#888]">
+    <div v-else-if="isEmpty" class="flex min-h-48 items-center justify-center border border-white/10 bg-[#111827] text-sm text-[#888]">
       No users found.
     </div>
 
-    <div v-else class="overflow-x-auto border border-white/10 bg-[#121212]">
+    <div v-else class="overflow-x-auto border border-white/10 bg-[#111827]">
       <table class="w-full min-w-[640px] text-left text-sm">
         <thead class="border-b border-white/10 text-[11px] uppercase tracking-wide text-[#777]">
           <tr>

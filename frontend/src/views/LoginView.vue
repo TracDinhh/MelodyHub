@@ -192,7 +192,7 @@ watch(() => registerForm.terms, () => clearFieldError('terms'));
       <p class="mt-2 text-sm text-[#858585]">Your next favorite sound is one sign-in away.</p>
     </div>
 
-    <div class="rounded-xl border border-white/10 bg-[#121212]/90 p-5 shadow-2xl shadow-black/40 backdrop-blur-xl sm:p-7">
+    <div class="rounded-xl border border-white/10 bg-[#111827]/90 p-5 shadow-2xl shadow-black/40 backdrop-blur-xl sm:p-7">
       <div class="mb-6 grid grid-cols-2 rounded-lg bg-black/40 p-1">
         <button type="button" class="h-9 rounded-md text-xs font-black transition" :class="mode === 'login' ? 'bg-[#252525] text-white' : 'text-[#777]'" @click="setMode('login')">LOGIN</button>
         <button type="button" class="h-9 rounded-md text-xs font-black transition" :class="mode === 'register' ? 'bg-[#252525] text-white' : 'text-[#777]'" @click="setMode('register')">REGISTER</button>
@@ -202,7 +202,7 @@ watch(() => registerForm.terms, () => clearFieldError('terms'));
         <label v-if="mode === 'login'" class="melodyhub-field">
           <span>Username or email</span>
           <div class="field-inline">
-            <AtSign :size="15" class="shrink-0 text-[#3A4A3E]" />
+            <AtSign :size="15" class="shrink-0 text-[#71717A]" />
             <input
               v-model="loginForm.usernameOrEmail"
               autocomplete="username"
@@ -217,7 +217,7 @@ watch(() => registerForm.terms, () => clearFieldError('terms'));
           <label class="melodyhub-field">
             <span>Username</span>
             <div class="field-inline">
-              <UserRound :size="15" class="shrink-0 text-[#3A4A3E]" />
+              <UserRound :size="15" class="shrink-0 text-[#71717A]" />
               <input v-model="registerForm.username" autocomplete="username" maxlength="50" placeholder="alexmorgan" />
             </div>
             <small v-if="errors.username" class="text-red-300">{{ errors.username }}</small>
@@ -225,7 +225,7 @@ watch(() => registerForm.terms, () => clearFieldError('terms'));
           <label class="melodyhub-field">
             <span>Display name <span class="font-normal text-[#555]">(optional)</span></span>
             <div class="field-inline">
-              <Music2 :size="15" class="shrink-0 text-[#3A4A3E]" />
+              <Music2 :size="15" class="shrink-0 text-[#71717A]" />
               <input v-model="registerForm.displayName" autocomplete="name" maxlength="100" placeholder="Alex Morgan" />
             </div>
             <small v-if="errors.displayName" class="text-red-300">{{ errors.displayName }}</small>
@@ -233,7 +233,7 @@ watch(() => registerForm.terms, () => clearFieldError('terms'));
           <label class="melodyhub-field">
             <span>Email</span>
             <div class="field-inline">
-              <Mail :size="15" class="shrink-0 text-[#3A4A3E]" />
+              <Mail :size="15" class="shrink-0 text-[#71717A]" />
               <input v-model="registerForm.email" type="email" autocomplete="email" maxlength="255" placeholder="you@example.com" />
             </div>
             <small v-if="errors.email" class="text-red-300">{{ errors.email }}</small>
@@ -243,14 +243,14 @@ watch(() => registerForm.terms, () => clearFieldError('terms'));
         <label class="melodyhub-field">
           <span>Password</span>
           <div class="field-inline">
-            <Music2 :size="15" class="shrink-0 text-[#3A4A3E]" />
+            <Music2 :size="15" class="shrink-0 text-[#71717A]" />
             <input
               v-model="currentPassword"
               :type="passwordVisible ? 'text' : 'password'"
               :autocomplete="mode === 'login' ? 'current-password' : 'new-password'"
               :placeholder="mode === 'login' ? 'Your password' : 'At least 6 characters'"
             />
-            <button type="button" class="ml-auto shrink-0 text-[#3A4A3E] hover:text-[#EDE9E0]" title="Toggle password visibility" @click="passwordVisible = !passwordVisible">
+            <button type="button" class="ml-auto shrink-0 text-[#71717A] hover:text-[#F4FFF7]" title="Toggle password visibility" @click="passwordVisible = !passwordVisible">
               <EyeOff v-if="passwordVisible" :size="16" /><Eye v-else :size="16" />
             </button>
           </div>
@@ -261,26 +261,26 @@ watch(() => registerForm.terms, () => clearFieldError('terms'));
         <div v-if="mode === 'login'" class="flex items-center justify-between">
           <label class="flex cursor-pointer items-center gap-2.5 text-xs text-[#777]">
             <input v-model="loginForm.rememberMe" type="checkbox" class="peer sr-only" />
-            <span class="grid size-4 shrink-0 place-items-center rounded border border-white/15 peer-checked:border-[#1DB954] peer-checked:bg-[#1DB954] peer-checked:text-black">
+            <span class="grid size-4 shrink-0 place-items-center rounded border border-white/15 peer-checked:border-[#16C65A] peer-checked:bg-[#16C65A] peer-checked:text-black">
               <Check v-if="loginForm.rememberMe" :size="10" :stroke-width="4" />
             </span>
             <span>Remember me</span>
           </label>
-          <RouterLink :to="{ name: 'forgot-password' }" class="text-xs text-[#1DB954] hover:underline">Forgot password?</RouterLink>
+          <RouterLink :to="{ name: 'forgot-password' }" class="text-xs text-[#16C65A] hover:underline">Forgot password?</RouterLink>
         </div>
 
         <template v-if="mode === 'register'">
           <label class="melodyhub-field">
             <span>Confirm password</span>
             <div class="field-inline">
-              <Music2 :size="15" class="shrink-0 text-[#3A4A3E]" />
+              <Music2 :size="15" class="shrink-0 text-[#71717A]" />
               <input
                 v-model="registerForm.confirmPassword"
                 :type="confirmPasswordVisible ? 'text' : 'password'"
                 autocomplete="new-password"
                 placeholder="Enter your password again"
               />
-              <button type="button" class="ml-auto shrink-0 text-[#3A4A3E] hover:text-[#EDE9E0]" title="Toggle confirm password visibility" @click="confirmPasswordVisible = !confirmPasswordVisible">
+              <button type="button" class="ml-auto shrink-0 text-[#71717A] hover:text-[#F4FFF7]" title="Toggle confirm password visibility" @click="confirmPasswordVisible = !confirmPasswordVisible">
                 <EyeOff v-if="confirmPasswordVisible" :size="16" /><Eye v-else :size="16" />
               </button>
             </div>
@@ -290,7 +290,7 @@ watch(() => registerForm.terms, () => clearFieldError('terms'));
           <div>
             <label class="flex cursor-pointer items-start gap-3 text-xs leading-5 text-[#777]">
               <input v-model="registerForm.terms" type="checkbox" class="peer sr-only" />
-              <span class="mt-0.5 grid size-4 shrink-0 place-items-center rounded border border-white/15 peer-checked:border-[#1DB954] peer-checked:bg-[#1DB954] peer-checked:text-black">
+              <span class="mt-0.5 grid size-4 shrink-0 place-items-center rounded border border-white/15 peer-checked:border-[#16C65A] peer-checked:bg-[#16C65A] peer-checked:text-black">
                 <Check v-if="registerForm.terms" :size="12" :stroke-width="4" />
               </span>
               <span>I agree to the Terms of Service and Privacy Policy.</span>
@@ -300,7 +300,7 @@ watch(() => registerForm.terms, () => clearFieldError('terms'));
         </template>
 
         <p v-if="errors.general" class="rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-300" role="alert">{{ errors.general }}</p>
-        <button type="submit" class="h-11 w-full rounded-full bg-[#1DB954] text-xs font-black text-black transition hover:bg-[#20ca5c] disabled:cursor-not-allowed disabled:opacity-60" :disabled="authStore.isLoading">
+        <button type="submit" class="h-11 w-full rounded-full bg-[#16C65A] text-xs font-black text-black transition hover:bg-[#22C55E] disabled:cursor-not-allowed disabled:opacity-60" :disabled="authStore.isLoading">
           <span v-if="authStore.isLoading">PLEASE WAIT...</span>
           <span v-else>{{ mode === 'login' ? 'LOGIN TO MELODY HUB' : 'CREATE ACCOUNT' }}</span>
         </button>

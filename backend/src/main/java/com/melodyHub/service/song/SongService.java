@@ -9,6 +9,7 @@ import com.melodyHub.entity.Artist;
 import com.melodyHub.entity.Song;
 import com.melodyHub.repository.AlbumRepository;
 import com.melodyHub.repository.SongRepository;
+import com.melodyHub.util.Pagination;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Objects;
@@ -32,7 +33,7 @@ public class SongService {
 
     public PagedResponse<SongResponse> getPage(int page, int size, String titleQuery, String genreSlug)
             throws SQLException {
-        int offset = (page - 1) * size;
+        int offset = Pagination.offset(page, size);
         String normalizedTitle = normalize(titleQuery);
         String normalizedGenre = normalize(genreSlug);
 
@@ -113,9 +114,14 @@ public class SongService {
                 bounded
         );
 
+        // Batch-load artists for every related song in one query (avoids N+1).
+        List<Integer> relatedIds = related.stream().map(Song::getId).toList();
+        java.util.Map<Integer, List<Artist>> artistsBySong =
+                songRepository.findArtistsForSongs(relatedIds);
+
         List<SongSummaryResponse> result = new java.util.ArrayList<>(related.size());
         for (Song song : related) {
-            List<Artist> relatedArtists = songRepository.findArtistsForSong(song.getId());
+            List<Artist> relatedArtists = artistsBySong.getOrDefault(song.getId(), List.of());
             result.add(SongSummaryResponse.build(song, relatedArtists));
         }
         return result;
