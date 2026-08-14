@@ -8,6 +8,7 @@ import { artistBrowseService } from '../services/artistBrowseService';
 import { songService } from '../services/songService';
 import { useAuthStore } from '../stores/auth.store';
 import { usePlayerStore } from '../stores/player.store';
+import { toPlayerTrack } from '../utils/playerTrack';
 
 const route = useRoute();
 const authStore = useAuthStore();
@@ -16,7 +17,14 @@ const artistScroller = ref(null);
 
 // Newest published songs from the real API.
 const newReleases = ref([]);
+const newReleasesTotal = ref(0);
+const newReleasesPage = ref(1);
+const NEW_RELEASES_SIZE = 6;
 const newReleasesLoading = ref(true);
+
+const newReleasesTotalPages = computed(() =>
+  Math.max(1, Math.ceil(newReleasesTotal.value / NEW_RELEASES_SIZE))
+);
 
 // Real artists from the public API.
 const topArtists = ref([]);
@@ -59,36 +67,43 @@ function formatReleaseDate(value) {
 async function loadNewReleases() {
   newReleasesLoading.value = true;
   try {
-    const response = await songService.listPublic({ page: 1, size: 8 });
+    const response = await songService.listPublic({
+      page: newReleasesPage.value,
+      size: NEW_RELEASES_SIZE
+    });
     newReleases.value = response?.items || [];
+    newReleasesTotal.value = response?.total || 0;
   } catch {
     newReleases.value = [];
+    newReleasesTotal.value = 0;
   } finally {
     newReleasesLoading.value = false;
   }
 }
 
-function toPlayerTrack(song) {
-  return {
-    id: song.id,
-    title: song.title,
-    cover: song.coverUrl,
-    artist: '',
-    album: '',
-    duration: song.durationSec || 0,
-    audioUrl: song.audioUrl,
-    lyricsType: song.lyricsType || 'PLAIN',
-    slug: song.slug
-  };
+async function changeNewReleasesPage(nextPage) {
+  if (
+    nextPage < 1 ||
+    nextPage > newReleasesTotalPages.value ||
+    nextPage === newReleasesPage.value ||
+    newReleasesLoading.value
+  ) return;
+
+  newReleasesPage.value = nextPage;
+  await loadNewReleases();
+}
+
+function toTrack(song) {
+  return toPlayerTrack(song, { artist: '' });
 }
 
 function playNewRelease(song) {
-  const list = newReleases.value.map(toPlayerTrack);
-  player.playTrack(toPlayerTrack(song), list);
+  const list = newReleases.value.map(toTrack);
+  player.playTrack(toTrack(song), list);
 }
 
 function playSearchSong(song, list) {
-  player.playTrack(toPlayerTrack(song), list);
+  player.playTrack(toTrack(song), list);
 }
 
 // ── Search ─────────────────────────────────────────────────────
@@ -206,47 +221,38 @@ const hasMoreArtists = computed(() => searchArtists.value.length < searchArtists
 </script>
 
 <template>
-  <div class="mx-auto max-w-[1240px] space-y-12 px-4 py-6 sm:px-7 sm:py-8">
+  <div class="mx-auto max-w-[1400px] space-y-10 px-4 py-5 sm:px-8 sm:py-8">
 
-    <!-- ── Hero: clean editorial ─────────────────────────────── -->
-    <section class="relative min-h-[260px] overflow-hidden rounded-xl border border-white/[0.05] sm:min-h-[300px]">
-      <!-- Background image -->
-      <div
-        class="absolute inset-0 bg-cover bg-center opacity-35"
-        :style="{ backgroundImage: `url(${playlists[0].cover})` }"
-      />
-
-      <!-- Gradient overlays -->
-      <div class="absolute inset-0 bg-gradient-to-r from-[#0E1218] via-[#0E1218]/70 to-transparent" />
-      <div class="absolute inset-0 bg-gradient-to-t from-[#0E1218] via-transparent to-transparent" />
-
-      <!-- Content: left-aligned editorial -->
-      <div class="relative flex min-h-[260px] flex-col justify-end px-7 pb-8 sm:min-h-[300px] sm:px-9 sm:pb-10">
-        <div class="max-w-lg">
-          <p class="melodyhub-kicker">MelodyHub</p>
-          <h1 class="mt-3 text-2xl font-bold leading-tight text-[#EDE9E0] sm:text-4xl">
-            {{ sectionTitle }}
-          </h1>
-          <p class="mt-3 max-w-md text-sm leading-relaxed text-[#5A6860]">
-            A curated listening space. Discover indie artists, build your library, and tune in.
-          </p>
-          <div class="mt-6 flex flex-wrap items-center gap-3">
-            <button
-              class="inline-flex h-10 items-center gap-2.5 rounded-lg bg-[#3DDE7C] px-5 text-xs font-bold text-[#0B0D0F] transition-all duration-200 active:scale-95 hover:brightness-105"
-              @click="player.playTrack(tracks[0])"
-            >
-              <Play :size="15" class="fill-current" /> Play Mix
-            </button>
-            <span class="font-mono text-[11px] text-[#3A4A3E]">42 tracks &middot; updated today</span>
-          </div>
+    <!-- Editorial feature: a clear primary action, like modern streaming homepages. -->
+    <section class="relative isolate grid min-h-[320px] overflow-hidden rounded-3xl border border-white/[0.07] bg-[#121214] sm:min-h-[360px] lg:grid-cols-[minmax(0,1fr)_360px]">
+      <div class="absolute inset-0 bg-[radial-gradient(circle_at_18%_0%,rgba(244,63,94,0.26),transparent_42%),radial-gradient(circle_at_86%_100%,rgba(127,29,29,0.24),transparent_46%),linear-gradient(120deg,#251116_0%,#121214_58%,#09090B_100%)]" />
+      <div class="relative flex flex-col justify-end px-7 py-8 sm:px-10 sm:py-11">
+        <p class="melodyhub-kicker">Made for your next listen</p>
+        <h1 class="mt-3 max-w-2xl text-3xl font-bold leading-[1.03] tracking-tight text-[#F4FFF7] sm:text-5xl">
+          {{ sectionTitle }}
+        </h1>
+        <p class="mt-4 max-w-lg text-sm leading-6 text-[#C4C4CC] sm:text-base">
+          Find new sounds, revisit favourites, and keep every great track close to your library.
+        </p>
+        <div class="mt-7 flex flex-wrap items-center gap-3">
+          <button
+            class="inline-flex h-11 items-center gap-2.5 rounded-full bg-[#20E878] px-6 text-sm font-bold text-[#09090B] transition hover:scale-[1.03] hover:bg-[#64F4A1] active:scale-95"
+            @click="player.playTrack(tracks[0])"
+          >
+            <Play :size="16" class="fill-current" /> Play now
+          </button>
+          <RouterLink :to="{ name: 'explore' }" class="inline-flex h-11 items-center gap-2 rounded-full border border-white/[0.12] px-5 text-sm font-semibold text-[#F4FFF7] transition hover:border-[#20E878]/60 hover:bg-white/[0.05]">
+            Explore <ArrowRight :size="15" />
+          </RouterLink>
         </div>
       </div>
 
-      <!-- Featured mood: right panel -->
-      <div class="absolute bottom-8 right-6 hidden w-36 border-l border-white/[0.07] pl-5 sm:bottom-10 sm:right-9 sm:block">
-        <p class="text-[9px] font-bold uppercase tracking-[0.2em] text-[#3A4A3E]">Featured mood</p>
-        <p class="mt-2 text-base font-bold text-[#EDE9E0]">Night Drive</p>
-        <p class="mt-1 text-xs leading-relaxed text-[#4E5A52]">Synthwave for city lights.</p>
+      <div class="relative hidden items-center justify-center p-8 lg:flex">
+        <div class="absolute inset-0 bg-gradient-to-l from-transparent via-[#09090B]/15 to-[#121214]" />
+        <img :src="playlists[0].cover" alt="Featured MelodyHub playlist" class="relative aspect-square w-full max-w-[272px] rounded-2xl object-cover shadow-2xl shadow-black/50 ring-1 ring-white/[0.12]" />
+        <div class="absolute bottom-10 left-8 rounded-full border border-white/[0.10] bg-[#09090B]/70 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-[#FDA4AF] backdrop-blur">
+          42 tracks · updated today
+        </div>
       </div>
     </section>
 
@@ -255,24 +261,24 @@ const hasMoreArtists = computed(() => searchArtists.value.length < searchArtists
       <section>
         <div class="mb-6 flex items-center gap-3">
           <div class="flex size-9 items-center justify-center rounded-lg border border-white/[0.06] bg-white/[0.03]">
-            <Search :size="16" class="text-[#3DDE7C]" />
+            <Search :size="16" class="text-[#20E878]" />
           </div>
           <div>
-            <p class="text-xs font-bold uppercase tracking-wide text-[#3A4A3E]">Search results</p>
-            <p class="text-sm font-semibold text-[#EDE9E0]">"<span class="text-[#3DDE7C]">{{ searchQuery }}</span>"</p>
+            <p class="text-xs font-bold uppercase tracking-wide text-[#71717A]">Search results</p>
+            <p class="text-sm font-semibold text-[#F4FFF7]">"<span class="text-[#20E878]">{{ searchQuery }}</span>"</p>
           </div>
         </div>
 
         <!-- Error -->
         <div v-if="searchError" class="rounded-xl border border-red-500/20 bg-red-500/[0.06] px-4 py-4 text-sm text-red-300">
           {{ searchError }}
-          <button class="ml-3 text-xs font-bold text-[#3DDE7C] hover:underline" @click="doSearch">Retry</button>
+          <button class="ml-3 text-xs font-bold text-[#20E878] hover:underline" @click="doSearch">Retry</button>
         </div>
 
         <!-- Loading -->
         <div v-else-if="searchLoading && searchSongs.length === 0" class="space-y-6">
           <div>
-            <p class="mb-2 text-[10px] font-bold uppercase tracking-widest text-[#3A4A3E]">Songs</p>
+            <p class="mb-2 text-[10px] font-bold uppercase tracking-widest text-[#71717A]">Songs</p>
             <div class="grid gap-2 sm:grid-cols-2">
               <div v-for="n in 4" :key="n" class="flex items-center gap-3 rounded-lg p-2">
                 <span class="size-12 shrink-0 animate-pulse rounded-lg bg-white/5" />
@@ -281,7 +287,7 @@ const hasMoreArtists = computed(() => searchArtists.value.length < searchArtists
             </div>
           </div>
           <div>
-            <p class="mb-3 text-[10px] font-bold uppercase tracking-widest text-[#3A4A3E]">Artists</p>
+            <p class="mb-3 text-[10px] font-bold uppercase tracking-widest text-[#71717A]">Artists</p>
             <div class="flex gap-4">
               <div v-for="n in 4" :key="n" class="w-32 shrink-0 text-center">
                 <span class="mx-auto block aspect-square animate-pulse rounded-full bg-white/5" />
@@ -295,7 +301,7 @@ const hasMoreArtists = computed(() => searchArtists.value.length < searchArtists
         <div v-else>
           <!-- Songs -->
           <div v-if="searchSongs.length > 0">
-            <p class="mb-2 text-[10px] font-bold uppercase tracking-widest text-[#3A4A3E]">Songs <span class="text-[#2A3830]">({{ searchSongsTotal }})</span></p>
+            <p class="mb-2 text-[10px] font-bold uppercase tracking-widest text-[#71717A]">Songs <span class="text-[#27272A]">({{ searchSongsTotal }})</span></p>
             <div class="grid gap-1 sm:grid-cols-2">
               <div
                 v-for="song in searchSongs"
@@ -309,16 +315,16 @@ const hasMoreArtists = computed(() => searchArtists.value.length < searchArtists
                     :alt="`${song.title} cover`"
                     class="size-12 rounded-lg object-cover ring-1 ring-white/[0.06]"
                   />
-                  <span v-else class="grid size-12 place-items-center rounded-lg bg-white/[0.04] text-[#3A4A3E]">
+                  <span v-else class="grid size-12 place-items-center rounded-lg bg-white/[0.04] text-[#71717A]">
                     <Music2 :size="18" />
                   </span>
                 </button>
                 <div class="min-w-0 flex-1">
                   <RouterLink
                     :to="{ name: 'song-detail', params: { slug: song.slug } }"
-                    class="block truncate text-sm font-medium text-[#EDE9E0] transition group-hover:text-[#3DDE7C]"
+                    class="block truncate text-sm font-medium text-[#F4FFF7] transition group-hover:text-[#20E878]"
                   >{{ song.title }}</RouterLink>
-                  <p class="truncate text-xs text-[#3A4A3E]">{{ song.artists?.map((a) => a.name).join(', ') || 'Unknown artist' }}</p>
+                  <p class="truncate text-xs text-[#71717A]">{{ song.artists?.map((a) => a.name).join(', ') || 'Unknown artist' }}</p>
                 </div>
                 <button
                   class="melodyhub-icon-btn !size-8 shrink-0 opacity-0 transition group-hover:opacity-100"
@@ -331,7 +337,7 @@ const hasMoreArtists = computed(() => searchArtists.value.length < searchArtists
             </div>
             <button
               v-if="hasMoreSongs"
-              class="mt-3 text-xs font-medium text-[#3DDE7C] hover:underline disabled:opacity-40"
+              class="mt-3 text-xs font-medium text-[#20E878] hover:underline disabled:opacity-40"
               :disabled="searchLoading"
               @click="loadMoreSongs"
             >
@@ -341,7 +347,7 @@ const hasMoreArtists = computed(() => searchArtists.value.length < searchArtists
 
           <!-- Artists -->
           <div v-if="searchArtists.length > 0" :class="{ 'mt-6': searchSongs.length > 0 }">
-            <p class="mb-3 text-[10px] font-bold uppercase tracking-widest text-[#3A4A3E]">Artists <span class="text-[#2A3830]">({{ searchArtistsTotal }})</span></p>
+            <p class="mb-3 text-[10px] font-bold uppercase tracking-widest text-[#71717A]">Artists <span class="text-[#27272A]">({{ searchArtistsTotal }})</span></p>
             <div class="flex flex-wrap gap-5">
               <RouterLink
                 v-for="artist in searchArtists"
@@ -349,17 +355,17 @@ const hasMoreArtists = computed(() => searchArtists.value.length < searchArtists
                 :to="{ name: 'artist-detail', params: { slug: artist.slug } }"
                 class="group w-28 text-center sm:w-32"
               >
-                <span class="relative mx-auto block aspect-square overflow-hidden rounded-full bg-[#1A2030] ring-1 ring-white/[0.06] transition-all duration-300 group-hover:ring-[#3DDE7C]/60">
+                <span class="relative mx-auto block aspect-square overflow-hidden rounded-full bg-[#1B1B1F] ring-1 ring-white/[0.06] transition-all duration-300 group-hover:ring-[#20E878]/60">
                   <img v-if="artist.imageUrl" :src="artist.imageUrl" :alt="artist.name" class="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
-                  <span v-else class="grid h-full w-full place-items-center text-[#3A4A3E]"><CheckCircle2 :size="22" /></span>
+                  <span v-else class="grid h-full w-full place-items-center text-[#71717A]"><CheckCircle2 :size="22" /></span>
                 </span>
-                <span class="mt-3 block truncate text-sm font-medium text-[#EDE9E0] transition group-hover:text-[#3DDE7C]">{{ artist.name }}</span>
-                <span class="mt-0.5 block truncate text-xs text-[#3A4A3E]">Artist</span>
+                <span class="mt-3 block truncate text-sm font-medium text-[#F4FFF7] transition group-hover:text-[#20E878]">{{ artist.name }}</span>
+                <span class="mt-0.5 block truncate text-xs text-[#71717A]">Artist</span>
               </RouterLink>
             </div>
             <button
               v-if="hasMoreArtists"
-              class="mt-3 text-xs font-medium text-[#3DDE7C] hover:underline disabled:opacity-40"
+              class="mt-3 text-xs font-medium text-[#20E878] hover:underline disabled:opacity-40"
               :disabled="searchLoading"
               @click="loadMoreArtists"
             >
@@ -370,11 +376,11 @@ const hasMoreArtists = computed(() => searchArtists.value.length < searchArtists
           <!-- Empty -->
           <div
             v-if="!searchLoading && searchSongs.length === 0 && searchArtists.length === 0"
-            class="rounded-xl border border-white/[0.05] bg-[#131820] px-6 py-14 text-center"
+            class="rounded-xl border border-white/[0.05] bg-[#121214] px-6 py-14 text-center"
           >
-            <Search :size="32" class="mx-auto mb-4 text-[#2A3830]" />
-            <p class="text-sm font-medium text-[#5A6860]">No results for "<span class="text-[#EDE9E0]">{{ searchQuery }}</span>"</p>
-            <p class="mt-2 text-xs text-[#3A4A3E]">Try different keywords or check your spelling.</p>
+            <Search :size="32" class="mx-auto mb-4 text-[#27272A]" />
+            <p class="text-sm font-medium text-[#A1A1AA]">No results for "<span class="text-[#F4FFF7]">{{ searchQuery }}</span>"</p>
+            <p class="mt-2 text-xs text-[#71717A]">Try different keywords or check your spelling.</p>
           </div>
         </div>
       </section>
@@ -398,7 +404,7 @@ const hasMoreArtists = computed(() => searchArtists.value.length < searchArtists
           <span class="mx-auto mt-3 block h-4 w-20 animate-pulse rounded bg-white/5" />
         </div>
       </div>
-      <div v-else-if="topArtists.length === 0" class="rounded-xl border border-white/[0.05] bg-[#131820] px-4 py-8 text-center text-sm text-[#3A4A3E]">
+      <div v-else-if="topArtists.length === 0" class="rounded-xl border border-white/[0.05] bg-[#121214] px-4 py-8 text-center text-sm text-[#71717A]">
         No artists yet.
       </div>
       <div v-else ref="artistScroller" class="no-scrollbar flex snap-x gap-5 overflow-x-auto pb-1">
@@ -408,12 +414,12 @@ const hasMoreArtists = computed(() => searchArtists.value.length < searchArtists
           :to="{ name: 'artist-detail', params: { slug: artist.slug } }"
           class="group w-28 shrink-0 snap-start text-center sm:w-32"
         >
-          <span class="relative mx-auto block aspect-square overflow-hidden rounded-full bg-[#1A2030] ring-1 ring-white/[0.06] transition-all duration-300 group-hover:ring-[#3DDE7C]/60">
+          <span class="relative mx-auto block aspect-square overflow-hidden rounded-full bg-[#1B1B1F] ring-1 ring-white/[0.06] transition-all duration-300 group-hover:ring-[#20E878]/60">
             <img v-if="artist.imageUrl" :src="artist.imageUrl" :alt="artist.name" class="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
-            <span v-else class="grid h-full w-full place-items-center text-[#3A4A3E]"><CheckCircle2 :size="22" /></span>
+            <span v-else class="grid h-full w-full place-items-center text-[#71717A]"><CheckCircle2 :size="22" /></span>
           </span>
-          <span class="mt-3 block truncate text-sm font-medium text-[#EDE9E0] transition group-hover:text-[#3DDE7C]">{{ artist.name }}</span>
-          <span class="mt-0.5 block truncate text-xs text-[#3A4A3E]">Artist</span>
+          <span class="mt-3 block truncate text-sm font-medium text-[#F4FFF7] transition group-hover:text-[#20E878]">{{ artist.name }}</span>
+          <span class="mt-0.5 block truncate text-xs text-[#71717A]">Artist</span>
         </RouterLink>
       </div>
     </section>
@@ -427,7 +433,7 @@ const hasMoreArtists = computed(() => searchArtists.value.length < searchArtists
           <span class="h-4 w-36 animate-pulse rounded bg-white/5" />
         </div>
       </div>
-      <div v-else-if="newReleases.length === 0" class="rounded-xl border border-white/[0.05] bg-[#131820] px-4 py-8 text-center text-sm text-[#3A4A3E]">
+      <div v-else-if="newReleases.length === 0" class="rounded-xl border border-white/[0.05] bg-[#121214] px-4 py-8 text-center text-sm text-[#71717A]">
         No songs have been published yet.
       </div>
       <div v-else class="grid gap-1 sm:grid-cols-2">
@@ -443,7 +449,7 @@ const hasMoreArtists = computed(() => searchArtists.value.length < searchArtists
               :alt="`${song.title} cover`"
               class="size-12 rounded-lg object-cover ring-1 ring-white/[0.06]"
             />
-            <span v-else class="grid size-12 place-items-center rounded-lg bg-white/[0.04] text-[#3A4A3E]">
+            <span v-else class="grid size-12 place-items-center rounded-lg bg-white/[0.04] text-[#71717A]">
               <Music2 :size="18" />
             </span>
           </button>
@@ -451,8 +457,8 @@ const hasMoreArtists = computed(() => searchArtists.value.length < searchArtists
             :to="{ name: 'song-detail', params: { slug: song.slug } }"
             class="min-w-0 flex-1"
           >
-            <span class="block truncate text-sm font-medium text-[#EDE9E0] transition group-hover:text-[#3DDE7C]">{{ song.title }}</span>
-            <span class="mt-0.5 block truncate text-xs text-[#3A4A3E]">{{ formatReleaseDate(song.createdAt) }}</span>
+            <span class="block truncate text-sm font-medium text-[#F4FFF7] transition group-hover:text-[#20E878]">{{ song.title }}</span>
+            <span class="mt-0.5 block truncate text-xs text-[#71717A]">{{ formatReleaseDate(song.createdAt) }}</span>
           </RouterLink>
           <button class="melodyhub-icon-btn !size-8 shrink-0" @click="playNewRelease(song)">
             <Play :size="14" class="fill-current" />
@@ -460,25 +466,45 @@ const hasMoreArtists = computed(() => searchArtists.value.length < searchArtists
           <AddToPlaylistButton :song-id="song.id" hide-until-hover size="sm" />
         </div>
       </div>
+      <div
+        v-if="newReleasesTotalPages > 1"
+        class="mt-4 flex items-center justify-center gap-3 text-xs font-bold text-[#8EA696]"
+      >
+        <button
+          class="rounded-md border border-white/[0.08] px-3 py-2 transition hover:border-[#20E878]/50 hover:text-[#20E878] disabled:cursor-not-allowed disabled:opacity-40"
+          :disabled="newReleasesPage === 1 || newReleasesLoading"
+          @click="changeNewReleasesPage(newReleasesPage - 1)"
+        >
+          Previous
+        </button>
+        <span>Page {{ newReleasesPage }} of {{ newReleasesTotalPages }}</span>
+        <button
+          class="rounded-md border border-white/[0.08] px-3 py-2 transition hover:border-[#20E878]/50 hover:text-[#20E878] disabled:cursor-not-allowed disabled:opacity-40"
+          :disabled="newReleasesPage === newReleasesTotalPages || newReleasesLoading"
+          @click="changeNewReleasesPage(newReleasesPage + 1)"
+        >
+          Next
+        </button>
+      </div>
     </section>
 
     <!-- Podcasts -->
     <section class="pb-8">
       <div class="mb-4 flex items-end justify-between">
         <div><p class="melodyhub-kicker">Listen Deeper</p><h2 class="melodyhub-section-title">Podcasts</h2></div>
-        <RouterLink :to="{ name: 'podcasts' }" class="text-xs font-medium text-[#3A4A3E] hover:text-[#EDE9E0]">Browse all</RouterLink>
+        <RouterLink :to="{ name: 'podcasts' }" class="text-xs font-medium text-[#71717A] hover:text-[#F4FFF7]">Browse all</RouterLink>
       </div>
       <div class="grid gap-3 sm:grid-cols-3">
         <article
           v-for="podcast in podcasts"
           :key="podcast.id"
-          class="group flex min-w-0 gap-3 rounded-xl border border-white/[0.05] bg-[#131820] p-3.5 transition-all duration-200 hover:-translate-y-0.5 hover:border-white/[0.08] hover:bg-[#1A2030]"
+          class="group flex min-w-0 gap-3 rounded-xl border border-white/[0.05] bg-[#121214] p-3.5 transition-all duration-200 hover:-translate-y-0.5 hover:border-white/[0.08] hover:bg-[#1B1B1F]"
         >
           <img :src="podcast.cover" :alt="podcast.title" class="size-18 shrink-0 rounded-lg object-cover" />
           <div class="min-w-0">
-            <p class="line-clamp-2 text-sm font-medium text-[#EDE9E0]">{{ podcast.title }}</p>
-            <p class="mt-1 truncate text-xs text-[#3A4A3E]">{{ podcast.host }}</p>
-            <p class="mt-3 font-mono text-[10px] font-medium text-[#3DDE7C]">{{ podcast.length }}</p>
+            <p class="line-clamp-2 text-sm font-medium text-[#F4FFF7]">{{ podcast.title }}</p>
+            <p class="mt-1 truncate text-xs text-[#71717A]">{{ podcast.host }}</p>
+            <p class="mt-3 font-mono text-[10px] font-medium text-[#20E878]">{{ podcast.length }}</p>
           </div>
         </article>
       </div>

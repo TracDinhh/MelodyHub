@@ -44,7 +44,7 @@ onMounted(load);
       </div>
       <RouterLink
         :to="{ name: 'artist-song-upload' }"
-        class="inline-flex h-10 items-center gap-2 rounded-full bg-[#1DB954] px-5 text-xs font-black text-black transition hover:bg-[#20ca5c]"
+        class="inline-flex h-10 items-center gap-2 rounded-full bg-[#16C65A] px-5 text-xs font-black text-black transition hover:bg-[#22C55E]"
       >
         <Plus :size="16" /> Upload song
       </RouterLink>
@@ -53,15 +53,15 @@ onMounted(load);
     <p v-if="error" class="mb-4 rounded-md bg-red-500/10 px-3 py-2 text-xs text-red-300" role="alert">{{ error }}</p>
 
     <div v-if="isLoading" class="flex min-h-64 items-center justify-center text-sm text-[#888]">
-      <LoaderCircle :size="20" class="mr-3 animate-spin text-[#1DB954]" /> Loading songs
+      <LoaderCircle :size="20" class="mr-3 animate-spin text-[#16C65A]" /> Loading songs
     </div>
 
-    <div v-else-if="isEmpty" class="flex min-h-56 flex-col items-center justify-center gap-4 border border-white/10 bg-[#121212] text-center">
-      <UploadCloud :size="34" class="text-[#1DB954]" />
+    <div v-else-if="isEmpty" class="flex min-h-56 flex-col items-center justify-center gap-4 border border-white/10 bg-[#111827] text-center">
+      <UploadCloud :size="34" class="text-[#16C65A]" />
       <p class="text-sm text-[#999]">You haven't uploaded any songs yet.</p>
       <RouterLink
         :to="{ name: 'artist-song-upload' }"
-        class="inline-flex h-10 items-center gap-2 rounded-full bg-[#1DB954] px-5 text-xs font-black text-black transition hover:bg-[#20ca5c]"
+        class="inline-flex h-10 items-center gap-2 rounded-full bg-[#16C65A] px-5 text-xs font-black text-black transition hover:bg-[#22C55E]"
       >
         <Plus :size="16" /> Upload your first song
       </RouterLink>
@@ -71,7 +71,7 @@ onMounted(load);
       <li
         v-for="song in songs"
         :key="song.id"
-        class="flex items-center gap-4 border border-white/10 bg-[#121212] p-3 sm:p-4"
+        class="flex items-center gap-4 border border-white/10 bg-[#111827] p-3 sm:p-4"
       >
         <div class="size-12 shrink-0 overflow-hidden rounded bg-white/[0.04]">
           <img v-if="song.coverUrl" :src="song.coverUrl" :alt="song.title" class="h-full w-full object-cover" />
@@ -83,7 +83,7 @@ onMounted(load);
         </div>
         <span
           class="rounded-full px-2.5 py-1 text-[11px] font-bold"
-          :class="song.status === 'PUBLISHED' ? 'bg-[#1DB954]/15 text-[#1DB954]' : 'bg-white/10 text-[#bbb]'"
+          :class="song.status === 'PUBLISHED' ? 'bg-[#16C65A]/15 text-[#16C65A]' : 'bg-white/10 text-[#bbb]'"
         >{{ song.status }}</span>
         <span class="w-12 text-right text-xs text-[#888]">{{ formatDuration(song.durationSec) }}</span>
         <RouterLink

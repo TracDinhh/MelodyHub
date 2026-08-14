@@ -5,6 +5,7 @@ import { LoaderCircle, Play } from '@lucide/vue';
 import TrackRow from '../components/music/TrackRow.vue';
 import { artistBrowseService } from '../services/artistBrowseService';
 import { usePlayerStore } from '../stores/player.store';
+import { toPlayerTrack } from '../utils/playerTrack';
 
 const route = useRoute();
 const player = usePlayerStore();
@@ -16,15 +17,8 @@ const notFound = ref(false);
 
 const playerTracks = computed(() =>
   songs.value.map((song) => ({
-    id: song.id,
-    slug: song.slug,
-    title: song.title,
-    artist: artist.value?.name || '',
-    cover: song.coverUrl,
-    plays: (song.playCount ?? 0).toLocaleString(),
-    duration: song.durationSec || 0,
-    audioUrl: song.audioUrl,
-    lyricsType: song.lyricsType || 'PLAIN'
+    ...toPlayerTrack(song, { artist: artist.value?.name || '' }),
+    plays: (song.playCount ?? 0).toLocaleString()
   }))
 );
 
@@ -57,12 +51,12 @@ watch(() => route.params.slug, (slug) => slug && load(slug));
 <template>
   <div class="pb-10">
     <div v-if="isLoading" class="flex min-h-[60vh] items-center justify-center text-sm text-[#888]">
-      <LoaderCircle :size="22" class="mr-3 animate-spin text-[#1DB954]" /> Loading artist
+      <LoaderCircle :size="22" class="mr-3 animate-spin text-[#16C65A]" /> Loading artist
     </div>
 
     <div v-else-if="notFound || !artist" class="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-center">
       <p class="text-lg font-black text-white">Artist not found</p>
-      <RouterLink :to="{ name: 'home' }" class="text-xs font-bold text-[#1DB954]">Back to Home</RouterLink>
+      <RouterLink :to="{ name: 'home' }" class="text-xs font-bold text-[#16C65A]">Back to Home</RouterLink>
     </div>
 
     <template v-else>
@@ -75,7 +69,7 @@ watch(() => route.params.slug, (slug) => slug && load(slug));
             <p class="mt-3 text-sm text-white/70">{{ songs.length }} song{{ songs.length === 1 ? '' : 's' }}</p>
             <div class="mt-5 flex flex-wrap items-center gap-3">
               <button
-                class="inline-flex h-11 items-center gap-2 rounded-full bg-[#1DB954] px-6 text-xs font-black text-black transition hover:scale-[1.03] disabled:opacity-50"
+                class="inline-flex h-11 items-center gap-2 rounded-full bg-[#16C65A] px-6 text-xs font-black text-black transition hover:scale-[1.03] disabled:opacity-50"
                 :disabled="!songs.length"
                 @click="playAll"
               >

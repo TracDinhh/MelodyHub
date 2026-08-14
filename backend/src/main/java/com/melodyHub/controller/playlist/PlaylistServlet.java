@@ -1,24 +1,19 @@
 package com.melodyHub.controller.playlist;
 
 import com.auth0.jwt.exceptions.JWTVerificationException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.melodyHub.controller.JsonServlet;
 import com.melodyHub.dto.request.PlaylistCreateRequest;
 import com.melodyHub.dto.request.PlaylistSongRequest;
 import com.melodyHub.dto.request.PlaylistUpdateRequest;
-import com.melodyHub.dto.response.ErrorResponse;
 import com.melodyHub.dto.response.PagedResponse;
 import com.melodyHub.dto.response.PlaylistDetailResponse;
 import com.melodyHub.dto.response.PlaylistResponse;
 import com.melodyHub.service.playlist.PlaylistService;
 import com.melodyHub.util.JwtUtil;
 import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.util.Map;
 import java.util.Optional;
@@ -36,15 +31,10 @@ import java.util.Optional;
  *   <li>{@code DELETE /api/playlists/{id}/songs/{songId}} — remove a song</li>
  * </ul>
  */
-public class PlaylistServlet extends HttpServlet {
-    private static final String CONTENT_TYPE_JSON = "application/json";
+public class PlaylistServlet extends JsonServlet {
     private static final int DEFAULT_PAGE = 1;
     private static final int DEFAULT_SIZE = 20;
     private static final int MAX_SIZE = 50;
-
-    private final ObjectMapper objectMapper = new ObjectMapper()
-            .registerModule(new JavaTimeModule())
-            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
     private PlaylistService playlistService;
 
@@ -274,12 +264,8 @@ public class PlaylistServlet extends HttpServlet {
     }
 
     private Optional<Integer> requireUserId(HttpServletRequest request) {
-        String header = request.getHeader("Authorization");
-        if (header == null || !header.startsWith("Bearer ")) {
-            return Optional.empty();
-        }
-        String token = header.substring("Bearer ".length()).trim();
-        if (token.isEmpty()) {
+        String token = getBearerToken(request);
+        if (token == null) {
             return Optional.empty();
         }
         try {
@@ -287,27 +273,6 @@ public class PlaylistServlet extends HttpServlet {
         } catch (JWTVerificationException | IllegalArgumentException exception) {
             return Optional.empty();
         }
-    }
-
-    private int parsePositiveInt(String value, String name, int defaultValue) throws InvalidQueryParamException {
-        if (value == null || value.isBlank()) {
-            return defaultValue;
-        }
-        int parsed;
-        try {
-            parsed = Integer.parseInt(value.trim());
-        } catch (NumberFormatException exception) {
-            throw new InvalidQueryParamException(name + " must be a positive integer");
-        }
-        if (parsed < 1) {
-            throw new InvalidQueryParamException(name + " must be a positive integer");
-        }
-        return parsed;
-    }
-
-    private String getPath(HttpServletRequest request) {
-        String pathInfo = request.getPathInfo();
-        return pathInfo == null || pathInfo.isBlank() ? "/" : pathInfo;
     }
 
     private String[] segments(String path) {
@@ -341,22 +306,6 @@ public class PlaylistServlet extends HttpServlet {
         }
     }
 
-    private void writeJson(HttpServletResponse response, int statusCode, Object body) throws IOException {
-        response.setStatus(statusCode);
-        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
-        response.setContentType(CONTENT_TYPE_JSON);
-        objectMapper.writeValue(response.getWriter(), body);
-    }
-
-    private void writeError(HttpServletResponse response, int statusCode, String code, String message)
-            throws IOException {
-        writeJson(response, statusCode, new ErrorResponse(code, message));
-    }
-
-    private void writeUnauthorized(HttpServletResponse response) throws IOException {
-        writeError(response, HttpServletResponse.SC_UNAUTHORIZED, "UNAUTHORIZED", "Authentication required");
-    }
-
     private void writeNotFound(HttpServletResponse response) throws IOException {
         writeError(response, HttpServletResponse.SC_NOT_FOUND, "NOT_FOUND", "Playlist endpoint was not found");
     }
@@ -371,11 +320,5 @@ public class PlaylistServlet extends HttpServlet {
 
     private void writeDatabaseError(HttpServletResponse response) throws IOException {
         writeError(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "DATABASE_ERROR", "Database error occurred");
-    }
-
-    private static final class InvalidQueryParamException extends Exception {
-        private InvalidQueryParamException(String message) {
-            super(message);
-        }
     }
 }

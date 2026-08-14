@@ -38,7 +38,7 @@ const passwordStrength = computed(() => {
   return { level: 4, label: 'Strong' };
 });
 
-const strengthColors = ['', 'bg-red-400', 'bg-yellow-400', 'bg-green-400', 'bg-[#1DB954]'];
+const strengthColors = ['', 'bg-red-400', 'bg-yellow-400', 'bg-green-400', 'bg-[#16C65A]'];
 
 function clearErrors() {
   form.errors.password = '';
@@ -88,7 +88,7 @@ async function submit() {
       </RouterLink>
     </div>
 
-    <div class="rounded-xl border border-white/10 bg-[#121212]/90 p-5 shadow-2xl shadow-black/40 backdrop-blur-xl sm:p-7">
+    <div class="rounded-xl border border-white/10 bg-[#111827]/90 p-5 shadow-2xl shadow-black/40 backdrop-blur-xl sm:p-7">
       <!-- Back to login -->
       <RouterLink :to="{ name: 'login' }" class="mb-6 inline-flex items-center gap-1.5 text-xs text-[#777] hover:text-white transition">
         <ArrowLeft :size="14" />
@@ -103,7 +103,7 @@ async function submit() {
           <label class="melodyhub-field">
             <span>New password</span>
             <div class="field-inline">
-              <KeyRound :size="15" class="shrink-0 text-[#3A4A3E]" />
+              <KeyRound :size="15" class="shrink-0 text-[#71717A]" />
               <input
                 v-model="form.password"
                 :type="passwordVisible ? 'text' : 'password'"
@@ -111,7 +111,7 @@ async function submit() {
                 placeholder="At least 6 characters"
                 @input="form.errors.password = ''"
               />
-              <button type="button" class="ml-auto shrink-0 text-[#3A4A3E] hover:text-[#EDE9E0]" @click="passwordVisible = !passwordVisible">
+              <button type="button" class="ml-auto shrink-0 text-[#71717A] hover:text-[#F4FFF7]" @click="passwordVisible = !passwordVisible">
                 <EyeOff v-if="passwordVisible" :size="16" /><Eye v-else :size="16" />
               </button>
             </div>
@@ -133,7 +133,7 @@ async function submit() {
           <label class="melodyhub-field">
             <span>Confirm password</span>
             <div class="field-inline">
-              <KeyRound :size="15" class="shrink-0 text-[#3A4A3E]" />
+              <KeyRound :size="15" class="shrink-0 text-[#71717A]" />
               <input
                 v-model="form.confirmPassword"
                 :type="passwordVisible ? 'text' : 'password'"
@@ -149,7 +149,7 @@ async function submit() {
 
           <button
             type="submit"
-            class="h-11 w-full rounded-full bg-[#1DB954] text-xs font-black text-black transition hover:bg-[#20ca5c] disabled:cursor-not-allowed disabled:opacity-60"
+            class="h-11 w-full rounded-full bg-[#16C65A] text-xs font-black text-black transition hover:bg-[#22C55E] disabled:cursor-not-allowed disabled:opacity-60"
             :disabled="isLoading"
           >
             <span v-if="isLoading">RESETTING...</span>
@@ -161,7 +161,7 @@ async function submit() {
       <!-- Success -->
       <template v-else>
         <div class="flex flex-col items-center py-4 text-center">
-          <span class="mb-4 grid size-14 place-items-center rounded-full bg-[#1DB954]/10 text-[#1DB954]">
+          <span class="mb-4 grid size-14 place-items-center rounded-full bg-[#16C65A]/10 text-[#16C65A]">
             <Check :size="28" :stroke-width="3" />
           </span>
           <h1 class="mb-2 text-2xl font-black text-white">Password reset!</h1>
@@ -173,7 +173,7 @@ async function submit() {
         <div class="mt-6">
           <RouterLink
             :to="{ name: 'login' }"
-            class="flex h-11 w-full items-center justify-center rounded-full bg-[#1DB954] text-xs font-black text-black transition hover:bg-[#20ca5c]"
+            class="flex h-11 w-full items-center justify-center rounded-full bg-[#16C65A] text-xs font-black text-black transition hover:bg-[#22C55E]"
           >
             SIGN IN
           </RouterLink>

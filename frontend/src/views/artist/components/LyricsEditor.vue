@@ -1,6 +1,12 @@
 <script setup>
 import { computed, onUnmounted, ref, watch } from 'vue';
 import { Play, Pause, Plus, Trash2, ListMusic } from '@lucide/vue';
+import {
+  convertLegacyLyricsTime,
+  formatLyricsTime,
+  looksLikeLegacyLyricsTimes,
+  parseLyricsTime
+} from '../../../utils/lyricsTime';
 
 const props = defineProps({
   modelValue: {
@@ -41,11 +47,20 @@ watch(() => props.modelValue, (val) => {
     try {
       const parsed = JSON.parse(val);
       if (parsed.lines && Array.isArray(parsed.lines)) {
-        lines.value = parsed.lines.map((l) => ({
+        const parsedLines = parsed.lines.map((l) => ({
           startTime: l.startTime || 0,
           endTime: l.endTime || 0,
           text: l.text || ''
         }));
+        const legacyTimes = looksLikeLegacyLyricsTimes(parsedLines);
+        lines.value = parsedLines.map((line) => legacyTimes
+          ? {
+              ...line,
+              startTime: convertLegacyLyricsTime(line.startTime),
+              endTime: convertLegacyLyricsTime(line.endTime)
+            }
+          : line
+        );
       }
     } catch {
       lines.value = [];
@@ -62,10 +77,21 @@ function emitSynced() {
   emit('update:modelValue', payload);
 }
 
+// Debounce the deep-watch emit so rapid typing doesn't rebuild + re-serialize
+// the whole payload on every keystroke.
+let emitTimer = null;
+function scheduleEmitSynced() {
+  if (emitTimer) clearTimeout(emitTimer);
+  emitTimer = setTimeout(() => {
+    emitTimer = null;
+    emitSynced();
+  }, 300);
+}
+
 // Sync lines back to modelValue
 watch(lines, () => {
   if (props.lyricsType === 'SYNCED') {
-    emitSynced();
+    scheduleEmitSynced();
   }
 }, { deep: true });
 
@@ -124,6 +150,14 @@ function captureTime(index) {
   }
 }
 
+function updateLineTime(line, field, event) {
+  const parsed = parseLyricsTime(event.target.value);
+  if (parsed !== null) {
+    line[field] = Number(parsed.toFixed(1));
+  }
+  event.target.value = formatLyricsTime(line[field]);
+}
+
 // Format time for display
 function formatTime(seconds) {
   if (!seconds && seconds !== 0) return '0:00.0';
@@ -132,29 +166,27 @@ function formatTime(seconds) {
   return `${m}:${String(s).padStart(4, '0')}`;
 }
 
-// Parse time string back to seconds
-function parseTime(str) {
-  const match = str.match(/^(\d+):(\d+\.?\d*)$/);
-  if (match) {
-    return parseInt(match[1]) * 60 + parseFloat(match[2]);
-  }
-  return 0;
-}
-
 // Current active line index based on currentTime
 const activeLineIndex = computed(() => {
   if (props.lyricsType !== 'SYNCED') return -1;
-  // Latest line whose (set) start time has been reached. It stays highlighted
-  // until the next line starts — standard karaoke behaviour.
-  let active = -1;
-  for (let i = 0; i < lines.value.length; i++) {
+  for (let i = lines.value.length - 1; i >= 0; i--) {
     const line = lines.value[i];
-    if (line.startTime > 0 && currentTime.value >= line.startTime) {
-      active = i;
+    const startsAt = Number(line.startTime || 0);
+    const endsAt = Number(line.endTime || 0);
+    if (currentTime.value >= startsAt && (!endsAt || currentTime.value < endsAt)) {
+      return i;
     }
   }
-  return active;
+  return -1;
 });
+
+function flushSynced() {
+  if (emitTimer) {
+    clearTimeout(emitTimer);
+    emitTimer = null;
+  }
+  emitSynced();
+}
 
 function toggleLyricsType() {
   const newType = props.lyricsType === 'PLAIN' ? 'SYNCED' : 'PLAIN';
@@ -172,9 +204,13 @@ function toggleLyricsType() {
       }
     }
     emit('update:lyricsType', newType);
-    emitSynced();
+    flushSynced();
   } else {
     // SYNCED -> PLAIN: convert lines back to plain text so the textarea is clean.
+    if (emitTimer) {
+      clearTimeout(emitTimer);
+      emitTimer = null;
+    }
     const plain = lines.value
       .filter((l) => l.text.trim())
       .map((l) => l.text)
@@ -185,6 +221,11 @@ function toggleLyricsType() {
 }
 
 onUnmounted(() => {
+  if (emitTimer) {
+    clearTimeout(emitTimer);
+    emitTimer = null;
+    emitSynced();
+  }
   if (audioPreview.value) {
     audioPreview.value.pause();
   }
@@ -198,7 +239,7 @@ onUnmounted(() => {
       <button
         type="button"
         @click="toggleLyricsType"
-        class="inline-flex items-center gap-2 rounded-lg border border-white/20 bg-white/[0.03] px-3 py-2 text-xs font-bold transition hover:border-[#1DB954]/70 hover:text-[#1DB954]"
+        class="inline-flex items-center gap-2 rounded-lg border border-white/20 bg-white/[0.03] px-3 py-2 text-xs font-bold transition hover:border-[#16C65A]/70 hover:text-[#16C65A]"
       >
         <ListMusic :size="14" />
         {{ lyricsType === 'PLAIN' ? 'Switch to Synced Lyrics' : 'Switch to Plain Lyrics' }}
@@ -214,7 +255,7 @@ onUnmounted(() => {
         :value="modelValue"
         @input="$emit('update:modelValue', $event.target.value)"
         rows="8"
-        class="w-full resize-y rounded-lg border border-white/10 bg-black/30 px-3 py-3 text-sm leading-6 text-white outline-none transition placeholder:text-[#555] focus:border-[#1DB954]/70 focus:ring-2 focus:ring-[#1DB954]/10"
+        class="w-full resize-y rounded-lg border border-white/10 bg-black/30 px-3 py-3 text-sm leading-6 text-white outline-none transition placeholder:text-[#555] focus:border-[#16C65A]/70 focus:ring-2 focus:ring-[#16C65A]/10"
         placeholder="Enter plain lyrics here..."
       />
       <p class="mt-1 text-xs text-[#666]">Enter each line of lyrics on a new line.</p>
@@ -238,7 +279,7 @@ onUnmounted(() => {
         <button
           type="button"
           @click="togglePlayPause"
-          class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#1DB954] text-black transition hover:bg-[#20ca5c]"
+          class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#16C65A] text-black transition hover:bg-[#22C55E]"
         >
           <Pause v-if="isPlaying" :size="16" />
           <Play v-else :size="16" class="ml-0.5" />
@@ -250,8 +291,9 @@ onUnmounted(() => {
           step="0.1"
           :value="currentTime"
           @input="seek"
-          class="h-1.5 flex-1 cursor-pointer accent-[#1DB954]"
+          class="h-1.5 flex-1 cursor-pointer accent-[#16C65A]"
           aria-label="Seek preview audio"
+          :aria-valuetext="`${formatTime(currentTime)} of ${formatTime(duration)}`"
         />
         <span class="min-w-[92px] text-right text-xs tabular-nums text-[#888]">
           {{ formatTime(currentTime) }} / {{ formatTime(duration) }}
@@ -261,9 +303,9 @@ onUnmounted(() => {
       <!-- Lines Editor -->
       <div class="rounded-lg border border-white/10 bg-black/20">
         <!-- Header -->
-        <div class="grid grid-cols-[60px_60px_1fr_32px] gap-2 border-b border-white/10 bg-white/[0.02] px-3 py-2 text-xs font-bold text-[#888]">
-          <span>Start</span>
-          <span>End</span>
+        <div class="grid grid-cols-[78px_78px_1fr_32px] gap-2 border-b border-white/10 bg-white/[0.02] px-3 py-2 text-xs font-bold text-[#888]">
+          <span>Start (MM:SS)</span>
+          <span>End (MM:SS)</span>
           <span>Lyrics</span>
           <span></span>
         </div>
@@ -273,35 +315,35 @@ onUnmounted(() => {
           <div
             v-for="(line, index) in lines"
             :key="index"
-            class="grid grid-cols-[60px_60px_1fr_32px] items-center gap-2 border-b border-white/5 px-3 py-2 transition-colors"
-            :class="{ 'bg-[#1DB954]/10': activeLineIndex === index }"
+            class="grid grid-cols-[78px_78px_1fr_32px] items-center gap-2 border-b border-white/5 px-3 py-2 transition-colors"
+            :class="{ 'bg-[#16C65A]/10': activeLineIndex === index }"
           >
             <input
-              v-model.number="line.startTime"
-              type="number"
-              step="0.1"
-              min="0"
-              class="w-full rounded border border-white/10 bg-white/5 px-2 py-1 text-xs text-white outline-none transition focus:border-[#1DB954]/50"
-              placeholder="0.0"
+              :value="formatLyricsTime(line.startTime)"
+              type="text"
+              inputmode="decimal"
+              @change="updateLineTime(line, 'startTime', $event)"
+              class="w-full rounded border border-white/10 bg-white/5 px-2 py-1 text-xs text-white outline-none transition focus:border-[#16C65A]/50"
+              placeholder="00:00.0"
             />
             <input
-              v-model.number="line.endTime"
-              type="number"
-              step="0.1"
-              min="0"
-              class="w-full rounded border border-white/10 bg-white/5 px-2 py-1 text-xs text-white outline-none transition focus:border-[#1DB954]/50"
-              placeholder="0.0"
+              :value="formatLyricsTime(line.endTime)"
+              type="text"
+              inputmode="decimal"
+              @change="updateLineTime(line, 'endTime', $event)"
+              class="w-full rounded border border-white/10 bg-white/5 px-2 py-1 text-xs text-white outline-none transition focus:border-[#16C65A]/50"
+              placeholder="00:00.0"
             />
             <div class="flex items-center gap-2">
               <input
                 v-model="line.text"
-                class="w-full rounded border border-white/10 bg-white/5 px-2 py-1 text-sm text-white outline-none transition focus:border-[#1DB954]/50"
+                class="w-full rounded border border-white/10 bg-white/5 px-2 py-1 text-sm text-white outline-none transition focus:border-[#16C65A]/50"
                 placeholder="Lyrics line..."
               />
               <button
                 type="button"
                 @click="captureTime(index)"
-                class="shrink-0 rounded bg-[#1DB954]/20 px-2 py-1 text-xs font-bold text-[#1DB954] transition hover:bg-[#1DB954]/40"
+                class="shrink-0 rounded bg-[#16C65A]/20 px-2 py-1 text-xs font-bold text-[#16C65A] transition hover:bg-[#16C65A]/40"
                 title="Capture current time"
               >
                 SET
@@ -321,7 +363,7 @@ onUnmounted(() => {
         <button
           type="button"
           @click="addLine"
-          class="flex w-full items-center justify-center gap-2 py-3 text-xs font-bold text-[#666] transition hover:bg-white/5 hover:text-[#1DB954]"
+          class="flex w-full items-center justify-center gap-2 py-3 text-xs font-bold text-[#666] transition hover:bg-white/5 hover:text-[#16C65A]"
         >
           <Plus :size="14" />
           Add Line
@@ -329,7 +371,7 @@ onUnmounted(() => {
       </div>
 
       <p class="text-xs text-[#666]">
-        💡 Click <strong>SET</strong> while playing audio to capture the timestamp for that line.
+        💡 Time uses <strong>MM:SS</strong> (for example, 00:37 means 37 seconds). Click <strong>SET</strong> while playing audio to capture it automatically.
       </p>
 
       <!-- Preview (karaoke — highlights the line that matches current playback time) -->
@@ -341,7 +383,7 @@ onUnmounted(() => {
               v-if="line.text.trim()"
               class="py-1 transition-all duration-300"
               :class="activeLineIndex === index
-                ? 'text-base font-black text-[#1DB954]'
+                ? 'text-base font-black text-[#16C65A]'
                 : 'text-sm text-[#888]'"
             >
               {{ line.text }}

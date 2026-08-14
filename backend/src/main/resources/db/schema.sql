@@ -176,6 +176,9 @@ CREATE TABLE songs (
 );
 CREATE INDEX idx_songs_album     ON songs(album_id, track_number);
 CREATE INDEX idx_songs_playcount ON songs(play_count DESC);
+-- Primary listener-facing browse: WHERE status = 'PUBLISHED' AND deleted_at IS NULL
+-- ORDER BY created_at DESC, id DESC. Covers the catalog listing + its COUNT(*).
+CREATE INDEX idx_songs_status_created ON songs(status, deleted_at, created_at DESC, id DESC);
 
 -- =====================================================
 -- 5. LOI BAI HAT

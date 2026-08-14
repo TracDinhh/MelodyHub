@@ -13,6 +13,7 @@ import { songService } from '../services/songService';
 import { usePlayerStore } from '../stores/player.store';
 import AddToPlaylistButton from '../components/music/AddToPlaylistButton.vue';
 import { formatDuration } from '../utils/formatDate';
+import { toPlayerTrack } from '../utils/playerTrack';
 
 const route = useRoute();
 const player = usePlayerStore();
@@ -30,7 +31,7 @@ const artistLabel = computed(() => {
 
 const artistList = computed(() => song.value?.artists ?? []);
 
-const relatedTrackList = computed(() => related.value.map(toPlayerTrack));
+const relatedTrackList = computed(() => related.value.map(toTrack));
 
 async function load(slug) {
   isLoading.value = true;
@@ -61,27 +62,19 @@ async function load(slug) {
 
 function playSong() {
   if (!song.value) return;
-  const main = toPlayerTrack(song.value);
+  const main = toTrack(song.value);
   const queue = [main, ...relatedTrackList.value.filter((track) => track.id !== main.id)];
   player.playTrack(main, queue);
 }
 
 function playRelated(track) {
-  const queue = [toPlayerTrack(song.value), ...relatedTrackList.value.filter((t) => t.id !== track.id)];
+  const queue = [toTrack(song.value), ...relatedTrackList.value.filter((t) => t.id !== track.id)];
   player.playTrack(track, queue);
 }
 
-function toPlayerTrack(detail) {
-  return {
-    id: detail.id,
-    title: detail.title,
-    cover: detail.coverUrl,
-    artist: (detail.artists || []).map((artist) => artist.name).join(' & '),
-    duration: detail.durationSec || 0,
-    audioUrl: detail.audioUrl,
-    lyricsType: detail.lyricsType || 'PLAIN',
-    slug: detail.slug
-  };
+function toTrack(detail) {
+  const artist = (detail.artists || []).map((a) => a.name).join(' & ');
+  return toPlayerTrack(detail, { artist });
 }
 
 const isPlaying = computed(() => player.isPlaying && player.currentTrack.id === song.value?.id);
@@ -110,12 +103,12 @@ watch(() => route.params.slug, (slug) => slug && load(slug));
 <template>
   <div class="pb-10">
     <div v-if="isLoading" class="flex min-h-[60vh] items-center justify-center text-sm text-[#888]">
-      <LoaderCircle :size="22" class="mr-3 animate-spin text-[#1DB954]" /> Loading song
+      <LoaderCircle :size="22" class="mr-3 animate-spin text-[#16C65A]" /> Loading song
     </div>
 
     <div v-else-if="notFound || !song" class="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-center">
       <p class="text-lg font-black text-white">Song not found</p>
-      <RouterLink :to="{ name: 'home' }" class="text-xs font-bold text-[#1DB954]">Back to Home</RouterLink>
+      <RouterLink :to="{ name: 'home' }" class="text-xs font-bold text-[#16C65A]">Back to Home</RouterLink>
     </div>
 
     <template v-else>
@@ -150,7 +143,7 @@ watch(() => route.params.slug, (slug) => slug && load(slug));
                 v-for="artist in artistList"
                 :key="artist.id"
               >
-                <RouterLink :to="{ name: 'artist-detail', params: { slug: artist.slug } }" class="font-bold text-white hover:text-[#8be8a8]">
+                <RouterLink :to="{ name: 'artist-detail', params: { slug: artist.slug } }" class="font-bold text-white hover:text-[#FDA4AF]">
                   {{ artist.name }}
                 </RouterLink>
               </span>
@@ -170,7 +163,7 @@ watch(() => route.params.slug, (slug) => slug && load(slug));
 
             <div class="mt-5 flex flex-wrap items-center gap-3">
               <button
-                class="inline-flex h-11 items-center gap-2 rounded-full bg-[#1DB954] px-6 text-xs font-black text-black transition hover:scale-[1.03] disabled:opacity-50"
+                class="inline-flex h-11 items-center gap-2 rounded-full bg-[#16C65A] px-6 text-xs font-black text-black transition hover:scale-[1.03] disabled:opacity-50"
                 :disabled="!song.audioUrl"
                 @click="playSong"
               >
@@ -183,7 +176,7 @@ watch(() => route.params.slug, (slug) => slug && load(slug));
                 :title="song.isLiked ? 'You liked this song' : 'Like this song'"
                 disabled
               >
-                <Heart :size="18" :class="song.isLiked ? 'fill-[#1DB954] text-[#1DB954]' : ''" />
+                <Heart :size="18" :class="song.isLiked ? 'fill-[#16C65A] text-[#16C65A]' : ''" />
               </button>
               <AddToPlaylistButton :song-id="song.id" />
             </div>
@@ -202,7 +195,7 @@ watch(() => route.params.slug, (slug) => slug && load(slug));
               <p class="melodyhub-kicker">LYRICS</p>
               <h2 class="melodyhub-section-title">Synced Lyrics</h2>
             </div>
-            <p class="text-[10px] font-bold text-[#1DB954]">● SYNCED</p>
+            <p class="text-[10px] font-bold text-[#16C65A]">● SYNCED</p>
           </div>
           <div ref="lyricsBox" class="max-h-[340px] space-y-1 overflow-y-auto scroll-smooth text-center">
             <div
@@ -211,7 +204,7 @@ watch(() => route.params.slug, (slug) => slug && load(slug));
               :data-line="index"
               class="py-1.5 text-base transition-all duration-300 sm:text-xl"
               :class="{
-                'scale-105 font-bold text-[#1DB954]': player.currentLyricLine === index && player.currentTrack.id === song.id,
+                'scale-105 font-bold text-[#16C65A]': player.currentLyricLine === index && player.currentTrack.id === song.id,
                 'text-[#555]': player.currentTrack.id === song.id && player.currentLyricLine !== null && index < player.currentLyricLine,
                 'text-[#888]': !(player.currentLyricLine === index && player.currentTrack.id === song.id) && !(player.currentTrack.id === song.id && player.currentLyricLine !== null && index < player.currentLyricLine)
               }"
@@ -261,8 +254,8 @@ watch(() => route.params.slug, (slug) => slug && load(slug));
                   <Play :size="22" class="ml-0.5 fill-white text-white" />
                 </span>
               </span>
-              <span class="mt-3 block truncate text-sm font-bold text-white transition group-hover:text-[#8be8a8]">{{ track.title }}</span>
-              <span class="mt-1 block truncate text-xs text-[#87918a]">{{ track.artist }}</span>
+              <span class="mt-3 block truncate text-sm font-bold text-white transition group-hover:text-[#FDA4AF]">{{ track.title }}</span>
+              <span class="mt-1 block truncate text-xs text-[#8EA696]">{{ track.artist }}</span>
             </button>
           </div>
         </section>

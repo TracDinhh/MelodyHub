@@ -128,15 +128,15 @@ onMounted(load);
     </div>
 
     <div v-if="isLoading" class="flex min-h-64 items-center justify-center text-sm text-[#888]">
-      <LoaderCircle :size="20" class="mr-3 animate-spin text-[#1DB954]" /> Loading
+      <LoaderCircle :size="20" class="mr-3 animate-spin text-[#16C65A]" /> Loading
     </div>
 
     <form v-else class="grid max-w-4xl gap-8 lg:grid-cols-[minmax(0,1fr)_220px]" novalidate @submit.prevent="save">
-      <div class="space-y-5 border border-white/10 bg-[#121212] p-5 sm:p-6">
+      <div class="space-y-5 border border-white/10 bg-[#111827] p-5 sm:p-6">
         <label class="melodyhub-field">
           <span>Title</span>
           <div class="field-inline">
-            <Music2 :size="16" class="shrink-0 text-[#3A4A3E]" />
+            <Music2 :size="16" class="shrink-0 text-[#71717A]" />
             <input v-model="form.title" maxlength="255" placeholder="Song title" @input="fieldErrors.title = ''" />
           </div>
           <small v-if="fieldErrors.title" class="mt-1 block text-red-300">{{ fieldErrors.title }}</small>
@@ -163,7 +163,7 @@ onMounted(load);
 
         <button
           type="submit"
-          class="inline-flex h-11 items-center gap-2 rounded-full bg-[#1DB954] px-6 text-xs font-black text-black transition hover:bg-[#20ca5c] disabled:cursor-not-allowed disabled:opacity-60"
+          class="inline-flex h-11 items-center gap-2 rounded-full bg-[#16C65A] px-6 text-xs font-black text-black transition hover:bg-[#22C55E] disabled:cursor-not-allowed disabled:opacity-60"
           :disabled="isSaving"
         >
           <LoaderCircle v-if="isSaving" :size="16" class="animate-spin" />
@@ -174,10 +174,10 @@ onMounted(load);
 
       <div>
         <p class="mb-3 text-xs font-black text-[#aaa]">Cover art</p>
-        <label class="group flex aspect-square w-full cursor-pointer items-center justify-center overflow-hidden border border-dashed border-white/20 bg-white/[0.03] transition hover:border-[#1DB954]/70">
+        <label class="group flex aspect-square w-full cursor-pointer items-center justify-center overflow-hidden border border-dashed border-white/20 bg-white/[0.03] transition hover:border-[#16C65A]/70">
           <img v-if="coverPreview || currentCover" :src="coverPreview || currentCover" alt="Cover" class="h-full w-full object-cover" />
           <span v-else class="flex flex-col items-center gap-3 text-center text-xs font-bold text-[#777]">
-            <ImagePlus :size="28" class="text-[#1DB954]" /> Choose image
+            <ImagePlus :size="28" class="text-[#16C65A]" /> Choose image
           </span>
           <input class="sr-only" type="file" accept="image/*" @change="selectCover" />
         </label>

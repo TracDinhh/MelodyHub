@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted } from 'vue';
+import { computed } from 'vue';
 import {
   Heart,
   Maximize2,
@@ -15,16 +15,12 @@ import { usePlayerStore } from '../../stores/player.store';
 import { formatDuration } from '../../utils/formatDate';
 
 const player = usePlayerStore();
-let timer;
 
 const isLiked = computed(() => player.likedIds.has(player.currentTrack.id));
 
-onMounted(() => { timer = window.setInterval(player.tick, 1000); });
-onBeforeUnmount(() => window.clearInterval(timer));
-
-const progress = computed(() =>
-  player.duration > 0 ? (player.currentTime / player.duration) * 100 : 0
-);
+// Playback time is driven by the audio element's timeupdate event, so the
+// store's `progress` is always current — no polling interval needed.
+const progress = computed(() => player.progress);
 
 const lyricLines = computed(() => {
   if (player.hasSyncedLyrics) return player.syncedLyrics;
@@ -60,7 +56,7 @@ function seekTo(e) {
           />
           <span
             v-else
-            class="grid size-14 shrink-0 place-items-center rounded-xl bg-white/[0.04] text-[#3A4A3E]"
+            class="grid size-14 shrink-0 place-items-center rounded-xl bg-white/[0.04] text-[#71717A]"
           >
             <svg class="size-6" viewBox="0 0 24 24" fill="currentColor">
               <path d="M9 18V5l12-2v13" />
@@ -70,12 +66,12 @@ function seekTo(e) {
           </span>
         </div>
         <div class="min-w-0 flex-1">
-          <p class="truncate text-base font-semibold text-[#EDE9E0]">{{ player.currentTrack.title }}</p>
-          <p class="truncate text-xs text-[#5A6860]">{{ player.currentTrack.artist }}</p>
+          <p class="truncate text-base font-semibold text-[#F4FFF7]">{{ player.currentTrack.title }}</p>
+          <p class="truncate text-xs text-[#A1A1AA]">{{ player.currentTrack.artist }}</p>
         </div>
         <button
           class="melodyhub-icon-btn size-9"
-          :class="isLiked ? 'text-[#3DDE7C]' : 'text-[#4E5A52]'"
+          :class="isLiked ? 'text-[#20E878]' : 'text-[#A1A1AA]'"
           @click="player.toggleLike(player.currentTrack.id)"
         >
           <Heart :size="17" :class="isLiked ? 'fill-current' : ''" />
@@ -91,7 +87,7 @@ function seekTo(e) {
           </button>
 
           <button
-            class="flex size-11 shrink-0 items-center justify-center rounded-full bg-[#EDE9E0] text-[#0E1218] transition-all duration-200 active:scale-95 hover:scale-105"
+            class="flex size-11 shrink-0 items-center justify-center rounded-full bg-[#F4FFF7] text-[#0F0F12] transition-all duration-200 active:scale-95 hover:scale-105"
             @click="player.togglePlayback"
           >
             <Pause v-if="player.isPlaying" :size="20" class="fill-current" />
@@ -105,27 +101,27 @@ function seekTo(e) {
 
         <!-- Progress bar -->
         <div class="flex w-full items-center gap-3 sm:gap-4">
-          <span class="w-10 shrink-0 text-right font-mono text-[11px] text-[#5A6860]">{{ formatDuration(player.currentTime) }}</span>
+          <span class="w-10 shrink-0 text-right font-mono text-[11px] text-[#A1A1AA]">{{ formatDuration(player.currentTime) }}</span>
           <div
             class="group relative h-1 flex-1 cursor-pointer rounded-full bg-white/[0.08] transition-all duration-150 hover:h-1.5"
             @click="seekTo"
           >
             <div
-              class="absolute inset-y-0 left-0 rounded-full bg-[#EDE9E0] transition-all"
+              class="absolute inset-y-0 left-0 rounded-full bg-[#F4FFF7] transition-all"
               :style="{ width: `${progress}%` }"
             />
             <div
-              class="absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 scale-0 rounded-full bg-[#EDE9E0] transition-transform group-hover:scale-100"
+              class="absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 scale-0 rounded-full bg-[#F4FFF7] transition-transform group-hover:scale-100"
               :style="{ left: `${progress}%` }"
             />
           </div>
-          <span class="w-10 shrink-0 font-mono text-[11px] text-[#5A6860]">{{ formatDuration(player.duration) }}</span>
+          <span class="w-10 shrink-0 font-mono text-[11px] text-[#A1A1AA]">{{ formatDuration(player.duration) }}</span>
         </div>
       </div>
 
       <!-- Volume -->
       <div class="hidden items-center justify-end gap-3 lg:flex">
-        <button class="melodyhub-icon-btn size-9 text-[#4E5A52]" @click="player.toggleMute">
+        <button class="melodyhub-icon-btn size-9 text-[#A1A1AA]" @click="player.toggleMute">
           <VolumeX v-if="player.muted" :size="17" />
           <Volume2 v-else :size="17" />
         </button>
@@ -161,11 +157,11 @@ function seekTo(e) {
         <div class="flex h-full flex-col">
           <header class="flex h-[3.75rem] shrink-0 items-center justify-between border-b border-white/[0.05] px-6">
             <div>
-              <p class="text-xs font-bold uppercase tracking-[0.1em] text-[#EDE9E0]">Up Next</p>
-              <p class="mt-0.5 font-mono text-[11px] text-[#3A4A3E]">{{ tracks.length }} tracks</p>
+              <p class="text-xs font-bold uppercase tracking-[0.1em] text-[#F4FFF7]">Up Next</p>
+              <p class="mt-0.5 font-mono text-[11px] text-[#71717A]">{{ tracks.length }} tracks</p>
             </div>
             <button class="melodyhub-icon-btn" @click="player.queueOpen = false">
-              <svg class="size-4 text-[#4E5A52]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              <svg class="size-4 text-[#A1A1AA]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
             </button>
           </header>
 
@@ -175,7 +171,7 @@ function seekTo(e) {
               :key="track.id"
               class="group flex w-full items-center gap-3 rounded-lg p-2.5 text-left transition-all duration-200"
               :class="track.id === player.currentTrack.id
-                ? 'bg-[#3DDE7C]/[0.08]'
+                ? 'bg-[#20E878]/[0.08]'
                 : 'hover:bg-white/[0.04]'"
               @click="player.playTrack(track)"
             >
@@ -183,13 +179,13 @@ function seekTo(e) {
               <span class="min-w-0 flex-1">
                 <span
                   class="block truncate text-sm font-medium"
-                  :class="track.id === player.currentTrack.id ? 'text-[#3DDE7C]' : 'text-[#EDE9E0]'"
+                  :class="track.id === player.currentTrack.id ? 'text-[#20E878]' : 'text-[#F4FFF7]'"
                 >
                   {{ track.title }}
                 </span>
-                <span class="block truncate text-xs text-[#3A4A3E]">{{ track.artist }}</span>
+                <span class="block truncate text-xs text-[#71717A]">{{ track.artist }}</span>
               </span>
-              <span class="shrink-0 font-mono text-[10px] text-[#2A3830]">
+              <span class="shrink-0 font-mono text-[10px] text-[#27272A]">
                 {{ formatDuration(track.duration) }}
               </span>
               <span v-if="track.id === player.currentTrack.id" class="playing-bars shrink-0">
@@ -218,12 +214,12 @@ function seekTo(e) {
           <div class="flex items-center gap-4">
             <img :src="player.currentTrack.cover" alt="" class="size-11 rounded-lg object-cover" />
             <div>
-              <p class="font-semibold text-[#EDE9E0]">{{ player.currentTrack.title }}</p>
-              <p class="text-xs text-[#5A6860]">{{ player.currentTrack.artist }}</p>
+              <p class="font-semibold text-[#F4FFF7]">{{ player.currentTrack.title }}</p>
+              <p class="text-xs text-[#A1A1AA]">{{ player.currentTrack.artist }}</p>
             </div>
           </div>
           <button class="melodyhub-icon-btn" @click="player.fullscreenLyrics = false">
-            <svg class="size-5 text-[#4E5A52]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            <svg class="size-5 text-[#A1A1AA]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
           </button>
         </header>
 
@@ -232,11 +228,11 @@ function seekTo(e) {
             v-for="(line, index) in lyricLines"
             :key="index"
             class="text-center text-xl font-bold transition-all duration-500 sm:text-3xl"
-            :class="index === activeLyricLine ? 'text-[#3DDE7C]' : 'text-[#EDE9E0]/[0.15]'"
+            :class="index === activeLyricLine ? 'text-[#20E878]' : 'text-[#F4FFF7]/[0.15]'"
           >
             {{ player.hasSyncedLyrics ? line.text : line }}
           </p>
-          <p v-if="!lyricLines.length" class="text-sm text-[#3A4A3E]">
+          <p v-if="!lyricLines.length" class="text-sm text-[#71717A]">
             No lyrics available for this track.
           </p>
         </div>

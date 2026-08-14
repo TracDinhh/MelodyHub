@@ -6,11 +6,11 @@ import com.melodyHub.entity.Artist;
 import com.melodyHub.entity.LyricsType;
 import com.melodyHub.entity.Song;
 import com.melodyHub.entity.SongStatus;
+import com.melodyHub.util.SqlSupport;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -319,7 +319,10 @@ public class SongRepository {
         parameters.add(SongStatus.PUBLISHED.name());
 
         if (titleQuery != null) {
-            clause.append(" AND LOWER(title) LIKE LOWER(?) ESCAPE '!'");
+            // The title column uses a case-insensitive collation (utf8mb4_unicode_ci),
+            // so we compare directly instead of LOWER(title), which would defeat any
+            // index and add a per-row function call.
+            clause.append(" AND title LIKE ? ESCAPE '!'");
             parameters.add("%" + escapeLike(titleQuery) + "%");
         }
 
@@ -400,6 +403,54 @@ public class SongRepository {
                 return artists;
             }
         }
+    }
+
+    /**
+     * Batched variant of {@link #findArtistsForSong(int)} that loads artists for
+     * many songs in a single query, avoiding the N+1 pattern when building a page
+     * of songs. Returns a map of {@code songId -> ordered artists}; song ids with
+     * no linked artists are absent from the map.
+     */
+    public java.util.Map<Integer, List<Artist>> findArtistsForSongs(java.util.Collection<Integer> songIds)
+            throws SQLException {
+        java.util.Map<Integer, List<Artist>> bySong = new java.util.LinkedHashMap<>();
+        if (songIds == null || songIds.isEmpty()) {
+            return bySong;
+        }
+
+        // Distinct, preserving encounter order for stable iteration.
+        List<Integer> ids = songIds.stream().filter(Objects::nonNull).distinct().toList();
+        if (ids.isEmpty()) {
+            return bySong;
+        }
+
+        String placeholders = SqlSupport.placeholders(ids.size());
+        String sql = """
+                SELECT sa.song_id,
+                       a.id, a.user_id, a.name, a.slug, a.bio, a.image_url,
+                       a.created_at, a.updated_at, a.deleted_at
+                FROM song_artists sa
+                JOIN artists a ON a.id = sa.artist_id
+                WHERE sa.song_id IN (""" + placeholders + """
+                )
+                  AND a.deleted_at IS NULL
+                ORDER BY sa.song_id, FIELD(sa.role, 'MAIN', 'FEATURED'), sa.position
+                """;
+
+        try (var connection = getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            for (int i = 0; i < ids.size(); i++) {
+                statement.setInt(i + 1, ids.get(i));
+            }
+            try (var resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    int songId = resultSet.getInt("song_id");
+                    bySong.computeIfAbsent(songId, key -> new ArrayList<>())
+                            .add(mapArtistRow(resultSet));
+                }
+            }
+        }
+        return bySong;
     }
 
     /**
@@ -580,17 +631,14 @@ public class SongRepository {
     }
 
     private Integer getNullableInteger(ResultSet resultSet, String columnName) throws SQLException {
-        int value = resultSet.getInt(columnName);
-        return resultSet.wasNull() ? null : value;
+        return SqlSupport.getNullableInteger(resultSet, columnName);
     }
 
     private Short getNullableShort(ResultSet resultSet, String columnName) throws SQLException {
-        short value = resultSet.getShort(columnName);
-        return resultSet.wasNull() ? null : value;
+        return SqlSupport.getNullableShort(resultSet, columnName);
     }
 
     private LocalDateTime getLocalDateTime(ResultSet resultSet, String columnName) throws SQLException {
-        Timestamp timestamp = resultSet.getTimestamp(columnName);
-        return timestamp == null ? null : timestamp.toLocalDateTime();
+        return SqlSupport.getLocalDateTime(resultSet, columnName);
     }
 }

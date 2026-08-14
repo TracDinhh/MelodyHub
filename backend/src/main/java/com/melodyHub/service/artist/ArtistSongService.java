@@ -14,6 +14,7 @@ import com.melodyHub.entity.SongStatus;
 import com.melodyHub.exception.SongException;
 import com.melodyHub.repository.SongLyricsRepository;
 import com.melodyHub.repository.SongRepository;
+import com.melodyHub.util.Pagination;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
@@ -239,7 +240,7 @@ public class ArtistSongService {
     }
 
     public PagedResponse<SongResponse> getOwnPage(int artistId, int page, int size) throws SQLException {
-        int offset = calculateOffset(page, size);
+        int offset = Pagination.offset(page, size);
         List<SongResponse> items = songRepository.getOwnedPage(artistId, size, offset)
                 .stream()
                 .map(SongResponse::fromEntity)
@@ -247,14 +248,6 @@ public class ArtistSongService {
         long total = songRepository.countOwned(artistId);
 
         return new PagedResponse<>(items, total, page, size);
-    }
-
-    private int calculateOffset(int page, int size) {
-        long offset = ((long) page - 1L) * size;
-        if (offset > Integer.MAX_VALUE) {
-            throw new IllegalArgumentException("page is too large");
-        }
-        return (int) offset;
     }
 
     public Optional<SongResponse> getOwnByIdentifier(int artistId, String identifier) throws SQLException {

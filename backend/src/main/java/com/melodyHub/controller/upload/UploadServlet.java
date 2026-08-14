@@ -1,30 +1,19 @@
 package com.melodyHub.controller.upload;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.melodyHub.dto.response.ErrorResponse;
+import com.melodyHub.controller.JsonServlet;
 import com.melodyHub.exception.AuthException;
 import com.melodyHub.service.storage.ImageStorageException;
 import com.melodyHub.service.upload.MediaUploadService;
 import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.Part;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 
-public class UploadServlet extends HttpServlet {
-    private static final String CONTENT_TYPE_JSON = "application/json";
-    private static final String BEARER_PREFIX = "Bearer ";
+public class UploadServlet extends JsonServlet {
     private static final String FILE_PART_NAME = "file";
-
-    private final ObjectMapper objectMapper = new ObjectMapper()
-            .registerModule(new JavaTimeModule())
-            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
     private MediaUploadService mediaUploadService;
 
@@ -114,20 +103,6 @@ public class UploadServlet extends HttpServlet {
         }
     }
 
-    private String getPath(HttpServletRequest request) {
-        String pathInfo = request.getPathInfo();
-        return pathInfo == null || pathInfo.isBlank() ? "/" : pathInfo;
-    }
-
-    private String getBearerToken(HttpServletRequest request) {
-        String authorization = request.getHeader("Authorization");
-        if (authorization == null || !authorization.startsWith(BEARER_PREFIX)) {
-            return null;
-        }
-
-        return authorization.substring(BEARER_PREFIX.length()).trim();
-    }
-
     private int getStatusCode(AuthException exception) {
         return switch (exception.getCode()) {
             case "MISSING_TOKEN", "INVALID_TOKEN" -> HttpServletResponse.SC_UNAUTHORIZED;
@@ -135,17 +110,5 @@ public class UploadServlet extends HttpServlet {
             case "USER_NOT_FOUND" -> HttpServletResponse.SC_NOT_FOUND;
             default -> HttpServletResponse.SC_BAD_REQUEST;
         };
-    }
-
-    private void writeJson(HttpServletResponse response, int statusCode, Object body) throws IOException {
-        response.setStatus(statusCode);
-        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
-        response.setContentType(CONTENT_TYPE_JSON);
-        objectMapper.writeValue(response.getWriter(), body);
-    }
-
-    private void writeError(HttpServletResponse response, int statusCode, String code, String message)
-            throws IOException {
-        writeJson(response, statusCode, new ErrorResponse(code, message));
     }
 }

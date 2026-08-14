@@ -1,6 +1,11 @@
 import { computed, ref } from 'vue';
 import { defineStore } from 'pinia';
 import { useListenTrackerStore } from './listenTracker.store';
+import { songService } from '../services/songService';
+import {
+  convertLegacyLyricsTime,
+  looksLikeLegacyLyricsTimes
+} from '../utils/lyricsTime';
 
 const EMPTY_TRACK = { id: null, title: '', artist: '', cover: '', duration: 0, audioUrl: null, lyricsType: 'PLAIN', lyrics: [] };
 
@@ -39,7 +44,10 @@ export const usePlayerStore = defineStore('player', () => {
     if (!syncedLyrics.value.length) return null;
     const time = currentTime.value;
     for (let i = syncedLyrics.value.length - 1; i >= 0; i--) {
-      if (time >= syncedLyrics.value[i].startTime) {
+      const line = syncedLyrics.value[i];
+      const startsAt = Number(line.startTime || 0);
+      const endsAt = Number(line.endTime || 0);
+      if (time >= startsAt && (!endsAt || time < endsAt)) {
         return i;
       }
     }
@@ -132,12 +140,23 @@ export const usePlayerStore = defineStore('player', () => {
   async function loadSyncedLyrics(slug, trackId = currentTrack.value?.id, requestId = ++lyricsRequestId) {
     if (!slug || !trackId) return;
     try {
-      const response = await fetch(`/api/songs/${encodeURIComponent(slug)}/lyrics`);
-      if (!response.ok) throw new Error('Could not load synced lyrics');
-      const data = await response.json();
+      const data = await songService.getSyncedLyrics(slug);
       if (requestId !== lyricsRequestId || currentTrack.value?.id !== trackId) return;
-      if (data.lyricsType === 'SYNCED' && data.lines) {
-        syncedLyrics.value = data.lines;
+      if (data.lyricsType === 'SYNCED' && Array.isArray(data.lines)) {
+        const legacyTimes = looksLikeLegacyLyricsTimes(data.lines);
+        const normalizedLines = data.lines.map((line) => legacyTimes
+          ? {
+              ...line,
+              startTime: convertLegacyLyricsTime(line.startTime),
+              endTime: convertLegacyLyricsTime(line.endTime)
+            }
+          : line
+        );
+        // The API normally returns playback order, but sort defensively so
+        // older rows with stale line_number values cannot make lyrics jump.
+        syncedLyrics.value = normalizedLines.sort(
+          (a, b) => Number(a.startTime || 0) - Number(b.startTime || 0)
+        );
       } else {
         syncedLyrics.value = [];
       }
@@ -194,10 +213,6 @@ export const usePlayerStore = defineStore('player', () => {
     if (audio && currentTrack.value?.audioUrl) audio.currentTime = seconds;
   }
 
-  // Kept for compatibility with the interval in BottomPlayer; real time comes
-  // from the audio element's timeupdate event, so this is a no-op.
-  function tick() {}
-
   function setVolume(value) {
     volume.value = Number(value);
     if (volume.value > 0) previousVolume.value = volume.value;
@@ -244,7 +259,6 @@ export const usePlayerStore = defineStore('player', () => {
     next,
     previous,
     seek,
-    tick,
     setVolume,
     toggleMute,
     toggleLike: (id) => toggleInSet(likedIds, id),

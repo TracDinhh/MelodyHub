@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router';
 import { ListMusic, Music2, Play, Trash2 } from '@lucide/vue';
 import { usePlaylistStore } from '../stores/playlist.store';
 import { usePlayerStore } from '../stores/player.store';
+import { toPlayerTrack } from '../utils/playerTrack';
 
 const route = useRoute();
 const store = usePlaylistStore();
@@ -16,22 +17,8 @@ function artistNames(song) {
   return (song.artists || []).map((artist) => artist.name).filter(Boolean).join(', ');
 }
 
-function toPlayerTrack(song) {
-  return {
-    id: song?.id,
-    title: song?.title,
-    cover: song?.coverUrl,
-    artist: artistNames(song),
-    album: '',
-    duration: song?.durationSec || 0,
-    audioUrl: song?.audioUrl,
-    lyricsType: song?.lyricsType || 'PLAIN',
-    slug: song?.slug
-  };
-}
-
 function play(song) {
-  const tracks = songs.value.map(toPlayerTrack).filter((track) => track.id);
+  const tracks = songs.value.map((item) => toPlayerTrack(item)).filter((track) => track.id);
   player.playTrack(toPlayerTrack(song), tracks);
 }
 
@@ -61,7 +48,7 @@ watch(() => route.params.id, load);
 
     <div v-else-if="store.detailError" class="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-6 text-center text-sm text-red-200">
       {{ store.detailError }}
-      <button class="ml-3 text-xs font-bold text-[#65e78c] hover:underline" @click="load">Retry</button>
+      <button class="ml-3 text-xs font-bold text-[#20E878] hover:underline" @click="load">Retry</button>
     </div>
 
     <template v-else-if="playlist">
@@ -80,14 +67,14 @@ watch(() => route.params.id, load);
         <div class="flex flex-col gap-2">
           <p class="melodyhub-kicker">PLAYLIST</p>
           <h1 class="text-3xl font-black text-white sm:text-4xl">{{ playlist.name }}</h1>
-          <p v-if="playlist.description" class="max-w-xl text-sm text-[#87918a]">{{ playlist.description }}</p>
+          <p v-if="playlist.description" class="max-w-xl text-sm text-[#8EA696]">{{ playlist.description }}</p>
           <p class="text-xs font-semibold text-[#777]">
             {{ playlist.songCount }} {{ playlist.songCount === 1 ? 'song' : 'songs' }}
-            <span v-if="playlist.isPublic" class="ml-1 text-[#65e78c]">· Public</span>
+            <span v-if="playlist.isPublic" class="ml-1 text-[#20E878]">· Public</span>
           </p>
           <button
             v-if="songs.length"
-            class="mt-2 inline-flex h-11 w-fit items-center gap-2 rounded-full bg-[#65e78c] px-6 text-sm font-black text-[#071108] transition hover:bg-[#54d67b]"
+            class="mt-2 inline-flex h-11 w-fit items-center gap-2 rounded-full bg-[#20E878] px-6 text-sm font-black text-[#0F0F12] transition hover:bg-[#54d67b]"
             @click="playAll"
           >
             <Play :size="16" class="fill-current" /> Play
@@ -122,11 +109,11 @@ watch(() => route.params.id, load);
           <div class="min-w-0 flex-1">
             <RouterLink
               :to="{ name: 'song-detail', params: { slug: song.slug } }"
-              class="block truncate text-sm font-bold text-white transition group-hover:text-[#8be8a8]"
+              class="block truncate text-sm font-bold text-white transition group-hover:text-[#FDA4AF]"
             >
               {{ song.title }}
             </RouterLink>
-            <p class="mt-1 truncate text-xs text-[#87918a]">{{ artistNames(song) || 'Unknown artist' }}</p>
+            <p class="mt-1 truncate text-xs text-[#8EA696]">{{ artistNames(song) || 'Unknown artist' }}</p>
           </div>
           <button class="melodyhub-icon-btn !size-9 shrink-0" title="Play song" @click="play(song)">
             <Play :size="15" class="fill-current" />

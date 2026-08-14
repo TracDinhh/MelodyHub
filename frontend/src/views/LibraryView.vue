@@ -12,7 +12,7 @@ const deleted = ref(false);
 <template>
   <div class="pb-10">
     <section class="relative overflow-hidden px-5 py-8 sm:px-8">
-      <div class="absolute inset-0 bg-gradient-to-b from-[#1DB954]/15 to-transparent" />
+      <div class="absolute inset-0 bg-gradient-to-b from-[#16C65A]/15 to-transparent" />
       <div class="relative flex flex-col gap-6 sm:flex-row sm:items-end">
         <div class="grid aspect-square w-44 shrink-0 place-items-center overflow-hidden rounded-lg bg-[#181818] shadow-2xl shadow-black/50">
           <img v-if="!deleted" :src="playlists[0].cover" alt="Night Drive playlist cover" class="h-full w-full object-cover" />
@@ -23,7 +23,7 @@ const deleted = ref(false);
           <h1 class="mt-2 text-4xl font-black text-white sm:text-6xl">{{ deleted ? 'Playlist removed' : 'Night Drive' }}</h1>
           <p class="mt-3 text-sm text-[#999]">{{ deleted ? 'Create another playlist from the sidebar.' : '42 tracks · 2 hr 48 min · Made by Alex Morgan' }}</p>
           <div v-if="!deleted" class="mt-5 flex flex-wrap gap-3">
-            <button class="inline-flex h-11 items-center gap-2 rounded-full bg-[#1DB954] px-6 text-xs font-black text-black" @click="player.playTrack(tracks[0])">
+            <button class="inline-flex h-11 items-center gap-2 rounded-full bg-[#16C65A] px-6 text-xs font-black text-black" @click="player.playTrack(tracks[0])">
               <Play :size="17" class="fill-current" /> PLAY ALL
             </button>
             <button class="inline-flex h-11 items-center gap-2 rounded-full border border-white/15 px-5 text-xs font-bold text-[#aaa] hover:border-red-400/60 hover:text-red-400" @click="deleted = true">

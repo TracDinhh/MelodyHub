@@ -41,20 +41,20 @@ function openDetail() {
       <div class="min-w-0">
         <button
           v-if="songSlug"
-          class="block max-w-full truncate text-left font-bold transition hover:text-[#8be8a8]"
-          :class="isCurrent ? 'text-[#1DB954]' : 'text-white'"
+          class="block max-w-full truncate text-left font-bold transition hover:text-[#FDA4AF]"
+          :class="isCurrent ? 'text-[#16C65A]' : 'text-white'"
           @click.stop="openDetail"
         >
           {{ track.title }}
         </button>
-        <p v-else class="truncate font-bold" :class="isCurrent ? 'text-[#1DB954]' : 'text-white'">{{ track.title }}</p>
+        <p v-else class="truncate font-bold" :class="isCurrent ? 'text-[#16C65A]' : 'text-white'">{{ track.title }}</p>
         <p class="truncate text-xs text-[#777]">{{ track.artist }}<span v-if="track.featured"> feat. {{ track.featured }}</span></p>
       </div>
     </div>
     <p class="truncate text-xs text-[#777]">{{ showAlbum ? track.album : track.plays }}</p>
     <p class="text-xs text-[#777]">{{ formatDuration(track.duration) }}</p>
     <button class="melodyhub-icon-btn !size-8" :title="isLiked ? 'Remove from favorites' : 'Add to favorites'" @click="player.toggleLike(track.id)">
-      <Heart :size="16" :class="isLiked ? 'fill-[#1DB954] text-[#1DB954]' : ''" />
+      <Heart :size="16" :class="isLiked ? 'fill-[#16C65A] text-[#16C65A]' : ''" />
     </button>
     <AddToPlaylistButton
       v-if="track.id != null"

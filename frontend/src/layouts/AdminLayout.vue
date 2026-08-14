@@ -23,7 +23,7 @@ async function logout() {
 </script>
 
 <template>
-  <div class="h-screen overflow-hidden bg-[#090909] text-white">
+  <div class="h-screen overflow-hidden bg-[#09090B] text-white">
     <div class="grid h-screen grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)]">
       <!-- Sidebar -->
       <div
@@ -48,7 +48,7 @@ async function logout() {
             :key="item.route"
             :to="{ name: item.route }"
             class="group relative flex h-11 items-center gap-3 rounded-md px-3 text-sm font-semibold text-[#8f8f8f] transition hover:bg-white/5 hover:text-white"
-            active-class="bg-white/[0.06] !text-[#1DB954] before:absolute before:-left-3 before:h-6 before:w-0.5 before:rounded-r before:bg-[#1DB954]"
+            active-class="bg-white/[0.06] !text-[#16C65A] before:absolute before:-left-3 before:h-6 before:w-0.5 before:rounded-r before:bg-[#16C65A]"
             @click="navOpen = false"
           >
             <component :is="item.icon" :size="18" />
@@ -58,7 +58,7 @@ async function logout() {
 
         <div class="mt-auto border-t border-white/5 p-4">
           <div class="mb-3 flex items-center gap-2 text-xs text-[#888]">
-            <ShieldCheck :size="15" class="text-[#1DB954]" />
+            <ShieldCheck :size="15" class="text-[#16C65A]" />
             <span class="truncate">{{ authStore.displayName }}</span>
           </div>
           <button

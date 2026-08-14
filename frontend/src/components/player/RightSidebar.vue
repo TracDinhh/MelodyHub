@@ -66,7 +66,7 @@ watch(activeLine, async (index) => {
         v-for="tab in tabs"
         :key="tab.id"
         class="relative h-11 text-[11px] font-bold transition"
-        :class="activeTab === tab.id ? 'text-white after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:bg-[#1DB954]' : 'text-[#737373] hover:text-white'"
+        :class="activeTab === tab.id ? 'text-white after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:bg-[#16C65A]' : 'text-[#737373] hover:text-white'"
         @click="activeTab = tab.id"
       >
         {{ tab.label }}
@@ -80,7 +80,7 @@ watch(activeLine, async (index) => {
           :key="`${player.currentTrack.id}-${index}`"
           :data-lyric="index"
           class="origin-left transition-all duration-500"
-          :class="index === activeLine ? 'text-lg font-black text-[#1DB954]' : 'text-sm font-semibold text-[#6d6d6d]'"
+          :class="index === activeLine ? 'text-lg font-black text-[#16C65A]' : 'text-sm font-semibold text-[#6d6d6d]'"
         >
           {{ player.hasSyncedLyrics ? line.text : line }}
         </p>
@@ -91,13 +91,13 @@ watch(activeLine, async (index) => {
         <img :src="featuredArtist.avatar" :alt="featuredArtist.name" class="h-52 w-full rounded-lg object-cover" />
         <div class="mt-4 flex items-center gap-1.5">
           <h3 class="font-bold text-white">{{ featuredArtist.name }}</h3>
-          <CheckCircle2 :size="15" class="fill-[#1DB954] text-black" />
+          <CheckCircle2 :size="15" class="fill-[#16C65A] text-black" />
         </div>
         <p class="mt-1 text-xs font-bold text-[#9a9a9a]">{{ featuredArtist.followers }} followers</p>
         <p class="mt-4 text-sm leading-6 text-[#8b8b8b]">{{ featuredArtist.bio }}</p>
         <RouterLink
           :to="{ name: 'artist-detail', params: { slug: featuredArtist.slug } }"
-          class="mt-4 inline-flex items-center gap-1 text-xs font-bold text-[#1DB954]"
+          class="mt-4 inline-flex items-center gap-1 text-xs font-bold text-[#16C65A]"
           @click="emit('close')"
         >
           View artist <ArrowUpRight :size="14" />

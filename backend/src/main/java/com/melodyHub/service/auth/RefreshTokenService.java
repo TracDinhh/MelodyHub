@@ -2,13 +2,9 @@ package com.melodyHub.service.auth;
 
 import com.melodyHub.config.AppConfig;
 import com.melodyHub.repository.RefreshTokenRepository;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
+import com.melodyHub.util.TokenHashUtil;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
-import java.util.Base64;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -17,7 +13,6 @@ public class RefreshTokenService {
     private static final int DEFAULT_EXPIRES_DAYS = 7;
     private static final int TOKEN_BYTES = 64;
 
-    private final SecureRandom secureRandom = new SecureRandom();
     private final RefreshTokenRepository refreshTokenRepository;
 
     public RefreshTokenService() {
@@ -61,23 +56,11 @@ public class RefreshTokenService {
     }
 
     private String generateToken() {
-        byte[] bytes = new byte[TOKEN_BYTES];
-        secureRandom.nextBytes(bytes);
-        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+        return TokenHashUtil.randomToken(TOKEN_BYTES);
     }
 
     private String hash(String token) {
-        try {
-            byte[] digest = MessageDigest.getInstance("SHA-256")
-                    .digest(token.getBytes(StandardCharsets.UTF_8));
-            StringBuilder hash = new StringBuilder(digest.length * 2);
-            for (byte value : digest) {
-                hash.append(String.format("%02x", value));
-            }
-            return hash.toString();
-        } catch (NoSuchAlgorithmException exception) {
-            throw new IllegalStateException("SHA-256 is not available", exception);
-        }
+        return TokenHashUtil.sha256Hex(token);
     }
 
     private int getExpiresInDays() {

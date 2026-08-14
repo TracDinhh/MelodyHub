@@ -15,7 +15,7 @@ const props = defineProps({
   /** Min bar height in px */
   minHeight: { type: Number, default: 3 },
   /** Color of played bars */
-  activeColor: { type: String, default: '#3DDE7C' },
+  activeColor: { type: String, default: '#20E878' },
   /** Color of unplayed bars */
   inactiveColor: { type: String, default: 'rgba(61, 222, 124, 0.22)' },
   /** Orientation */
