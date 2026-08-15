@@ -113,6 +113,24 @@ public class ArtistRequestRepository {
         }
     }
 
+    /**
+     * Counts artist requests grouped by status in one query. Returns a map keyed
+     * by the status's DB string (PENDING/APPROVED/REJECTED); statuses with no
+     * requests are absent. Used by the admin analytics dashboard.
+     */
+    public java.util.Map<String, Long> countByStatusGrouped() throws SQLException {
+        String sql = "SELECT status, COUNT(*) AS total FROM artist_requests GROUP BY status";
+        java.util.Map<String, Long> counts = new java.util.LinkedHashMap<>();
+        try (var connection = DatabaseConfig.getConnection();
+             var statement = connection.prepareStatement(sql);
+             var resultSet = statement.executeQuery()) {
+            while (resultSet.next()) {
+                counts.put(resultSet.getString("status"), resultSet.getLong("total"));
+            }
+        }
+        return counts;
+    }
+
     public List<AdminRow> findPageByStatus(ArtistRequestStatus status, int limit, int offset) throws SQLException {
         String sql = """
                 SELECT r.id, r.user_id, r.artist_name, r.slug, r.bio, r.image_url,

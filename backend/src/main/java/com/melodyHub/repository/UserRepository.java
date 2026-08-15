@@ -187,6 +187,52 @@ public class UserRepository {
         }
     }
 
+    /**
+     * Counts users grouped by role in one query. Returns a map keyed by the
+     * role's DB string (USER/ARTIST/ADMIN); roles with no users are absent.
+     * Used by the admin analytics dashboard.
+     */
+    public java.util.Map<String, Long> countByRoleGrouped() throws SQLException {
+        String sql = "SELECT role, COUNT(*) AS total FROM users GROUP BY role";
+        java.util.Map<String, Long> counts = new java.util.LinkedHashMap<>();
+        try (var connection = DatabaseConfig.getConnection();
+             var statement = connection.prepareStatement(sql);
+             var resultSet = statement.executeQuery()) {
+            while (resultSet.next()) {
+                counts.put(resultSet.getString("role"), resultSet.getLong("total"));
+            }
+        }
+        return counts;
+    }
+
+    /**
+     * Counts users created per calendar day since {@code since} (inclusive).
+     * Returns a map keyed by {@code yyyy-MM-dd}; empty days are absent.
+     */
+    public java.util.Map<String, Long> countCreatedByDaySince(LocalDateTime since) throws SQLException {
+        String sql = """
+                SELECT DATE(created_at) AS day, COUNT(*) AS total
+                FROM users
+                WHERE created_at >= ?
+                GROUP BY DATE(created_at)
+                ORDER BY day
+                """;
+        java.util.Map<String, Long> counts = new java.util.LinkedHashMap<>();
+        try (var connection = DatabaseConfig.getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            statement.setTimestamp(1, java.sql.Timestamp.valueOf(since));
+            try (var resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    java.sql.Date day = resultSet.getDate("day");
+                    if (day != null) {
+                        counts.put(day.toLocalDate().toString(), resultSet.getLong("total"));
+                    }
+                }
+            }
+        }
+        return counts;
+    }
+
     public Optional<User> updateRole(int userId, UserRole role) throws SQLException {
         String sql = "UPDATE users SET role = ?, updated_at = CURRENT_TIMESTAMP(6) WHERE id = ?";
 

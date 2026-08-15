@@ -141,6 +141,35 @@ public class ListenHistoryRepository {
         }
     }
 
+    /**
+     * Counts listens per calendar day since {@code since} (inclusive). Returns a
+     * map keyed by {@code yyyy-MM-dd}; days with no listens are absent (the
+     * service fills gaps with zero). Used by the admin analytics dashboard.
+     */
+    public java.util.Map<String, Long> countByDaySince(LocalDateTime since) throws SQLException {
+        String sql = """
+                SELECT DATE(listened_at) AS day, COUNT(*) AS total
+                FROM listen_history
+                WHERE listened_at >= ?
+                GROUP BY DATE(listened_at)
+                ORDER BY day
+                """;
+        java.util.Map<String, Long> counts = new java.util.LinkedHashMap<>();
+        try (var connection = getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            statement.setTimestamp(1, java.sql.Timestamp.valueOf(since));
+            try (var resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    java.sql.Date day = resultSet.getDate("day");
+                    if (day != null) {
+                        counts.put(day.toLocalDate().toString(), resultSet.getLong("total"));
+                    }
+                }
+            }
+        }
+        return counts;
+    }
+
     private Connection getConnection() throws SQLException {
         return dataSource == null ? DatabaseConfig.getConnection() : dataSource.getConnection();
     }
