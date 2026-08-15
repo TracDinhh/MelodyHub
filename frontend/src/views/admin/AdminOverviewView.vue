@@ -13,8 +13,10 @@ import {
   Users
 } from '@lucide/vue';
 import { adminService } from '../../services/adminService';
+import StatChart from './components/StatChart.vue';
 
 const stats = ref(null);
+const analytics = ref(null);
 const isLoading = ref(true);
 const error = ref('');
 
@@ -31,11 +33,71 @@ const cards = computed(() => {
   ];
 });
 
+// Shorten ISO dates (yyyy-MM-dd) to MM-dd for compact axis labels.
+function shortDate(iso) {
+  return typeof iso === 'string' && iso.length === 10 ? iso.slice(5) : iso;
+}
+
+// --- User growth (area) ---
+const userGrowthCategories = computed(() =>
+  (analytics.value?.userGrowth || []).map((d) => shortDate(d.date))
+);
+const userGrowthSeries = computed(() => [
+  { name: 'New users', data: (analytics.value?.userGrowth || []).map((d) => d.count) }
+]);
+
+// --- Listens by day (bar) ---
+const listensCategories = computed(() =>
+  (analytics.value?.listensByDay || []).map((d) => shortDate(d.date))
+);
+const listensSeries = computed(() => [
+  { name: 'Listens', data: (analytics.value?.listensByDay || []).map((d) => d.count) }
+]);
+
+// --- Users by role (donut) ---
+const usersByRoleLabels = computed(() =>
+  (analytics.value?.usersByRole || []).map((r) => r.label)
+);
+const usersByRoleSeries = computed(() =>
+  (analytics.value?.usersByRole || []).map((r) => r.count)
+);
+
+// --- Songs by status (donut) ---
+const songStatusLabels = computed(() =>
+  (analytics.value?.songsByStatus || []).map((r) => r.label)
+);
+const songStatusSeries = computed(() =>
+  (analytics.value?.songsByStatus || []).map((r) => r.count)
+);
+
+// --- Artist request funnel (bar) ---
+const funnelCategories = computed(() =>
+  (analytics.value?.artistRequestFunnel || []).map((r) => r.label)
+);
+const funnelSeries = computed(() => [
+  { name: 'Requests', data: (analytics.value?.artistRequestFunnel || []).map((r) => r.count) }
+]);
+
+// --- Top songs (horizontal bar) ---
+const topSongsCategories = computed(() =>
+  (analytics.value?.topSongs || []).map((s) => s.title)
+);
+const topSongsSeries = computed(() => [
+  { name: 'Plays', data: (analytics.value?.topSongs || []).map((s) => s.playCount) }
+]);
+
+const hasSeries = (arr) => Array.isArray(arr) && arr.some((v) => v > 0);
+
 async function load() {
   isLoading.value = true;
   error.value = '';
   try {
-    stats.value = await adminService.getStats();
+    const [statsResult, analyticsResult] = await Promise.all([
+      adminService.getStats(),
+      adminService.getAnalytics()
+    ]);
+    stats.value = statsResult;
+    analytics.value = analyticsResult;
   } catch (requestError) {
     error.value = requestError.message || 'Unable to load statistics.';
   } finally {
@@ -107,6 +169,56 @@ onMounted(load);
             <component :is="card.icon" :size="18" :class="card.tint" />
           </div>
           <p class="mt-3 text-3xl font-black text-white">{{ card.value }}</p>
+        </div>
+      </div>
+
+      <!-- Charts -->
+      <div v-if="analytics" class="mt-8 grid gap-4 lg:grid-cols-2">
+        <!-- User growth -->
+        <div class="border border-white/10 bg-[#111827] p-5">
+          <p class="mb-3 text-xs font-bold uppercase tracking-wide text-[#888]">New users (last 30 days)</p>
+          <StatChart type="area" :series="userGrowthSeries" :categories="userGrowthCategories" />
+        </div>
+
+        <!-- Listens by day -->
+        <div class="border border-white/10 bg-[#111827] p-5">
+          <p class="mb-3 text-xs font-bold uppercase tracking-wide text-[#888]">Listens (last 30 days)</p>
+          <StatChart type="bar" :series="listensSeries" :categories="listensCategories" />
+        </div>
+
+        <!-- Users by role -->
+        <div v-if="hasSeries(usersByRoleSeries)" class="border border-white/10 bg-[#111827] p-5">
+          <p class="mb-3 text-xs font-bold uppercase tracking-wide text-[#888]">Users by role</p>
+          <StatChart type="donut" :series="usersByRoleSeries" :labels="usersByRoleLabels" />
+        </div>
+
+        <!-- Songs by status -->
+        <div v-if="hasSeries(songStatusSeries)" class="border border-white/10 bg-[#111827] p-5">
+          <p class="mb-3 text-xs font-bold uppercase tracking-wide text-[#888]">Songs by status</p>
+          <StatChart type="donut" :series="songStatusSeries" :labels="songStatusLabels" />
+        </div>
+
+        <!-- Artist request funnel -->
+        <div v-if="hasSeries(funnelSeries[0].data)" class="border border-white/10 bg-[#111827] p-5">
+          <p class="mb-3 text-xs font-bold uppercase tracking-wide text-[#888]">Artist requests</p>
+          <StatChart
+            type="bar"
+            :series="funnelSeries"
+            :categories="funnelCategories"
+            :extra-options="{ plotOptions: { bar: { distributed: true } }, legend: { show: false } }"
+          />
+        </div>
+
+        <!-- Top songs -->
+        <div v-if="hasSeries(topSongsSeries[0].data)" class="border border-white/10 bg-[#111827] p-5 lg:col-span-2">
+          <p class="mb-3 text-xs font-bold uppercase tracking-wide text-[#888]">Top songs by plays</p>
+          <StatChart
+            type="bar"
+            :height="360"
+            :series="topSongsSeries"
+            :categories="topSongsCategories"
+            :extra-options="{ plotOptions: { bar: { horizontal: true, borderRadius: 4 } } }"
+          />
         </div>
       </div>
     </template>

@@ -575,6 +575,95 @@ public class SongRepository {
         }
     }
 
+    /**
+     * Counts songs grouped by status in one query. Returns a map keyed by the
+     * status's DB string (DRAFT/PUBLISHED/HIDDEN); statuses with no songs are
+     * absent. Excludes soft-deleted songs. Used by the admin analytics dashboard.
+     */
+    public java.util.Map<String, Long> countByStatusGrouped() throws SQLException {
+        String sql = """
+                SELECT status, COUNT(*) AS total
+                FROM songs
+                WHERE deleted_at IS NULL
+                GROUP BY status
+                """;
+        java.util.Map<String, Long> counts = new java.util.LinkedHashMap<>();
+        try (var connection = getConnection();
+             var statement = connection.prepareStatement(sql);
+             var resultSet = statement.executeQuery()) {
+            while (resultSet.next()) {
+                counts.put(resultSet.getString("status"), resultSet.getLong("total"));
+            }
+        }
+        return counts;
+    }
+
+    /**
+     * Counts published songs created per calendar day since {@code since}
+     * (inclusive). Returns a map keyed by {@code yyyy-MM-dd}; empty days absent.
+     */
+    public java.util.Map<String, Long> countCreatedByDaySince(LocalDateTime since) throws SQLException {
+        String sql = """
+                SELECT DATE(created_at) AS day, COUNT(*) AS total
+                FROM songs
+                WHERE created_at >= ? AND deleted_at IS NULL
+                GROUP BY DATE(created_at)
+                ORDER BY day
+                """;
+        java.util.Map<String, Long> counts = new java.util.LinkedHashMap<>();
+        try (var connection = getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            statement.setTimestamp(1, java.sql.Timestamp.valueOf(since));
+            try (var resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    java.sql.Date day = resultSet.getDate("day");
+                    if (day != null) {
+                        counts.put(day.toLocalDate().toString(), resultSet.getLong("total"));
+                    }
+                }
+            }
+        }
+        return counts;
+    }
+
+    /**
+     * Returns the top {@code limit} published songs by play count, highest first.
+     * Each row pairs the song's title, slug, and play count for the admin
+     * analytics "top songs" chart.
+     */
+    public List<TopSongRow> findTopByPlayCount(int limit) throws SQLException {
+        if (limit <= 0) {
+            return List.of();
+        }
+        String sql = """
+                SELECT title, slug, play_count
+                FROM songs
+                WHERE deleted_at IS NULL AND status = ?
+                ORDER BY play_count DESC, created_at DESC
+                LIMIT ?
+                """;
+        List<TopSongRow> rows = new ArrayList<>();
+        try (var connection = getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            statement.setString(1, SongStatus.PUBLISHED.name());
+            statement.setInt(2, limit);
+            try (var resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    rows.add(new TopSongRow(
+                            resultSet.getString("title"),
+                            resultSet.getString("slug"),
+                            resultSet.getLong("play_count")
+                    ));
+                }
+            }
+        }
+        return rows;
+    }
+
+    /** A song's title, slug, and play count for the top-songs analytics chart. */
+    public record TopSongRow(String title, String slug, long playCount) {
+    }
+
     private Artist mapArtistRow(ResultSet resultSet) throws SQLException {
         return new Artist(
                 resultSet.getInt("id"),

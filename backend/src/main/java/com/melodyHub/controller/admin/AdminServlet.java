@@ -44,6 +44,14 @@ public class AdminServlet extends JsonServlet {
                 );
                 return;
             }
+            if ("/analytics".equals(path)) {
+                writeJson(
+                        response,
+                        HttpServletResponse.SC_OK,
+                        adminStatsService.getAnalytics(getBearerToken(request))
+                );
+                return;
+            }
             if ("/artist-requests".equals(path)) {
                 handleListRequests(request, response);
                 return;

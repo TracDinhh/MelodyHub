@@ -1,5 +1,6 @@
 import { createPinia } from 'pinia';
 import { createApp } from 'vue';
+import VueApexCharts from 'vue3-apexcharts';
 import './assets/styles/main.css';
 import App from './App.vue';
 import router from './router';
@@ -10,6 +11,7 @@ const pinia = createPinia();
 
 async function bootstrap() {
   app.use(pinia);
+  app.use(VueApexCharts);
   await useAuthStore(pinia).initialize();
   app.use(router);
   window.addEventListener('melodyhub:unauthorized', () => {

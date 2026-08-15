@@ -43,5 +43,12 @@ export const adminService = {
    */
   getStats() {
     return apiClient.get('/api/admin/stats');
+  },
+
+  /**
+   * Detailed analytics (time series + distributions) for the dashboard charts.
+   */
+  getAnalytics() {
+    return apiClient.get('/api/admin/analytics');
   }
 };
