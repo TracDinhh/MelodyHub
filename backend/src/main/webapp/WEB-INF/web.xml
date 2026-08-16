@@ -66,6 +66,11 @@
         <servlet-class>com.melodyHub.controller.user.UserServlet</servlet-class>
     </servlet>
 
+    <servlet>
+        <servlet-name>LikeServlet</servlet-name>
+        <servlet-class>com.melodyHub.controller.song.LikeServlet</servlet-class>
+    </servlet>
+
     <servlet-mapping>
         <servlet-name>AuthServlet</servlet-name>
         <url-pattern>/api/auth/*</url-pattern>
@@ -110,6 +115,12 @@
         <servlet-name>UserServlet</servlet-name>
         <url-pattern>/api/users/*</url-pattern>
     </servlet-mapping>
+
+    <servlet-mapping>
+        <servlet-name>LikeServlet</servlet-name>
+        <url-pattern>/api/likes/*</url-pattern>
+    </servlet-mapping>
+
 
     <session-config>
         <session-timeout>30</session-timeout>

@@ -47,6 +47,12 @@ async function load(slug) {
     song.value = detail;
     related.value = relatedResponse?.items || [];
 
+    // Seed the store's liked set from the detail payload so the heart reflects
+    // the server's isLiked even before/without a full hydrate call.
+    if (detail?.id != null && typeof detail.isLiked === 'boolean') {
+      player.setLiked(detail.id, detail.isLiked);
+    }
+
     if (detail.lyricsType === 'SYNCED') {
       const lyricsResponse = await songService.getSyncedLyrics(detail.slug).catch(() => null);
       if (song.value?.id === detail.id && lyricsResponse?.lyricsType === 'SYNCED') {
@@ -78,6 +84,16 @@ function toTrack(detail) {
 }
 
 const isPlaying = computed(() => player.isPlaying && player.currentTrack.id === song.value?.id);
+
+// Heart state comes from the player store's liked set (persisted to the
+// backend), falling back to the detail payload's isLiked on first load.
+const isLiked = computed(() =>
+  song.value?.id ? player.likedIds.has(song.value.id) : false
+);
+
+function toggleLike() {
+  if (song.value?.id) player.toggleLike(song.value.id);
+}
 
 // Auto-scroll the active lyric line to the middle of the lyrics box while playing.
 const lyricsBox = ref(null);
@@ -173,10 +189,10 @@ watch(() => route.params.slug, (slug) => slug && load(slug));
               </button>
               <button
                 class="melodyhub-icon-btn !size-11"
-                :title="song.isLiked ? 'You liked this song' : 'Like this song'"
-                disabled
+                :title="isLiked ? 'Remove from your Liked Songs' : 'Save to your Liked Songs'"
+                @click="toggleLike"
               >
-                <Heart :size="18" :class="song.isLiked ? 'fill-[#16C65A] text-[#16C65A]' : ''" />
+                <Heart :size="18" :class="isLiked ? 'fill-[#16C65A] text-[#16C65A]' : ''" />
               </button>
               <AddToPlaylistButton :song-id="song.id" />
             </div>

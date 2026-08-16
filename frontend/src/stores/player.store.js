@@ -2,6 +2,8 @@ import { computed, ref } from 'vue';
 import { defineStore } from 'pinia';
 import { useListenTrackerStore } from './listenTracker.store';
 import { songService } from '../services/songService';
+import { likeService } from '../services/likeService';
+import { useAuthStore } from './auth.store';
 import {
   convertLegacyLyricsTime,
   looksLikeLegacyLyricsTimes
@@ -234,6 +236,56 @@ export const usePlayerStore = defineStore('player', () => {
     target.value = nextSet;
   }
 
+  function setLiked(id, liked) {
+    const nextSet = new Set(likedIds.value);
+    if (liked) nextSet.add(id);
+    else nextSet.delete(id);
+    likedIds.value = nextSet;
+  }
+
+  // Loads the user's liked song ids from the backend so the heart state is
+  // correct across reloads. No-op for guests. Safe to call repeatedly.
+  async function hydrateLikes() {
+    let auth = null;
+    try {
+      auth = useAuthStore();
+    } catch {
+      auth = null;
+    }
+    if (!auth?.isAuthenticated) {
+      likedIds.value = new Set();
+      return;
+    }
+    try {
+      const response = await likeService.listIds();
+      likedIds.value = new Set(response?.ids || []);
+    } catch {
+      // Leave whatever state we had; a transient failure shouldn't wipe hearts.
+    }
+  }
+
+  // Optimistically flips the heart, then persists. Rolls back on failure so the
+  // UI never claims a like the server rejected. Guests are ignored.
+  async function toggleLike(id) {
+    if (!id) return;
+    let auth = null;
+    try {
+      auth = useAuthStore();
+    } catch {
+      auth = null;
+    }
+    if (!auth?.isAuthenticated) return;
+
+    const wasLiked = likedIds.value.has(id);
+    setLiked(id, !wasLiked);
+    try {
+      if (wasLiked) await likeService.unlike(id);
+      else await likeService.like(id);
+    } catch {
+      setLiked(id, wasLiked);
+    }
+  }
+
   return {
     currentTrack,
     queue,
@@ -261,7 +313,9 @@ export const usePlayerStore = defineStore('player', () => {
     seek,
     setVolume,
     toggleMute,
-    toggleLike: (id) => toggleInSet(likedIds, id),
+    hydrateLikes,
+    setLiked,
+    toggleLike,
     toggleDownload: (id) => toggleInSet(downloadedIds, id)
   };
 });
