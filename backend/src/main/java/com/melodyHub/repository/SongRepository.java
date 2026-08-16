@@ -40,6 +40,27 @@ public class SongRepository {
             deleted_at
             """;
 
+    // Song columns qualified with the `s` alias for queries that JOIN songs
+    // against a link table (e.g. song_likes) where bare column names would be
+    // ambiguous. Mirrors SONG_COLUMNS; mapRow reads by column label.
+    private static final String LIKED_SONG_COLUMNS = """
+            s.id,
+            s.title,
+            s.slug,
+            s.album_id,
+            s.track_number,
+            s.duration_sec,
+            s.file_path,
+            s.cover_url,
+            s.lyrics,
+            s.lyrics_type,
+            s.status,
+            s.play_count,
+            s.created_at,
+            s.updated_at,
+            s.deleted_at
+            """;
+
     private final DataSource dataSource;
 
     public SongRepository() {
@@ -502,6 +523,113 @@ public class SongRepository {
             }
         }
     }
+
+    /**
+     * Records a like. Idempotent: a duplicate (user, song) pair is ignored via
+     * {@code INSERT IGNORE} so re-liking never errors. Returns true when a new
+     * row was inserted, false when the like already existed.
+     */
+    public boolean like(int songId, int userId) throws SQLException {
+        String sql = "INSERT IGNORE INTO song_likes (user_id, song_id) VALUES (?, ?)";
+        try (var connection = getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, userId);
+            statement.setInt(2, songId);
+            return statement.executeUpdate() > 0;
+        }
+    }
+
+    /**
+     * Removes a like. Returns true when a row was deleted, false when the user
+     * had not liked the song.
+     */
+    public boolean unlike(int songId, int userId) throws SQLException {
+        String sql = "DELETE FROM song_likes WHERE user_id = ? AND song_id = ?";
+        try (var connection = getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, userId);
+            statement.setInt(2, songId);
+            return statement.executeUpdate() > 0;
+        }
+    }
+
+    /**
+     * Returns the ids of every song the user has liked. Used by the frontend to
+     * hydrate the local liked-state set on load.
+     */
+    public List<Integer> findLikedSongIds(int userId) throws SQLException {
+        String sql = """
+                SELECT sl.song_id
+                FROM song_likes sl
+                JOIN songs s ON s.id = sl.song_id
+                WHERE sl.user_id = ? AND s.deleted_at IS NULL AND s.status = ?
+                ORDER BY sl.created_at DESC
+                """;
+        List<Integer> ids = new ArrayList<>();
+        try (var connection = getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, userId);
+            statement.setString(2, SongStatus.PUBLISHED.name());
+            try (var resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    ids.add(resultSet.getInt("song_id"));
+                }
+            }
+        }
+        return ids;
+    }
+
+    public long countLikedByUser(int userId) throws SQLException {
+        String sql = """
+                SELECT COUNT(*)
+                FROM song_likes sl
+                JOIN songs s ON s.id = sl.song_id
+                WHERE sl.user_id = ? AND s.deleted_at IS NULL AND s.status = ?
+                """;
+        try (var connection = getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, userId);
+            statement.setString(2, SongStatus.PUBLISHED.name());
+            try (var resultSet = statement.executeQuery()) {
+                return resultSet.next() ? resultSet.getLong(1) : 0L;
+            }
+        }
+    }
+
+    /**
+     * Returns a page of songs the user has liked, most-recently-liked first.
+     * Each row pairs a published song with the timestamp of the like.
+     */
+    public List<LikedSongRow> findLikedByUser(int userId, int size, int offset) throws SQLException {
+        String sql = "SELECT sl.created_at AS liked_at, "
+                + LIKED_SONG_COLUMNS
+                + """
+                 FROM song_likes sl
+                 JOIN songs s ON s.id = sl.song_id
+                 WHERE sl.user_id = ? AND s.deleted_at IS NULL AND s.status = ?
+                 ORDER BY sl.created_at DESC
+                 LIMIT ? OFFSET ?
+                 """;
+        List<LikedSongRow> rows = new ArrayList<>();
+        try (var connection = getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, userId);
+            statement.setString(2, SongStatus.PUBLISHED.name());
+            statement.setInt(3, size);
+            statement.setInt(4, offset);
+            try (var resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    Song song = mapRow(resultSet);
+                    LocalDateTime likedAt = getLocalDateTime(resultSet, "liked_at");
+                    rows.add(new LikedSongRow(song, likedAt));
+                }
+            }
+        }
+        return rows;
+    }
+
+    /** A liked song plus the timestamp of when the user liked it. */
+    public record LikedSongRow(Song song, LocalDateTime likedAt) {}
 
     public void incrementPlayCount(int songId) throws SQLException {
         String sql = """

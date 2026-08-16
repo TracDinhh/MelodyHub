@@ -6,6 +6,8 @@ import {
   Antenna,
   Compass,
   Disc3,
+  Heart,
+  History,
   Home,
   ListMusic,
   Mic2,
@@ -15,11 +17,13 @@ import {
   X
 } from '@lucide/vue';
 import { playlists, tracks } from '../../data/music';
+import { useAuthStore } from '../../stores/auth.store';
 import logoUrl from '../../assets/styles/icons/logo.png';
 
 defineProps({ mobileOpen: Boolean });
 const emit = defineEmits(['close']);
 
+const authStore = useAuthStore();
 const playlistItems = ref(playlists.slice(0, 5));
 const navItems = [
   { label: 'Home', route: 'home', icon: Home },
@@ -28,6 +32,11 @@ const navItems = [
   { label: 'Artists', route: 'artists', icon: Mic2 },
   { label: 'Albums', route: 'albums', icon: Album },
   { label: 'Podcasts', route: 'podcasts', icon: Disc3 }
+];
+// Library shortcuts only make sense for a signed-in listener.
+const libraryItems = [
+  { label: 'Liked Songs', route: 'library-liked', icon: Heart },
+  { label: 'Listen history', route: 'library-history', icon: History }
 ];
 
 function addPlaylist() {
@@ -102,6 +111,21 @@ function deletePlaylist(id) {
         </button>
       </div>
     </div>
+
+    <!-- Library shortcuts (signed-in listeners only) -->
+    <nav v-if="authStore.isAuthenticated" class="mt-2 space-y-1 px-3" aria-label="Library">
+      <RouterLink
+        v-for="item in libraryItems"
+        :key="item.route"
+        :to="{ name: item.route }"
+        class="nav-item"
+        active-class="active"
+        @click="emit('close')"
+      >
+        <component :is="item.icon" :size="17" class="shrink-0 transition-transform duration-200" />
+        <span>{{ item.label }}</span>
+      </RouterLink>
+    </nav>
 
     <!-- Playlist list -->
     <div class="mt-2 flex-1 space-y-1 overflow-y-auto px-3 pr-2">

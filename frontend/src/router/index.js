@@ -118,6 +118,16 @@ const router = createRouter({
       }
     },
     {
+      path: '/library/liked',
+      name: 'library-liked',
+      component: () => import('../views/LikedSongsView.vue'),
+      meta: {
+        requiresAuth: true,
+        title: 'Liked songs',
+        breadcrumb: 'Home / My Library / Liked songs'
+      }
+    },
+    {
       path: '/playlists',
       name: 'playlists',
       component: () => import('../views/PlaylistsView.vue'),

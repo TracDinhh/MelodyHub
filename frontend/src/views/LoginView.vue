@@ -3,12 +3,14 @@ import { computed, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { AtSign, Check, Eye, EyeOff, Mail, Music2, UserRound, KeyRound } from '@lucide/vue';
 import { useAuthStore } from '../stores/auth.store';
+import { usePlayerStore } from '../stores/player.store';
 import { canAccessRoute, getRoleHomeRouteName } from '../utils/roleRouting';
 import logoUrl from '../assets/styles/icons/logo.png';
 
 const router = useRouter();
 const route = useRoute();
 const authStore = useAuthStore();
+const playerStore = usePlayerStore();
 const mode = ref(route.query.mode === 'register' ? 'register' : 'login');
 const passwordVisible = ref(false);
 const confirmPasswordVisible = ref(false);
@@ -166,6 +168,8 @@ async function submit() {
         displayName: registerForm.displayName.trim() || null
       });
     }
+    // Load this user's liked songs so hearts are correct after login.
+    void playerStore.hydrateLikes();
     await router.push(safeRedirectTarget(authStore.user?.role));
   } catch (error) {
     mapBackendError(error);
