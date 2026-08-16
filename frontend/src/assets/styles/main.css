@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: 'DM Sans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-display: 'Bebas Neue', ui-sans-serif, sans-serif;
+  --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-display: 'Space Grotesk', 'Plus Jakarta Sans', ui-sans-serif, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
   --color-melodyhub-green: #20E878;
   --color-melodyhub-black: #09090B;
@@ -23,14 +23,16 @@
   :root {
     color-scheme: dark;
     font-family: var(--font-sans);
+    font-size: 16px;
     background: #09090B;
     color: #F4FFF7;
     font-synthesis: none;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
   }
 
-  * { box-sizing: border-box; letter-spacing: 0; }
+  * { box-sizing: border-box; letter-spacing: -0.006em; }
 
   html {
     min-width: 320px;
@@ -103,11 +105,12 @@
   }
 
   .melodyhub-kicker {
-    @apply text-[10px] font-bold uppercase tracking-[0.22em] text-[#20E878];
+    @apply text-[11px] font-bold uppercase tracking-[0.2em] text-[#20E878];
   }
 
   .melodyhub-section-title {
-    @apply mt-1 text-2xl font-bold text-[#F4FFF7];
+    @apply mt-1.5 text-[1.65rem] font-bold leading-tight tracking-tight text-[#F4FFF7];
+    font-family: var(--font-display);
   }
 
   .melodyhub-field {

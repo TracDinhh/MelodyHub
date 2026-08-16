@@ -221,17 +221,17 @@ const hasMoreArtists = computed(() => searchArtists.value.length < searchArtists
 </script>
 
 <template>
-  <div class="mx-auto max-w-[1400px] space-y-10 px-4 py-5 sm:px-8 sm:py-8">
+  <div class="mx-auto max-w-[1400px] space-y-12 px-4 py-6 sm:px-8 sm:py-9">
 
     <!-- Editorial feature: a clear primary action, like modern streaming homepages. -->
-    <section class="relative isolate grid min-h-[320px] overflow-hidden rounded-3xl border border-white/[0.07] bg-[#121214] sm:min-h-[360px] lg:grid-cols-[minmax(0,1fr)_360px]">
+    <section class="relative isolate grid min-h-[340px] overflow-hidden rounded-3xl border border-white/[0.07] bg-[#121214] sm:min-h-[380px] lg:grid-cols-[minmax(0,1fr)_360px]">
       <div class="absolute inset-0 bg-[radial-gradient(circle_at_18%_0%,rgba(244,63,94,0.26),transparent_42%),radial-gradient(circle_at_86%_100%,rgba(127,29,29,0.24),transparent_46%),linear-gradient(120deg,#251116_0%,#121214_58%,#09090B_100%)]" />
       <div class="relative flex flex-col justify-end px-7 py-8 sm:px-10 sm:py-11">
         <p class="melodyhub-kicker">Made for your next listen</p>
-        <h1 class="mt-3 max-w-2xl text-3xl font-bold leading-[1.03] tracking-tight text-[#F4FFF7] sm:text-5xl">
+        <h1 class="mt-3 max-w-2xl font-display text-4xl font-bold leading-[1.02] tracking-tight text-[#F4FFF7] sm:text-6xl">
           {{ sectionTitle }}
         </h1>
-        <p class="mt-4 max-w-lg text-sm leading-6 text-[#C4C4CC] sm:text-base">
+        <p class="mt-4 max-w-lg text-[0.95rem] leading-7 text-[#C4C4CC] sm:text-base">
           Find new sounds, revisit favourites, and keep every great track close to your library.
         </p>
         <div class="mt-7 flex flex-wrap items-center gap-3">
@@ -427,37 +427,37 @@ const hasMoreArtists = computed(() => searchArtists.value.length < searchArtists
     <!-- New releases -->
     <section>
       <div class="mb-4"><p class="melodyhub-kicker">Just Landed</p><h2 class="melodyhub-section-title">New releases</h2></div>
-      <div v-if="newReleasesLoading" class="grid gap-1 sm:grid-cols-2">
-        <div v-for="n in 4" :key="n" class="flex items-center gap-3 rounded-lg p-2">
-          <span class="size-12 shrink-0 animate-pulse rounded-lg bg-white/5" />
+      <div v-if="newReleasesLoading" class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        <div v-for="n in 6" :key="n" class="flex items-center gap-3 rounded-lg p-2.5">
+          <span class="size-14 shrink-0 animate-pulse rounded-lg bg-white/5" />
           <span class="h-4 w-36 animate-pulse rounded bg-white/5" />
         </div>
       </div>
       <div v-else-if="newReleases.length === 0" class="rounded-xl border border-white/[0.05] bg-[#121214] px-4 py-8 text-center text-sm text-[#71717A]">
         No songs have been published yet.
       </div>
-      <div v-else class="grid gap-1 sm:grid-cols-2">
+      <div v-else class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         <div
           v-for="song in newReleases"
           :key="song.id"
-          class="group flex min-w-0 items-center gap-3 rounded-lg p-2 transition hover:bg-white/[0.03]"
+          class="group flex min-w-0 items-center gap-3 rounded-xl border border-transparent p-2.5 transition hover:border-white/[0.06] hover:bg-white/[0.03]"
         >
           <button :title="`Open ${song.title}`" @click="$router.push({ name: 'song-detail', params: { slug: song.slug } })">
             <img
               v-if="song.coverUrl"
               :src="song.coverUrl"
               :alt="`${song.title} cover`"
-              class="size-12 rounded-lg object-cover ring-1 ring-white/[0.06]"
+              class="size-14 rounded-lg object-cover ring-1 ring-white/[0.06]"
             />
-            <span v-else class="grid size-12 place-items-center rounded-lg bg-white/[0.04] text-[#71717A]">
-              <Music2 :size="18" />
+            <span v-else class="grid size-14 place-items-center rounded-lg bg-white/[0.04] text-[#71717A]">
+              <Music2 :size="20" />
             </span>
           </button>
           <RouterLink
             :to="{ name: 'song-detail', params: { slug: song.slug } }"
             class="min-w-0 flex-1"
           >
-            <span class="block truncate text-sm font-medium text-[#F4FFF7] transition group-hover:text-[#20E878]">{{ song.title }}</span>
+            <span class="block truncate text-[0.95rem] font-semibold text-[#F4FFF7] transition group-hover:text-[#20E878]">{{ song.title }}</span>
             <span class="mt-0.5 block truncate text-xs text-[#71717A]">{{ formatReleaseDate(song.createdAt) }}</span>
           </RouterLink>
           <button class="melodyhub-icon-btn !size-8 shrink-0" @click="playNewRelease(song)">
