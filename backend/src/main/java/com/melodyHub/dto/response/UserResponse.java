@@ -21,6 +21,8 @@ public class UserResponse {
     private String avatarUrl;
     private UserRole role;
     private UserStatus status;
+    private LocalDateTime premiumUntil;
+    private boolean premium;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -37,6 +39,8 @@ public class UserResponse {
                 user.getAvatarUrl(),
                 user.getRole(),
                 user.getStatus(),
+                user.getPremiumUntil(),
+                user.isPremium(),
                 user.getCreatedAt(),
                 user.getUpdatedAt()
         );

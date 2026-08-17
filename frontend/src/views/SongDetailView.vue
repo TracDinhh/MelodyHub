@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router';
 import {
   ArrowLeft,
   Heart,
+  Lock,
   LoaderCircle,
   Music2,
   Pause,
@@ -11,12 +12,14 @@ import {
 } from '@lucide/vue';
 import { songService } from '../services/songService';
 import { usePlayerStore } from '../stores/player.store';
+import { useAuthStore } from '../stores/auth.store';
 import AddToPlaylistButton from '../components/music/AddToPlaylistButton.vue';
 import { formatDuration } from '../utils/formatDate';
 import { toPlayerTrack } from '../utils/playerTrack';
 
 const route = useRoute();
 const player = usePlayerStore();
+const authStore = useAuthStore();
 
 const song = ref(null);
 const related = ref([]);
@@ -53,7 +56,7 @@ async function load(slug) {
       player.setLiked(detail.id, detail.isLiked);
     }
 
-    if (detail.lyricsType === 'SYNCED') {
+    if (detail.lyricsType === 'SYNCED' && authStore.isPremium) {
       const lyricsResponse = await songService.getSyncedLyrics(detail.slug).catch(() => null);
       if (song.value?.id === detail.id && lyricsResponse?.lyricsType === 'SYNCED') {
         lyricLines.value = lyricsResponse.lines || [];
@@ -84,6 +87,7 @@ function toTrack(detail) {
 }
 
 const isPlaying = computed(() => player.isPlaying && player.currentTrack.id === song.value?.id);
+const lyricsLocked = computed(() => song.value?.lyricsType === 'SYNCED' && !authStore.isPremium);
 
 // Heart state comes from the player store's liked set (persisted to the
 // backend), falling back to the detail payload's isLiked on first load.
@@ -202,7 +206,7 @@ watch(() => route.params.slug, (slug) => slug && load(slug));
 
       <div class="px-4 py-7 sm:px-7">
         <!-- Synced Lyrics Display -->
-        <section 
+        <section
           v-if="song.lyricsType === 'SYNCED' && lyricLines.length > 0"
           class="mb-6 rounded-lg border border-white/[0.06] bg-[#111] p-5"
         >
@@ -228,6 +232,13 @@ watch(() => route.params.slug, (slug) => slug && load(slug));
               {{ line.text }}
             </div>
           </div>
+        </section>
+
+        <section v-else-if="lyricsLocked" class="mb-6 rounded-lg border border-[#20E878]/20 bg-[#20E878]/[0.05] p-5 text-center">
+          <Lock :size="24" class="mx-auto text-[#20E878]" />
+          <h2 class="mt-3 text-lg font-bold text-white">Synced lyrics are a Premium feature</h2>
+          <p class="mt-2 text-sm text-[#A1A1AA]">Upgrade to follow every line in time with the music.</p>
+          <RouterLink :to="{ name: 'premium' }" class="mt-4 inline-flex h-9 items-center rounded-full bg-[#20E878] px-4 text-xs font-bold text-[#09090B]">Upgrade to Premium</RouterLink>
         </section>
 
         <!-- Plain Lyrics Display (never used for SYNCED songs, so JSON never leaks) -->

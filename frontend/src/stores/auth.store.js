@@ -30,6 +30,8 @@ export const useAuthStore = defineStore('auth', () => {
   const isUser = computed(() => user.value?.role === 'USER');
   const isArtist = computed(() => user.value?.role === 'ARTIST');
   const isAdmin = computed(() => user.value?.role === 'ADMIN');
+  const isPremium = computed(() => Boolean(user.value?.premium));
+  const premiumUntil = computed(() => user.value?.premiumUntil || null);
   const displayName = computed(
     () => user.value?.displayName || user.value?.username || 'MelodyHub listener'
   );
@@ -111,6 +113,13 @@ export const useAuthStore = defineStore('auth', () => {
     initialized.value = true;
   }
 
+  async function refreshUser() {
+    if (!token.value) return null;
+    user.value = await authService.getCurrentUser();
+    sessionStorage.setItem(USER_KEY, JSON.stringify(user.value));
+    return user.value;
+  }
+
   return {
     token,
     user,
@@ -120,11 +129,14 @@ export const useAuthStore = defineStore('auth', () => {
     isUser,
     isArtist,
     isAdmin,
+    isPremium,
+    premiumUntil,
     displayName,
     login,
     register,
     logout,
     initialize,
+    refreshUser,
     clearSession,
     saveSession
   };

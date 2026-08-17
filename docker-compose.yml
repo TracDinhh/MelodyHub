@@ -44,6 +44,13 @@ services:
         -Djwt.secret='${JWT_SECRET:-change-this-secret-for-local-dev}'
         -Djwt.expires-minutes='${JWT_EXPIRES_MINUTES:-15}'
         -Drefresh-token.expires-days='${REFRESH_TOKEN_EXPIRES_DAYS:-7}'
+        -Dpayment.plans='${PAYMENT_PLANS:-MONTHLY:29000:30,QUARTERLY:79000:90}'
+        -Dpayment.currency='${PAYMENT_CURRENCY:-VND}'
+        -Dpayment.auto-confirm='${PAYMENT_AUTO_CONFIRM:-false}'
+        -Dpayment.qr.vietqr.bank='${PAYMENT_QR_VIETQR_BANK:-970422}'
+        -Dpayment.qr.vietqr.account='${PAYMENT_QR_VIETQR_ACCOUNT:-0123456789}'
+        -Dpayment.qr.vietqr.account-name='${PAYMENT_QR_VIETQR_ACCOUNT_NAME:-NGUYEN VAN A}'
+        -Dpayment.qr.static-image-url='${PAYMENT_QR_STATIC_IMAGE_URL:-}'
     ports:
       - "${BACKEND_PORT:-8080}:8080"
     volumes:

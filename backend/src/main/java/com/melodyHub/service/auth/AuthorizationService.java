@@ -54,6 +54,14 @@ public class AuthorizationService {
         return user;
     }
 
+    public User requirePremium(String token) throws AuthException, SQLException {
+        User user = requireAuthenticated(token);
+        if (!user.isPremium()) {
+            throw new AuthException("PREMIUM_REQUIRED", "A Premium subscription is required for this feature");
+        }
+        return user;
+    }
+
     private String normalize(String value) {
         if (value == null || value.isBlank()) {
             return null;

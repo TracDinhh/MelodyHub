@@ -42,6 +42,7 @@ const email = computed(() =>
 );
 const badgeLabel = computed(() => {
   if (!authStore.isAuthenticated) return 'GUEST';
+  if (authStore.isPremium) return 'PREMIUM';
   return user.value.role || 'LISTENER';
 });
 const avatarUrl = computed(() => user.value.avatarUrl || featuredArtist.avatar);

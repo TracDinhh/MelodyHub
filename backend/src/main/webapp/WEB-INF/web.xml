@@ -71,6 +71,11 @@
         <servlet-class>com.melodyHub.controller.song.LikeServlet</servlet-class>
     </servlet>
 
+    <servlet>
+        <servlet-name>PaymentServlet</servlet-name>
+        <servlet-class>com.melodyHub.controller.payment.PaymentServlet</servlet-class>
+    </servlet>
+
     <servlet-mapping>
         <servlet-name>AuthServlet</servlet-name>
         <url-pattern>/api/auth/*</url-pattern>
@@ -119,6 +124,11 @@
     <servlet-mapping>
         <servlet-name>LikeServlet</servlet-name>
         <url-pattern>/api/likes/*</url-pattern>
+    </servlet-mapping>
+
+    <servlet-mapping>
+        <servlet-name>PaymentServlet</servlet-name>
+        <url-pattern>/api/payments/*</url-pattern>
     </servlet-mapping>
 
 

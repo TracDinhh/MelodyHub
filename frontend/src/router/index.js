@@ -138,6 +138,12 @@ const router = createRouter({
       }
     },
     {
+      path: '/premium',
+      name: 'premium',
+      component: () => import('../views/PremiumView.vue'),
+      meta: { requiresAuth: true, title: 'Premium', breadcrumb: 'Home / Premium' }
+    },
+    {
       path: '/playlists/:id',
       name: 'playlist-detail',
       component: () => import('../views/PlaylistDetailView.vue'),
@@ -247,6 +253,12 @@ const router = createRouter({
       }
     },
     {
+      path: '/admin/payments',
+      name: 'admin-payments',
+      component: () => import('../views/admin/PaymentAdminView.vue'),
+      meta: { requiresAuth: true, allowedRoles: ['ADMIN'], layout: 'admin', workspace: 'admin', title: 'Payments', breadcrumb: 'Admin / Payments' }
+    },
+    {
       path: '/login',
       name: 'login',
       component: () => import('../views/LoginView.vue'),
@@ -299,6 +311,10 @@ router.beforeEach((to) => {
         redirect: to.fullPath
       }
     };
+  }
+
+  if (to.meta.requiresPremium && !authStore.isPremium) {
+    return { name: 'premium', query: { redirect: to.fullPath } };
   }
 
   if (!canAccessRoute(authStore.user?.role, to.meta.allowedRoles)) {

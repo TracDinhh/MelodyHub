@@ -21,10 +21,30 @@ CREATE TABLE users (
                   CHECK (role IN ('USER','ARTIST','ADMIN')),
     status        VARCHAR(10) NOT NULL DEFAULT 'ACTIVE'
                   CHECK (status IN ('ACTIVE','BANNED')),
+    premium_until DATETIME(6) NULL,
     created_at    DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
     updated_at    DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
     CONSTRAINT uk_users_username UNIQUE (username),
     CONSTRAINT uk_users_email    UNIQUE (email)
+);
+
+CREATE TABLE payment_orders (
+    id            BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id       INT NOT NULL,
+    plan_code     VARCHAR(32) NOT NULL,
+    amount        INT NOT NULL,
+    currency      VARCHAR(8) NOT NULL DEFAULT 'VND',
+    premium_days  INT NOT NULL,
+    transfer_note VARCHAR(64) NOT NULL UNIQUE,
+    status        VARCHAR(16) NOT NULL DEFAULT 'PENDING'
+                  CHECK (status IN ('PENDING','CONFIRMED','REJECTED','EXPIRED')),
+    confirmed_by  INT NULL,
+    confirmed_at  DATETIME(6) NULL,
+    created_at    DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    CONSTRAINT fk_payment_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_payment_confirmer FOREIGN KEY (confirmed_by) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_payment_user (user_id),
+    INDEX idx_payment_status (status)
 );
 
 -- =====================================================

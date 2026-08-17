@@ -8,7 +8,9 @@ import com.melodyHub.dto.response.SongResponse;
 import com.melodyHub.dto.response.SongSummaryResponse;
 import com.melodyHub.dto.response.SyncedLyricsResponse;
 import com.melodyHub.entity.LyricsType;
+import com.melodyHub.exception.AuthException;
 import com.melodyHub.repository.SongLyricsRepository;
+import com.melodyHub.service.auth.AuthorizationService;
 import com.melodyHub.service.song.SongService;
 import com.melodyHub.util.JwtUtil;
 
@@ -32,11 +34,13 @@ public class SongServlet extends JsonServlet {
 
     private SongService songService;
     private SongLyricsRepository lyricsRepository;
+    private AuthorizationService authorizationService;
 
     @Override
     public void init() throws ServletException {
         songService = new SongService();
         lyricsRepository = new SongLyricsRepository();
+        authorizationService = new AuthorizationService();
     }
 
     @Override
@@ -79,6 +83,9 @@ public class SongServlet extends JsonServlet {
                     "INVALID_QUERY_PARAM",
                     exception.getMessage()
             );
+        } catch (AuthException exception) {
+            int status = "PREMIUM_REQUIRED".equals(exception.getCode()) ? 402 : HttpServletResponse.SC_UNAUTHORIZED;
+            writeError(response, status, exception.getCode(), exception.getMessage());
         } catch (SQLException exception) {
             writeError(
                     response,
@@ -90,7 +97,7 @@ public class SongServlet extends JsonServlet {
     }
     
     private void handleGetLyrics(HttpServletRequest request, HttpServletResponse response, String slug)
-            throws IOException, SQLException {
+            throws IOException, SQLException, AuthException {
         // Reading lyrics must NOT count as a play, so use the read-only lookup
         // instead of getDetail (which bumps play_count).
         Optional<SongResponse> songOpt = songService.getBySlug(slug);
@@ -107,6 +114,8 @@ public class SongServlet extends JsonServlet {
             writeJson(response, HttpServletResponse.SC_OK, new SyncedLyricsResponse(song.getId(), "PLAIN", List.of()));
             return;
         }
+
+        authorizationService.requirePremium(getBearerToken(request));
 
         // Get synced lyrics from song_lyrics table
         List<SongLyricsRepository.SyncedLyricLine> dbLines = lyricsRepository.findBySongId(song.getId());
