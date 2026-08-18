@@ -3,15 +3,15 @@ services:
     image: mysql:8.4
     container_name: melodyhub-mysql
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-MelodyHubRoot!2026}
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-music_app}
-      MYSQL_USER: ${MYSQL_USER:-melodyhub}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-melodyhub_password}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:?Set MYSQL_DATABASE in .env}
+      MYSQL_USER: ${MYSQL_USER:?Set MYSQL_USER in .env}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
     command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
     ports:
-      - "${MYSQL_PORT:-3306}:3306"
+      - "${MYSQL_PORT:?Set MYSQL_PORT in .env}:3306"
     volumes:
       - mysql-data:/var/lib/mysql
       - ./backend/src/main/resources/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
@@ -31,27 +31,27 @@ services:
       mysql:
         condition: service_healthy
     environment:
-      IMAGEKIT_PUBLIC_KEY: ${IMAGEKIT_PUBLIC_KEY:-}
-      IMAGEKIT_PRIVATE_KEY: ${IMAGEKIT_PRIVATE_KEY:-}
-      IMAGEKIT_URL_ENDPOINT: ${IMAGEKIT_URL_ENDPOINT:-}
+      IMAGEKIT_PUBLIC_KEY: ${IMAGEKIT_PUBLIC_KEY}
+      IMAGEKIT_PRIVATE_KEY: ${IMAGEKIT_PRIVATE_KEY}
+      IMAGEKIT_URL_ENDPOINT: ${IMAGEKIT_URL_ENDPOINT}
       CATALINA_OPTS: >-
-        -Ddb.url='jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-music_app}?useUnicode=true&characterEncoding=utf8&connectionTimeZone=UTC&useSSL=false&allowPublicKeyRetrieval=true'
-        -Ddb.username='${MYSQL_USER:-melodyhub}'
-        -Ddb.password='${MYSQL_PASSWORD:-melodyhub_password}'
+        -Ddb.url='${DB_URL:?Set DB_URL in .env}'
+        -Ddb.username='${MYSQL_USER:?Set MYSQL_USER in .env}'
+        -Ddb.password='${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}'
         -Ddb.driver-class-name='com.mysql.cj.jdbc.Driver'
         -Dupload.base-dir='/usr/local/tomcat/uploads'
-        -Dcors.allowed-origin='${CORS_ALLOWED_ORIGIN:-*}'
-        -Djwt.secret='${JWT_SECRET:-change-this-secret-for-local-dev}'
-        -Djwt.expires-minutes='${JWT_EXPIRES_MINUTES:-15}'
-        -Drefresh-token.expires-days='${REFRESH_TOKEN_EXPIRES_DAYS:-7}'
-        -Dpayment.plans='${PAYMENT_PLANS:-MONTHLY:29000:30,QUARTERLY:79000:90}'
-        -Dpayment.currency='${PAYMENT_CURRENCY:-VND}'
-        -Dpayment.qr.vietqr.bank='${PAYMENT_QR_VIETQR_BANK:-970422}'
-        -Dpayment.qr.vietqr.account='${PAYMENT_QR_VIETQR_ACCOUNT:-0123456789}'
-        -Dpayment.qr.vietqr.account-name='${PAYMENT_QR_VIETQR_ACCOUNT_NAME:-NGUYEN VAN A}'
-        -Dpayment.qr.static-image-url='${PAYMENT_QR_STATIC_IMAGE_URL:-}'
+        -Dcors.allowed-origin='${CORS_ALLOWED_ORIGIN:?Set CORS_ALLOWED_ORIGIN in .env}'
+        -Djwt.secret='${JWT_SECRET:?Set JWT_SECRET in .env}'
+        -Djwt.expires-minutes='${JWT_EXPIRES_MINUTES:?Set JWT_EXPIRES_MINUTES in .env}'
+        -Drefresh-token.expires-days='${REFRESH_TOKEN_EXPIRES_DAYS:?Set REFRESH_TOKEN_EXPIRES_DAYS in .env}'
+        -Dpayment.plans='${PAYMENT_PLANS:?Set PAYMENT_PLANS in .env}'
+        -Dpayment.currency='${PAYMENT_CURRENCY:?Set PAYMENT_CURRENCY in .env}'
+        -Dpayment.qr.vietqr.bank='${PAYMENT_QR_VIETQR_BANK:?Set PAYMENT_QR_VIETQR_BANK in .env}'
+        -Dpayment.qr.vietqr.account='${PAYMENT_QR_VIETQR_ACCOUNT:?Set PAYMENT_QR_VIETQR_ACCOUNT in .env}'
+        -Dpayment.qr.vietqr.account-name='${PAYMENT_QR_VIETQR_ACCOUNT_NAME:?Set PAYMENT_QR_VIETQR_ACCOUNT_NAME in .env}'
+        -Dpayment.qr.static-image-url='${PAYMENT_QR_STATIC_IMAGE_URL}'
     ports:
-      - "${BACKEND_PORT:-8080}:8080"
+      - "${BACKEND_PORT:?Set BACKEND_PORT in .env}:8080"
     volumes:
       - backend-uploads:/usr/local/tomcat/uploads
 

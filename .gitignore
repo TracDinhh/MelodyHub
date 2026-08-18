@@ -29,7 +29,8 @@ replay_pid*
 .idea/
 .vscode/
 *.iml
-docs/          
+docs/
+*.md
 
 # Local environment
 .env
