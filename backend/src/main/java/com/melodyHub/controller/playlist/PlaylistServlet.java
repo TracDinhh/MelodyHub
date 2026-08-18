@@ -8,6 +8,7 @@ import com.melodyHub.dto.request.PlaylistUpdateRequest;
 import com.melodyHub.dto.response.PagedResponse;
 import com.melodyHub.dto.response.PlaylistDetailResponse;
 import com.melodyHub.dto.response.PlaylistResponse;
+import com.melodyHub.exception.PlaylistLimitException;
 import com.melodyHub.service.playlist.PlaylistService;
 import com.melodyHub.util.JwtUtil;
 import jakarta.servlet.ServletException;
@@ -94,6 +95,8 @@ public class PlaylistServlet extends JsonServlet {
             }
 
             writeNotFound(response);
+        } catch (PlaylistLimitException exception) {
+            writeError(response, HttpServletResponse.SC_FORBIDDEN, "PLAYLIST_LIMIT", exception.getMessage());
         } catch (IllegalArgumentException exception) {
             writeError(response, HttpServletResponse.SC_BAD_REQUEST, "INVALID_PAYLOAD", exception.getMessage());
         } catch (SQLException exception) {

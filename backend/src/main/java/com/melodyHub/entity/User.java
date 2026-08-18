@@ -19,6 +19,11 @@ public class User {
     private String avatarUrl;
     private UserRole role = UserRole.USER;
     private UserStatus status = UserStatus.ACTIVE;
+    private LocalDateTime premiumUntil;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    public boolean isPremium() {
+        return premiumUntil != null && premiumUntil.isAfter(LocalDateTime.now());
+    }
 }

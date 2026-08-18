@@ -2,8 +2,10 @@
 import { onMounted, reactive, ref } from 'vue';
 import { ListMusic, Music2, Plus, Trash2 } from '@lucide/vue';
 import { usePlaylistStore } from '../stores/playlist.store';
+import { useAuthStore } from '../stores/auth.store';
 
 const store = usePlaylistStore();
+const authStore = useAuthStore();
 
 const showCreate = ref(false);
 const creating = ref(false);
@@ -67,6 +69,7 @@ onMounted(() => store.loadPage(1));
           <h1 class="text-3xl font-black text-white sm:text-4xl">My playlists</h1>
         </div>
         <p class="text-sm text-[#8EA696]">Collections of the songs you love, in the order you want them.</p>
+        <p v-if="!authStore.isPremium && store.playlists.length >= 3" class="text-xs text-[#FDA4AF]">Free accounts can create up to 3 playlists. <RouterLink :to="{ name: 'premium' }" class="font-bold text-[#20E878]">Upgrade for unlimited playlists.</RouterLink></p>
       </div>
       <button
         class="inline-flex h-11 items-center gap-2 rounded-full bg-[#20E878] px-5 text-sm font-black text-[#0F0F12] transition hover:bg-[#54d67b]"

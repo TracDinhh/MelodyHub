@@ -7,8 +7,10 @@ import com.melodyHub.dto.response.SongSummaryResponse;
 import com.melodyHub.entity.Artist;
 import com.melodyHub.entity.Playlist;
 import com.melodyHub.entity.Song;
+import com.melodyHub.exception.PlaylistLimitException;
 import com.melodyHub.repository.PlaylistRepository;
 import com.melodyHub.repository.SongRepository;
+import com.melodyHub.repository.UserRepository;
 import com.melodyHub.util.Pagination;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -28,19 +30,29 @@ public class PlaylistService {
 
     private final PlaylistRepository playlistRepository;
     private final SongRepository songRepository;
+    private final UserRepository userRepository;
 
     public PlaylistService() {
-        this(new PlaylistRepository(), new SongRepository());
+        this(new PlaylistRepository(), new SongRepository(), new UserRepository());
     }
 
     public PlaylistService(PlaylistRepository playlistRepository, SongRepository songRepository) {
+        this(playlistRepository, songRepository, new UserRepository());
+    }
+
+    public PlaylistService(PlaylistRepository playlistRepository, SongRepository songRepository, UserRepository userRepository) {
         this.playlistRepository = Objects.requireNonNull(playlistRepository, "playlistRepository must not be null");
         this.songRepository = Objects.requireNonNull(songRepository, "songRepository must not be null");
+        this.userRepository = Objects.requireNonNull(userRepository, "userRepository must not be null");
     }
 
     public PlaylistResponse create(int userId, String name, String description, String coverUrl, Boolean isPublic)
             throws SQLException {
         String cleanName = requireName(name);
+        if (playlistRepository.countByUser(userId) >= 3
+                && userRepository.findById(userId).map(user -> !user.isPremium()).orElse(true)) {
+            throw new PlaylistLimitException();
+        }
         Playlist playlist = new Playlist(
                 null,
                 cleanName,

@@ -10,6 +10,7 @@ import {
   History,
   Home,
   ListMusic,
+  Crown,
   Mic2,
   MoreHorizontal,
   Plus,
@@ -62,7 +63,7 @@ function deletePlaylist(id) {
 
   <!-- Sidebar: console housing -->
   <aside
-    class="surface-panel fixed inset-y-0 left-0 z-50 flex w-[240px] flex-col border-r border-white/[0.06] transition-transform duration-300 lg:static lg:z-auto lg:translate-x-0"
+    class="surface-panel fixed inset-y-0 left-0 z-50 flex min-h-0 w-[240px] flex-col border-r border-white/[0.06] transition-transform duration-300 lg:static lg:z-auto lg:translate-x-0"
     :class="mobileOpen ? 'translate-x-0' : '-translate-x-full'"
   >
     <!-- Logo strip -->
@@ -97,6 +98,11 @@ function deletePlaylist(id) {
         <span>{{ item.label }}</span>
       </RouterLink>
     </nav>
+
+    <RouterLink :to="{ name: 'premium' }" class="mx-3 mt-5 flex items-center gap-3 rounded-xl border border-[#20E878]/25 bg-[#20E878]/[0.08] px-3.5 py-3 text-sm font-semibold text-[#F4FFF7] transition hover:bg-[#20E878]/[0.14]" @click="emit('close')">
+      <Crown :size="16" class="text-[#20E878]" />
+      <span>{{ authStore.isPremium ? 'Premium active' : 'Upgrade to Premium' }}</span>
+    </RouterLink>
 
     <!-- Section label -->
     <div class="mt-7 px-5">

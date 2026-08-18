@@ -23,6 +23,7 @@ public class UserRepository {
             avatar_url,
             role,
             status,
+            premium_until,
             created_at,
             updated_at
             """;
@@ -285,6 +286,19 @@ public class UserRepository {
         }
     }
 
+    public Optional<User> updatePremiumUntil(int userId, LocalDateTime premiumUntil) throws SQLException {
+        String sql = "UPDATE users SET premium_until = ?, updated_at = CURRENT_TIMESTAMP(6) WHERE id = ?";
+        try (var connection = DatabaseConfig.getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            statement.setTimestamp(1, premiumUntil == null ? null : java.sql.Timestamp.valueOf(premiumUntil));
+            statement.setInt(2, userId);
+            if (statement.executeUpdate() == 0) {
+                return Optional.empty();
+            }
+            return findById(userId);
+        }
+    }
+
     private User mapRow(ResultSet resultSet) throws SQLException {
         return new User(
                 resultSet.getInt("id"),
@@ -295,6 +309,7 @@ public class UserRepository {
                 resultSet.getString("avatar_url"),
                 UserRole.fromDatabaseValue(resultSet.getString("role")),
                 UserStatus.fromDatabaseValue(resultSet.getString("status")),
+                getLocalDateTime(resultSet, "premium_until"),
                 getLocalDateTime(resultSet, "created_at"),
                 getLocalDateTime(resultSet, "updated_at")
         );
