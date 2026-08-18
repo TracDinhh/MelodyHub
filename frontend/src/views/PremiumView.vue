@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { Check, Crown, ShieldCheck } from '@lucide/vue';
 import { paymentService } from '../services/paymentService';
 import { useAuthStore } from '../stores/auth.store';
@@ -14,7 +14,6 @@ const order = ref(null);
 const busy = ref(false);
 const loading = ref(true);
 const error = ref('');
-let pollTimer = null;
 
 const money = computed(() => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }));
 const isPremium = computed(() => authStore.isPremium);
@@ -25,7 +24,7 @@ const pendingOrder = computed(() => order.value?.status === 'PENDING');
 
 async function choosePlan(plan) {
   busy.value = true; error.value = '';
-  try { order.value = await paymentService.createOrder(plan.code); startPolling(); }
+  try { order.value = await paymentService.createOrder(plan.code); }
   catch (caught) {
     if (caught.code === 'PREMIUM_ALREADY_ACTIVE') {
       try {
@@ -41,35 +40,34 @@ async function choosePlan(plan) {
   finally { busy.value = false; }
 }
 
-function startPolling() {
-  clearInterval(pollTimer);
-  if (!pendingOrder.value) return;
-  pollTimer = setInterval(async () => {
-    try {
-      order.value = await paymentService.getOrder(order.value.id);
-      if (!pendingOrder.value) {
-        clearInterval(pollTimer);
-        if (confirmed.value) await authStore.refreshUser();
-      }
-    } catch { clearInterval(pollTimer); }
-  }, 5000);
+async function activatePremium() {
+  if (!pendingOrder.value || busy.value) return;
+  busy.value = true;
+  error.value = '';
+  try {
+    order.value = await paymentService.markPaid(order.value.id);
+    await authStore.refreshUser();
+  } catch (caught) {
+    error.value = caught.message || 'Could not activate Premium.';
+  } finally {
+    busy.value = false;
+  }
 }
 
-// Resume an in-flight transfer if the user reloads mid-payment, so we never
-// spin up a second order for the same person.
+// Resume an in-flight transfer if the user reloads before marking it paid, so
+// we never create a second order for the same person.
 async function resumePendingOrder() {
   try {
     const response = await paymentService.listMine({ page: 1, size: 5 });
     const items = response?.items || [];
     const pending = items.find((item) => item.status === 'PENDING');
-    if (pending) { order.value = pending; startPolling(); }
+    if (pending) order.value = pending;
   } catch {
     // Non-fatal: user can still start a fresh order from the plans.
   }
 }
 
 function startOver() {
-  clearInterval(pollTimer);
   order.value = null;
   error.value = '';
 }
@@ -79,7 +77,6 @@ onMounted(async () => {
   if (!isPremium.value) await resumePendingOrder();
   loading.value = false;
 });
-onBeforeUnmount(() => clearInterval(pollTimer));
 </script>
 
 <template>
@@ -128,7 +125,10 @@ onBeforeUnmount(() => clearInterval(pollTimer));
         <p class="mt-2 text-sm text-[#A1A1AA]">Scan the QR code with your banking app to complete the transfer.</p>
         <img v-if="order.qrImageUrl" :src="order.qrImageUrl" alt="Bank transfer QR code" class="mx-auto mt-5 size-72 rounded-2xl bg-white p-2 shadow-[0_16px_36px_rgba(0,0,0,0.35)] sm:size-80" />
         <p class="mt-4 text-sm text-[#C4C4CC]">Transfer note: <span class="font-mono font-bold text-[#20E878]">{{ order.transferNote }}</span></p>
-        <p class="mt-1 text-xs text-[#71717A]">Keep this page open — we'll activate Premium automatically once the payment is confirmed.</p>
+        <button class="mt-6 inline-flex h-11 items-center rounded-full bg-[#20E878] px-6 text-sm font-black text-[#09090B] transition hover:bg-[#64F4A1] disabled:opacity-50" :disabled="busy" @click="activatePremium">
+          <ShieldCheck :size="16" class="mr-2" />{{ busy ? 'Activating…' : "I've completed the transfer" }}
+        </button>
+        <p class="mt-3 text-xs text-[#71717A]">After completing the transfer, activate Premium here to unlock your benefits immediately.</p>
       </template>
       <template v-else>
         <h2 class="text-xl font-bold text-[#F4FFF7]">This order was {{ (order.status || '').toLowerCase() }}</h2>

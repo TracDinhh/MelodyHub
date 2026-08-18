@@ -14,6 +14,7 @@ import { songService } from '../services/songService';
 import { usePlayerStore } from '../stores/player.store';
 import { useAuthStore } from '../stores/auth.store';
 import AddToPlaylistButton from '../components/music/AddToPlaylistButton.vue';
+import PremiumUpgradeModal from '../components/premium/PremiumUpgradeModal.vue';
 import { formatDuration } from '../utils/formatDate';
 import { toPlayerTrack } from '../utils/playerTrack';
 
@@ -88,6 +89,7 @@ function toTrack(detail) {
 
 const isPlaying = computed(() => player.isPlaying && player.currentTrack.id === song.value?.id);
 const lyricsLocked = computed(() => song.value?.lyricsType === 'SYNCED' && !authStore.isPremium);
+const premiumUpgradeOpen = ref(false);
 
 // Heart state comes from the player store's liked set (persisted to the
 // backend), falling back to the detail payload's isLiked on first load.
@@ -238,7 +240,7 @@ watch(() => route.params.slug, (slug) => slug && load(slug));
           <Lock :size="24" class="mx-auto text-[#20E878]" />
           <h2 class="mt-3 text-lg font-bold text-white">Synced lyrics are a Premium feature</h2>
           <p class="mt-2 text-sm text-[#A1A1AA]">Upgrade to follow every line in time with the music.</p>
-          <RouterLink :to="{ name: 'premium' }" class="mt-4 inline-flex h-9 items-center rounded-full bg-[#20E878] px-4 text-xs font-bold text-[#09090B]">Upgrade to Premium</RouterLink>
+          <button class="mt-4 inline-flex h-9 items-center rounded-full bg-[#20E878] px-4 text-xs font-bold text-[#09090B]" @click="premiumUpgradeOpen = true">Unlock synced lyrics</button>
         </section>
 
         <!-- Plain Lyrics Display (never used for SYNCED songs, so JSON never leaks) -->
@@ -287,6 +289,13 @@ watch(() => route.params.slug, (slug) => slug && load(slug));
           </div>
         </section>
       </div>
+
+      <PremiumUpgradeModal
+        :open="premiumUpgradeOpen"
+        feature="Synced lyrics"
+        description="Follow every line in time with the music and turn your favourite lyrics into a shareable card."
+        @close="premiumUpgradeOpen = false"
+      />
     </template>
   </div>
 </template>

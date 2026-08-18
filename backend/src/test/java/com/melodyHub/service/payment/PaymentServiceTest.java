@@ -1,7 +1,9 @@
 package com.melodyHub.service.payment;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.melodyHub.dto.response.PaymentOrderResponse;
 import com.melodyHub.entity.PaymentOrder;
@@ -75,6 +77,36 @@ class PaymentServiceTest {
         assertEquals(1, repository.createCalls);
     }
 
+    @Test
+    void markPaidImmediatelyActivatesPremiumForTheOrderOwner() throws SQLException {
+        StubPaymentRepository paymentRepository = new StubPaymentRepository();
+        paymentRepository.orderById = Optional.of(order(18L, 12, "MONTHLY"));
+        StubUserRepository userRepository = new StubUserRepository(user(12, null));
+        PaymentService service = new PaymentService(paymentRepository, userRepository);
+
+        PaymentOrderResponse response = service.markPaid(12, 18L);
+
+        assertEquals(PaymentStatus.CONFIRMED, response.getStatus());
+        assertNotNull(response.getConfirmedAt());
+        assertEquals(12, paymentRepository.activatedUserId);
+        assertTrue(paymentRepository.activatedPremiumUntil.isAfter(LocalDateTime.now().plusDays(29)));
+    }
+
+    @Test
+    void markPaidDoesNotExtendPremiumTwiceForAConfirmedOrder() throws SQLException {
+        StubPaymentRepository paymentRepository = new StubPaymentRepository();
+        PaymentOrder confirmedOrder = order(19L, 12, "MONTHLY");
+        confirmedOrder.setStatus(PaymentStatus.CONFIRMED);
+        paymentRepository.orderById = Optional.of(confirmedOrder);
+        StubUserRepository userRepository = new StubUserRepository(user(12, null));
+        PaymentService service = new PaymentService(paymentRepository, userRepository);
+
+        PaymentOrderResponse response = service.markPaid(12, 19L);
+
+        assertEquals(PaymentStatus.CONFIRMED, response.getStatus());
+        assertEquals(0, paymentRepository.activatedUserId);
+    }
+
     private static User user(int id, LocalDateTime premiumUntil) {
         User user = new User();
         user.setId(id);
@@ -100,9 +132,12 @@ class PaymentServiceTest {
 
     private static final class StubPaymentRepository extends PaymentRepository {
         private Optional<PaymentOrder> pendingOrder = Optional.empty();
+        private Optional<PaymentOrder> orderById = Optional.empty();
         private PaymentOrder createdOrder;
         private int createCalls;
         private String updatedNote;
+        private int activatedUserId;
+        private LocalDateTime activatedPremiumUntil;
 
         @Override
         public Optional<PaymentOrder> findPendingByUser(int userId) {
@@ -118,6 +153,18 @@ class PaymentServiceTest {
         @Override
         public boolean updateTransferNote(long id, String note) {
             updatedNote = note;
+            return true;
+        }
+
+        @Override
+        public Optional<PaymentOrder> findById(long id) {
+            return orderById;
+        }
+
+        @Override
+        public boolean confirmAndActivate(long orderId, int userId, LocalDateTime premiumUntil, LocalDateTime confirmedAt) {
+            activatedUserId = userId;
+            activatedPremiumUntil = premiumUntil;
             return true;
         }
     }

@@ -38,7 +38,7 @@ CREATE TABLE payment_orders (
     transfer_note VARCHAR(64) NOT NULL UNIQUE,
     status        VARCHAR(16) NOT NULL DEFAULT 'PENDING'
                   CHECK (status IN ('PENDING','CONFIRMED','REJECTED','EXPIRED')),
-    confirmed_by  INT NULL,
+    confirmed_by  INT NULL,                          -- NULL = nguoi dung tu kich hoat sau khi chuyen khoan
     confirmed_at  DATETIME(6) NULL,
     created_at    DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
     CONSTRAINT fk_payment_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,

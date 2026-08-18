@@ -64,41 +64,20 @@ public class PaymentService {
         return new PagedResponse<>(items, paymentRepository.countByUser(userId), page, size);
     }
 
-    public PagedResponse<PaymentOrderResponse> listPending(int page, int size) throws SQLException {
-        int offset = Pagination.offset(page, size);
-        List<PaymentOrderResponse> items = paymentRepository.findPending(size, offset).stream().map(this::response).toList();
-        return new PagedResponse<>(items, paymentRepository.countPending(), page, size);
-    }
-
     public PaymentOrderResponse markPaid(int userId, long orderId) throws SQLException {
         PaymentOrder order = ownedOrder(userId, orderId);
-        if (order.getStatus() == PaymentStatus.PENDING && Boolean.parseBoolean(AppConfig.get("payment.auto-confirm"))) {
-            return confirm(userId, orderId);
+        if (order.getStatus() == PaymentStatus.CONFIRMED) return response(order);
+        if (order.getStatus() != PaymentStatus.PENDING) {
+            throw new IllegalArgumentException("Only pending payment orders can be activated");
         }
-        return response(order);
-    }
-
-    public PaymentOrderResponse confirm(int adminId, long orderId) throws SQLException {
-        PaymentOrder order = paymentRepository.findById(orderId).orElseThrow(() -> new IllegalArgumentException("Payment order not found"));
-        if (order.getStatus() != PaymentStatus.PENDING) throw new IllegalArgumentException("Only pending payment orders can be confirmed");
         User user = userRepository.findById(order.getUserId()).orElseThrow(() -> new IllegalArgumentException("Payment user not found"));
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime start = user.getPremiumUntil() != null && user.getPremiumUntil().isAfter(now) ? user.getPremiumUntil() : now;
         LocalDateTime premiumUntil = start.plusDays(order.getPremiumDays());
-        if (!paymentRepository.updateStatus(orderId, PaymentStatus.CONFIRMED, adminId, now)) {
+        if (!paymentRepository.confirmAndActivate(orderId, user.getId(), premiumUntil, now)) {
             throw new IllegalArgumentException("Payment order was already processed");
         }
-        userRepository.updatePremiumUntil(user.getId(), premiumUntil);
-        order.setStatus(PaymentStatus.CONFIRMED); order.setConfirmedBy(adminId); order.setConfirmedAt(now);
-        return response(order);
-    }
-
-    public PaymentOrderResponse reject(int adminId, long orderId) throws SQLException {
-        PaymentOrder order = paymentRepository.findById(orderId).orElseThrow(() -> new IllegalArgumentException("Payment order not found"));
-        if (!paymentRepository.updateStatus(orderId, PaymentStatus.REJECTED, adminId, LocalDateTime.now())) {
-            throw new IllegalArgumentException("Payment order was already processed");
-        }
-        order.setStatus(PaymentStatus.REJECTED); order.setConfirmedBy(adminId); order.setConfirmedAt(LocalDateTime.now());
+        order.setStatus(PaymentStatus.CONFIRMED); order.setConfirmedBy(null); order.setConfirmedAt(now);
         return response(order);
     }
 

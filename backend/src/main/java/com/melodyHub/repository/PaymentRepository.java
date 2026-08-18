@@ -87,6 +87,45 @@ public class PaymentRepository {
         }
     }
 
+    /**
+     * Atomically confirms a pending order and grants its Premium entitlement.
+     * Keeping both writes in one transaction prevents a confirmed order from
+     * leaving its owner without Premium if the user update fails.
+     */
+    public boolean confirmAndActivate(long orderId, int userId, LocalDateTime premiumUntil, LocalDateTime confirmedAt)
+            throws SQLException {
+        String orderSql = "UPDATE payment_orders SET status = 'CONFIRMED', confirmed_by = NULL, confirmed_at = ? "
+                + "WHERE id = ? AND status = 'PENDING'";
+        String userSql = "UPDATE users SET premium_until = ?, updated_at = CURRENT_TIMESTAMP(6) WHERE id = ?";
+
+        try (var connection = DatabaseConfig.getConnection()) {
+            connection.setAutoCommit(false);
+            try (var orderStatement = connection.prepareStatement(orderSql);
+                 var userStatement = connection.prepareStatement(userSql)) {
+                orderStatement.setTimestamp(1, java.sql.Timestamp.valueOf(confirmedAt));
+                orderStatement.setLong(2, orderId);
+                if (orderStatement.executeUpdate() != 1) {
+                    connection.rollback();
+                    return false;
+                }
+
+                userStatement.setTimestamp(1, java.sql.Timestamp.valueOf(premiumUntil));
+                userStatement.setInt(2, userId);
+                if (userStatement.executeUpdate() != 1) {
+                    throw new SQLException("Payment user was not found while activating Premium");
+                }
+
+                connection.commit();
+                return true;
+            } catch (SQLException exception) {
+                connection.rollback();
+                throw exception;
+            } finally {
+                connection.setAutoCommit(true);
+            }
+        }
+    }
+
     private Optional<PaymentOrder> findOne(String sql, Object value) throws SQLException {
         try (var connection = DatabaseConfig.getConnection(); var statement = connection.prepareStatement(sql)) {
             statement.setObject(1, value);
