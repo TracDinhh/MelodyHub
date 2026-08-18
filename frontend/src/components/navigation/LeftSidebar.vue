@@ -7,7 +7,6 @@ import {
   Compass,
   Disc3,
   Home,
-  Crown,
   ListMusic,
   Mic2,
   MoreHorizontal,
@@ -31,9 +30,10 @@ const navItems = [
   { label: 'Podcasts', route: 'podcasts', icon: Disc3 }
 ];
 
-function loadPlaylists() {
+function loadPlaylists(userId = authStore.user?.id ?? null) {
+  playlistStore.switchOwner(userId);
   if (
-    authStore.isAuthenticated
+    userId
     && !playlistStore.isSidebarLoading
     && playlistStore.sidebarPlaylists.length === 0
   ) {
@@ -41,13 +41,10 @@ function loadPlaylists() {
   }
 }
 
-onMounted(loadPlaylists);
+onMounted(() => loadPlaylists());
 watch(
-  () => authStore.isAuthenticated,
-  (isAuthenticated) => {
-    if (isAuthenticated) loadPlaylists();
-    else playlistStore.reset();
-  }
+  () => authStore.user?.id,
+  (userId) => loadPlaylists(userId ?? null)
 );
 </script>
 
@@ -146,13 +143,5 @@ watch(
       </nav>
     </template>
 
-    <RouterLink
-      :to="{ name: 'premium' }"
-      class="mx-3 mb-4 mt-auto flex shrink-0 items-center gap-3 rounded-xl border border-[#20E878]/25 bg-[#20E878]/[0.08] px-3.5 py-3 text-sm font-semibold text-[#F4FFF7] transition hover:bg-[#20E878]/[0.14]"
-      @click="emit('close')"
-    >
-      <Crown :size="16" class="text-[#20E878]" />
-      <span>{{ authStore.isPremium ? 'Premium active' : 'Upgrade to Premium' }}</span>
-    </RouterLink>
   </aside>
 </template>

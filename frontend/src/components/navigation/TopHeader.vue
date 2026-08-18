@@ -218,6 +218,10 @@ onBeforeUnmount(() => document.removeEventListener('click', closeOnOutsideClick)
                   <Settings2 :size="15" /> Preferences
                 </button>
 
+                <RouterLink :to="{ name: 'premium' }" class="melodyhub-menu-item" @click="dropdownOpen = false">
+                  <Crown :size="15" /> {{ authStore.isPremium ? 'Premium active' : 'Upgrade to Premium' }}
+                </RouterLink>
+
                 <div class="my-1.5 border-t border-white/[0.05]" />
 
                 <button class="melodyhub-menu-item w-full" @click="signOut">

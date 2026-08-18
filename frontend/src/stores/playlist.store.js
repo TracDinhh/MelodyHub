@@ -23,6 +23,7 @@ export const usePlaylistStore = defineStore('playlists', () => {
   const sidebarPlaylists = ref([]);
   const isSidebarLoading = ref(false);
   const sidebarError = ref('');
+  const ownerUserId = ref(null);
 
   const totalPages = computed(() => Math.max(1, Math.ceil(total.value / size.value)));
 
@@ -172,6 +173,15 @@ export const usePlaylistStore = defineStore('playlists', () => {
     sidebarPlaylists.value = [];
     isSidebarLoading.value = false;
     sidebarError.value = '';
+    ownerUserId.value = null;
+  }
+
+  function switchOwner(userId) {
+    const nextUserId = userId ?? null;
+    if (ownerUserId.value === nextUserId) return false;
+    reset();
+    ownerUserId.value = nextUserId;
+    return true;
   }
 
   return {
@@ -187,6 +197,7 @@ export const usePlaylistStore = defineStore('playlists', () => {
     sidebarPlaylists,
     isSidebarLoading,
     sidebarError,
+    ownerUserId,
     totalPages,
     loadPage,
     loadDetail,
@@ -196,6 +207,7 @@ export const usePlaylistStore = defineStore('playlists', () => {
     remove,
     addSong,
     removeSong,
+    switchOwner,
     reset
   };
 });
