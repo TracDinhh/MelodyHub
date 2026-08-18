@@ -142,9 +142,9 @@ onBeforeUnmount(() => document.removeEventListener('click', closeOnOutsideClick)
                 <Crown :size="9" :stroke-width="3" />
               </span>
             </span>
-            <span class="hidden max-w-[88px] sm:block">
-              <span class="block truncate text-xs font-semibold text-[#F4FFF7]">{{ displayName }}</span>
-              <span class="block text-[9px] font-bold uppercase tracking-widest text-[#20E878]">{{ badgeLabel }}</span>
+            <span class="hidden max-w-[128px] sm:block">
+              <span class="block truncate text-sm font-bold leading-tight text-[#F4FFF7]">{{ displayName }}</span>
+              <span class="mt-0.5 block text-[11px] font-bold uppercase leading-tight tracking-wider text-[#20E878]">{{ badgeLabel }}</span>
             </span>
             <ChevronDown
               :size="13"
