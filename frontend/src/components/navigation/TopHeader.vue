@@ -219,8 +219,18 @@ onBeforeUnmount(() => document.removeEventListener('click', closeOnOutsideClick)
                   <Settings2 :size="15" /> Preferences
                 </button>
 
-                <RouterLink :to="{ name: 'premium' }" class="melodyhub-menu-item" @click="dropdownOpen = false">
-                  <component :is="authStore.isPremium ? Check : Crown" :size="15" />
+                <RouterLink
+                  :to="{ name: 'premium' }"
+                  class="melodyhub-menu-item"
+                  :class="authStore.isPremium ? 'bg-[#20E878]/[0.08] text-sm font-bold !text-[#20E878]' : ''"
+                  @click="dropdownOpen = false"
+                >
+                  <component
+                    :is="authStore.isPremium ? Check : Crown"
+                    :size="authStore.isPremium ? 21 : 15"
+                    :stroke-width="authStore.isPremium ? 3 : 2"
+                    class="shrink-0"
+                  />
                   {{ authStore.isPremium ? 'Premium active' : 'Upgrade to Premium' }}
                 </RouterLink>
 
