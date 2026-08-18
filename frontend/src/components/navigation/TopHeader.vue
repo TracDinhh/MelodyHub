@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import {
   AudioLines,
+  Check,
   ChevronDown,
   Crown,
   Heart,
@@ -219,7 +220,8 @@ onBeforeUnmount(() => document.removeEventListener('click', closeOnOutsideClick)
                 </button>
 
                 <RouterLink :to="{ name: 'premium' }" class="melodyhub-menu-item" @click="dropdownOpen = false">
-                  <Crown :size="15" /> {{ authStore.isPremium ? 'Premium active' : 'Upgrade to Premium' }}
+                  <component :is="authStore.isPremium ? Check : Crown" :size="15" />
+                  {{ authStore.isPremium ? 'Premium active' : 'Upgrade to Premium' }}
                 </RouterLink>
 
                 <div class="my-1.5 border-t border-white/[0.05]" />
