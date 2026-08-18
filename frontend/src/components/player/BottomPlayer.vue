@@ -1,8 +1,8 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import {
   Heart,
-  Maximize2,
+  Mic2,
   Pause,
   Play,
   SkipBack,
@@ -12,9 +12,13 @@ import {
 } from '@lucide/vue';
 import { tracks } from '../../data/music';
 import { usePlayerStore } from '../../stores/player.store';
+import { useAuthStore } from '../../stores/auth.store';
 import { formatDuration } from '../../utils/formatDate';
+import PremiumRequiredModal from '../premium/PremiumRequiredModal.vue';
 
 const player = usePlayerStore();
+const authStore = useAuthStore();
+const premiumPromptOpen = ref(false);
 
 const isLiked = computed(() => player.likedIds.has(player.currentTrack.id));
 
@@ -33,6 +37,26 @@ const activeLyricLine = computed(() => {
   if (!count || !player.duration) return null;
   return Math.min(count - 1, Math.floor((player.currentTime / player.duration) * count));
 });
+
+async function toggleLyrics() {
+  if (!authStore.isPremium) {
+    player.fullscreenLyrics = false;
+    premiumPromptOpen.value = true;
+    return;
+  }
+  if (player.fullscreenLyrics) {
+    player.fullscreenLyrics = false;
+    return;
+  }
+  if (
+    player.currentTrack?.lyricsType === 'SYNCED'
+    && player.currentTrack?.slug
+    && !player.hasSyncedLyrics
+  ) {
+    await player.loadSyncedLyrics(player.currentTrack.slug, player.currentTrack.id);
+  }
+  player.fullscreenLyrics = true;
+}
 
 function seekTo(e) {
   const rect = e.currentTarget.getBoundingClientRect();
@@ -121,6 +145,14 @@ function seekTo(e) {
 
       <!-- Volume -->
       <div class="hidden items-center justify-end gap-3 lg:flex">
+        <button
+          class="melodyhub-icon-btn size-9"
+          :class="player.fullscreenLyrics ? 'text-[#20E878]' : 'text-[#A1A1AA]'"
+          title="Show lyrics"
+          @click="toggleLyrics"
+        >
+          <Mic2 :size="17" />
+        </button>
         <button class="melodyhub-icon-btn size-9 text-[#A1A1AA]" @click="player.toggleMute">
           <VolumeX v-if="player.muted" :size="17" />
           <Volume2 v-else :size="17" />
@@ -139,6 +171,8 @@ function seekTo(e) {
       </div>
     </div>
   </footer>
+
+  <PremiumRequiredModal :open="premiumPromptOpen" @close="premiumPromptOpen = false" />
 
   <!-- Queue panel -->
   <Teleport to="body">
@@ -207,8 +241,8 @@ function seekTo(e) {
       leave-to-class="opacity-0"
     >
       <div
-        v-if="player.fullscreenLyrics"
-        class="surface-glass fixed inset-0 z-[90] flex flex-col p-8 sm:p-12"
+        v-if="player.fullscreenLyrics && authStore.isPremium"
+        class="fixed left-0 right-0 top-[4.5rem] bottom-24 z-50 flex flex-col overflow-hidden bg-[#0F0F12] p-6 sm:bottom-[6.5rem] sm:p-10 lg:left-[240px] lg:rounded-tl-3xl"
       >
         <header class="flex shrink-0 items-center justify-between">
           <div class="flex items-center gap-4">
@@ -223,7 +257,7 @@ function seekTo(e) {
           </button>
         </header>
 
-        <div class="m-auto flex max-w-2xl flex-col items-center justify-center gap-5 overflow-y-auto py-12">
+        <div class="m-auto flex w-full max-w-3xl flex-col items-center justify-center gap-5 overflow-y-auto px-4 py-12">
           <p
             v-for="(line, index) in lyricLines"
             :key="index"
@@ -232,9 +266,7 @@ function seekTo(e) {
           >
             {{ player.hasSyncedLyrics ? line.text : line }}
           </p>
-          <p v-if="!lyricLines.length" class="text-sm text-[#71717A]">
-            No lyrics available for this track.
-          </p>
+          <p v-if="!lyricLines.length" class="text-sm text-[#71717A]">No lyrics available for this track.</p>
         </div>
       </div>
     </Transition>
