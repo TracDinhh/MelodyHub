@@ -31,7 +31,7 @@ public class PlaylistRepository {
 
     private static final String SONG_COLUMNS = """
             s.id, s.title, s.slug, s.album_id, s.track_number, s.duration_sec,
-            s.file_path, s.cover_url, s.lyrics, s.status, s.play_count,
+            s.file_path, s.cover_url, s.lyrics, s.lyrics_type, s.status, s.play_count,
             s.created_at, s.updated_at, s.deleted_at
             """;
 

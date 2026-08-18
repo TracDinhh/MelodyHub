@@ -1,10 +1,12 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import {
   Heart,
-  Maximize2,
+  Mic2,
   Pause,
   Play,
+  Sparkles,
   SkipBack,
   SkipForward,
   Volume2,
@@ -12,9 +14,19 @@ import {
 } from '@lucide/vue';
 import { tracks } from '../../data/music';
 import { usePlayerStore } from '../../stores/player.store';
+import { useAuthStore } from '../../stores/auth.store';
+import { useLyricSelection } from '../../composables/useLyricSelection';
 import { formatDuration } from '../../utils/formatDate';
+import LyricCardModal from '../lyrics/LyricCardModal.vue';
+import PremiumRequiredModal from '../premium/PremiumRequiredModal.vue';
 
 const player = usePlayerStore();
+const authStore = useAuthStore();
+const route = useRoute();
+const premiumPromptOpen = ref(false);
+const fullscreenLyricsBox = ref(null);
+const lyricCardOpen = ref(false);
+const lyricSelection = useLyricSelection();
 
 const isLiked = computed(() => player.likedIds.has(player.currentTrack.id));
 
@@ -33,6 +45,73 @@ const activeLyricLine = computed(() => {
   if (!count || !player.duration) return null;
   return Math.min(count - 1, Math.floor((player.currentTime / player.duration) * count));
 });
+
+const selectedCardLines = computed(() => lyricSelection.sortedIndices.value
+  .map((index) => lyricLines.value[index]?.text)
+  .filter(Boolean));
+
+function lyricLineState(index) {
+  if (index === activeLyricLine.value) {
+    return 'relative z-10 scale-110 text-[#20E878] opacity-100 drop-shadow-[0_0_22px_rgba(32,232,120,0.28)]';
+  }
+  if (activeLyricLine.value !== null && index < activeLyricLine.value) {
+    return 'translate-y-3 scale-95 text-[#F4FFF7] opacity-[0.08]';
+  }
+  return 'scale-100 text-[#F4FFF7] opacity-25';
+}
+
+function closeLyrics() {
+  player.fullscreenLyrics = false;
+  lyricSelection.clear();
+}
+
+async function toggleLyrics() {
+  if (!authStore.isPremium) {
+    player.fullscreenLyrics = false;
+    premiumPromptOpen.value = true;
+    return;
+  }
+  if (player.fullscreenLyrics) {
+    closeLyrics();
+    return;
+  }
+  if (
+    player.currentTrack?.lyricsType === 'SYNCED'
+    && player.currentTrack?.slug
+    && !player.hasSyncedLyrics
+  ) {
+    await player.loadSyncedLyrics(player.currentTrack.slug, player.currentTrack.id);
+  }
+  player.fullscreenLyrics = true;
+}
+
+watch(
+  () => [activeLyricLine.value, player.fullscreenLyrics],
+  async ([index, open]) => {
+    if (!open || index === null) return;
+    await nextTick();
+    const activeLine = fullscreenLyricsBox.value?.querySelector(`[data-lyric-index="${index}"]`);
+    activeLine?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+);
+
+watch(
+  () => player.currentTrack.id,
+  () => {
+    lyricSelection.clear();
+    lyricCardOpen.value = false;
+  }
+);
+
+// Fullscreen lyrics belongs to the current page. Close it before exposing a
+// newly routed page so library/profile content is never trapped underneath.
+watch(
+  () => route.fullPath,
+  () => {
+    closeLyrics();
+    lyricCardOpen.value = false;
+  }
+);
 
 function seekTo(e) {
   const rect = e.currentTarget.getBoundingClientRect();
@@ -121,6 +200,14 @@ function seekTo(e) {
 
       <!-- Volume -->
       <div class="hidden items-center justify-end gap-3 lg:flex">
+        <button
+          class="melodyhub-icon-btn size-9"
+          :class="player.fullscreenLyrics ? 'text-[#20E878]' : 'text-[#A1A1AA]'"
+          title="Show lyrics"
+          @click="toggleLyrics"
+        >
+          <Mic2 :size="17" />
+        </button>
         <button class="melodyhub-icon-btn size-9 text-[#A1A1AA]" @click="player.toggleMute">
           <VolumeX v-if="player.muted" :size="17" />
           <Volume2 v-else :size="17" />
@@ -139,6 +226,8 @@ function seekTo(e) {
       </div>
     </div>
   </footer>
+
+  <PremiumRequiredModal :open="premiumPromptOpen" @close="premiumPromptOpen = false" />
 
   <!-- Queue panel -->
   <Teleport to="body">
@@ -207,8 +296,8 @@ function seekTo(e) {
       leave-to-class="opacity-0"
     >
       <div
-        v-if="player.fullscreenLyrics"
-        class="surface-glass fixed inset-0 z-[90] flex flex-col p-8 sm:p-12"
+        v-if="player.fullscreenLyrics && authStore.isPremium"
+        class="fixed left-0 right-0 top-[4.5rem] bottom-24 z-20 flex flex-col overflow-hidden bg-[#0F0F12] p-6 sm:bottom-[6.5rem] sm:p-10 lg:left-[240px] lg:rounded-tl-3xl"
       >
         <header class="flex shrink-0 items-center justify-between">
           <div class="flex items-center gap-4">
@@ -218,25 +307,78 @@ function seekTo(e) {
               <p class="text-xs text-[#A1A1AA]">{{ player.currentTrack.artist }}</p>
             </div>
           </div>
-          <button class="melodyhub-icon-btn" @click="player.fullscreenLyrics = false">
+          <button class="melodyhub-icon-btn" @click="closeLyrics">
             <svg class="size-5 text-[#A1A1AA]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
           </button>
         </header>
 
-        <div class="m-auto flex max-w-2xl flex-col items-center justify-center gap-5 overflow-y-auto py-12">
-          <p
-            v-for="(line, index) in lyricLines"
-            :key="index"
-            class="text-center text-xl font-bold transition-all duration-500 sm:text-3xl"
-            :class="index === activeLyricLine ? 'text-[#20E878]' : 'text-[#F4FFF7]/[0.15]'"
-          >
-            {{ player.hasSyncedLyrics ? line.text : line }}
-          </p>
-          <p v-if="!lyricLines.length" class="text-sm text-[#71717A]">
-            No lyrics available for this track.
-          </p>
+        <div
+          ref="fullscreenLyricsBox"
+          class="min-h-0 flex-1 overflow-y-auto scroll-smooth px-4"
+        >
+          <div class="mx-auto flex min-h-full w-full max-w-3xl flex-col items-center gap-7 py-[30vh]">
+            <button
+              v-for="(line, index) in lyricLines"
+              :key="index"
+              :data-lyric-index="index"
+              type="button"
+              class="w-full rounded-2xl px-5 py-2 text-center text-xl font-bold transition-[color,opacity,transform,background-color,box-shadow] duration-700 ease-out sm:text-3xl"
+              :class="[
+                lyricLineState(index),
+                player.hasSyncedLyrics ? 'cursor-pointer hover:bg-white/[0.04]' : 'cursor-default',
+                lyricSelection.isSelected(index)
+                  ? 'bg-[#20E878]/10 ring-1 ring-inset ring-[#20E878]/60'
+                  : ''
+              ]"
+              :disabled="!player.hasSyncedLyrics"
+              :aria-pressed="player.hasSyncedLyrics ? lyricSelection.isSelected(index) : undefined"
+              @click="lyricSelection.toggle(index)"
+            >
+              {{ player.hasSyncedLyrics ? line.text : line }}
+            </button>
+            <p v-if="!lyricLines.length" class="text-sm text-[#71717A]">No lyrics available for this track.</p>
+          </div>
+        </div>
+
+        <div
+          v-if="player.hasSyncedLyrics"
+          class="flex shrink-0 flex-col gap-3 border-t border-white/[0.06] bg-[#0F0F12]/95 pt-4 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <div>
+            <p class="text-sm font-semibold text-[#F4FFF7]">Chọn 1–4 câu lyrics để tạo card</p>
+            <p class="mt-0.5 text-xs text-[#71717A]">
+              Đã chọn {{ lyricSelection.selected.value.size }}/{{ lyricSelection.MAX_LINES }} câu liền nhau
+            </p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button
+              v-if="lyricSelection.hasSelection.value"
+              type="button"
+              class="h-10 rounded-full px-4 text-xs font-bold text-[#A1A1AA] transition hover:bg-white/[0.05] hover:text-white"
+              @click="lyricSelection.clear"
+            >
+              Bỏ chọn
+            </button>
+            <button
+              type="button"
+              class="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-[#20E878] px-5 text-xs font-black text-[#09090B] transition hover:bg-[#64F4A1] disabled:cursor-not-allowed disabled:opacity-35"
+              :disabled="!lyricSelection.hasSelection.value"
+              @click="lyricCardOpen = true"
+            >
+              <Sparkles :size="15" /> Tạo lyric card
+            </button>
+          </div>
         </div>
       </div>
     </Transition>
   </Teleport>
+
+  <LyricCardModal
+    :open="lyricCardOpen"
+    :lines="selectedCardLines"
+    :title="player.currentTrack.title"
+    :artist="player.currentTrack.artist"
+    :cover-url="player.currentTrack.cover"
+    @close="lyricCardOpen = false"
+  />
 </template>

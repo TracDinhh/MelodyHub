@@ -1,31 +1,26 @@
 <script setup>
-import { ref } from 'vue';
+import { onMounted, watch } from 'vue';
 import { RouterLink } from 'vue-router';
 import {
   Album,
   Antenna,
   Compass,
   Disc3,
-  Heart,
-  History,
   Home,
   ListMusic,
-  Crown,
   Mic2,
   MoreHorizontal,
-  Plus,
-  Trash2,
   X
 } from '@lucide/vue';
-import { playlists, tracks } from '../../data/music';
 import { useAuthStore } from '../../stores/auth.store';
+import { usePlaylistStore } from '../../stores/playlist.store';
 import logoUrl from '../../assets/styles/icons/logo.png';
 
 defineProps({ mobileOpen: Boolean });
 const emit = defineEmits(['close']);
 
 const authStore = useAuthStore();
-const playlistItems = ref(playlists.slice(0, 5));
+const playlistStore = usePlaylistStore();
 const navItems = [
   { label: 'Home', route: 'home', icon: Home },
   { label: 'Explore', route: 'explore', icon: Compass },
@@ -34,23 +29,23 @@ const navItems = [
   { label: 'Albums', route: 'albums', icon: Album },
   { label: 'Podcasts', route: 'podcasts', icon: Disc3 }
 ];
-// Library shortcuts only make sense for a signed-in listener.
-const libraryItems = [
-  { label: 'Liked Songs', route: 'library-liked', icon: Heart },
-  { label: 'Listen history', route: 'library-history', icon: History }
-];
 
-function addPlaylist() {
-  playlistItems.value.push({
-    id: Date.now(),
-    title: `New playlist ${playlistItems.value.length + 1}`,
-    tracks: 0
-  });
+function loadPlaylists(userId = authStore.user?.id ?? null) {
+  playlistStore.switchOwner(userId);
+  if (
+    userId
+    && !playlistStore.isSidebarLoading
+    && playlistStore.sidebarPlaylists.length === 0
+  ) {
+    void playlistStore.loadSidebarPlaylists();
+  }
 }
 
-function deletePlaylist(id) {
-  playlistItems.value = playlistItems.value.filter((p) => p.id !== id);
-}
+onMounted(() => loadPlaylists());
+watch(
+  () => authStore.user?.id,
+  (userId) => loadPlaylists(userId ?? null)
+);
 </script>
 
 <template>
@@ -99,71 +94,54 @@ function deletePlaylist(id) {
       </RouterLink>
     </nav>
 
-    <RouterLink :to="{ name: 'premium' }" class="mx-3 mt-5 flex items-center gap-3 rounded-xl border border-[#20E878]/25 bg-[#20E878]/[0.08] px-3.5 py-3 text-sm font-semibold text-[#F4FFF7] transition hover:bg-[#20E878]/[0.14]" @click="emit('close')">
-      <Crown :size="16" class="text-[#20E878]" />
-      <span>{{ authStore.isPremium ? 'Premium active' : 'Upgrade to Premium' }}</span>
-    </RouterLink>
-
-    <!-- Section label -->
-    <div class="mt-7 px-5">
-      <div class="flex items-center justify-between">
-        <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-[#A1A1AA]">Your library</p>
-        <button
-          class="grid size-7 place-items-center rounded-full bg-white/[0.05] text-[#C4C4CC] transition-colors duration-200 hover:bg-[#20E878] hover:text-[#09090B]"
-          title="Create playlist"
-          @click="addPlaylist"
+    <template v-if="authStore.isAuthenticated">
+      <div class="mt-7 flex items-center justify-between px-5">
+        <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-[#A1A1AA]">Your playlists</p>
+        <RouterLink
+          :to="{ name: 'playlists' }"
+          class="text-[10px] font-bold text-[#20E878] transition hover:text-[#64F4A1]"
+          @click="emit('close')"
         >
-          <Plus :size="13" />
-        </button>
+          View all
+        </RouterLink>
       </div>
-    </div>
 
-    <!-- Library shortcuts (signed-in listeners only) -->
-    <nav v-if="authStore.isAuthenticated" class="mt-2 space-y-1 px-3" aria-label="Library">
-      <RouterLink
-        v-for="item in libraryItems"
-        :key="item.route"
-        :to="{ name: item.route }"
-        class="nav-item"
-        active-class="active"
-        @click="emit('close')"
-      >
-        <component :is="item.icon" :size="17" class="shrink-0 transition-transform duration-200" />
-        <span>{{ item.label }}</span>
-      </RouterLink>
-    </nav>
-
-    <!-- Playlist list -->
-    <div class="mt-2 flex-1 space-y-1 overflow-y-auto px-3 pr-2">
-      <div
-        v-for="playlist in playlistItems"
-        :key="playlist.id"
-        class="group flex h-10 cursor-pointer items-center gap-2.5 rounded-xl px-3 text-[#A1A1AA] transition-all duration-200 hover:bg-white/[0.05] hover:text-[#F4FFF7]"
-      >
-        <ListMusic :size="15" class="shrink-0 text-[#71717A] transition-colors group-hover:text-[#20E878]" />
-        <span class="min-w-0 flex-1 truncate text-xs font-medium">{{ playlist.title }}</span>
-        <button
-          class="grid size-6 shrink-0 place-items-center rounded text-[#27272A] opacity-0 transition-all duration-200 hover:bg-white/10 hover:text-red-400 group-hover:opacity-100"
-          @click.stop="deletePlaylist(playlist.id)"
+      <nav class="mt-2 min-h-0 flex-1 space-y-1 overflow-y-auto px-3" aria-label="Your playlists">
+        <RouterLink
+          v-for="playlist in playlistStore.sidebarPlaylists"
+          :key="playlist.id"
+          :to="{ name: 'playlist-detail', params: { id: playlist.id } }"
+          class="nav-item"
+          active-class="active"
+          @click="emit('close')"
         >
-          <Trash2 :size="12" />
-        </button>
-      </div>
-    </div>
+          <ListMusic :size="16" class="shrink-0" />
+          <span class="min-w-0 flex-1 truncate">{{ playlist.name }}</span>
+          <span class="shrink-0 text-[10px] text-[#71717A]">{{ playlist.songCount || 0 }}</span>
+        </RouterLink>
 
-    <!-- Recently saved widget -->
-    <div class="mx-3 mb-4 mt-3 overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.025]">
-      <img
-        :src="tracks[2].cover"
-        :alt="`${tracks[2].title} cover`"
-        class="h-16 w-full object-cover"
-        style="opacity: 0.72;"
-      />
-      <div class="border-t border-white/[0.05] px-3.5 py-3.5">
-        <p class="text-[9px] font-bold uppercase tracking-[0.16em] text-[#A1A1AA]">Recently saved</p>
-        <p class="mt-1 truncate text-xs font-semibold text-[#F4FFF7]">{{ tracks[2].title }}</p>
-        <p class="mt-0.5 truncate text-[11px] text-[#A1A1AA]">{{ tracks[2].artist }}</p>
-      </div>
-    </div>
+        <p
+          v-if="playlistStore.isSidebarLoading && playlistStore.sidebarPlaylists.length === 0"
+          class="px-3 py-3 text-xs text-[#71717A]"
+        >
+          Loading playlists…
+        </p>
+        <button
+          v-else-if="playlistStore.sidebarError"
+          type="button"
+          class="w-full rounded-lg px-3 py-3 text-left text-xs text-red-300 transition hover:bg-white/[0.04]"
+          @click="playlistStore.loadSidebarPlaylists"
+        >
+          Could not load playlists. <span class="font-bold text-[#20E878]">Retry</span>
+        </button>
+        <p
+          v-else-if="playlistStore.sidebarPlaylists.length === 0"
+          class="px-3 py-3 text-xs text-[#71717A]"
+        >
+          No playlists yet.
+        </p>
+      </nav>
+    </template>
+
   </aside>
 </template>

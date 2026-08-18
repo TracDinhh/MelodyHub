@@ -1,12 +1,18 @@
 <script setup>
 import { computed, nextTick, ref, watch } from 'vue';
-import { ArrowUpRight, CheckCircle2, Play, X } from '@lucide/vue';
+import { useRouter } from 'vue-router';
+import { ArrowUpRight, CheckCircle2, Crown, Lock, Play, Sparkles, X } from '@lucide/vue';
 import { artists, featuredArtist, tracks } from '../../data/music';
 import { usePlayerStore } from '../../stores/player.store';
+import { useAuthStore } from '../../stores/auth.store';
+import LyricCardModal from '../lyrics/LyricCardModal.vue';
+import { useLyricSelection } from '../../composables/useLyricSelection';
 
 defineProps({ mobileOpen: Boolean });
 const emit = defineEmits(['close']);
 const player = usePlayerStore();
+const authStore = useAuthStore();
+const router = useRouter();
 const activeTab = ref('lyrics');
 const tabs = [
   { id: 'lyrics', label: 'Lyrics' },
@@ -25,6 +31,35 @@ const activeLine = computed(() => {
   if (!count || !player.duration) return null;
   return Math.min(count - 1, Math.floor((player.currentTime / player.duration) * count));
 });
+
+const lyricsLocked = computed(() =>
+  player.currentTrack?.lyricsType === 'SYNCED' && !authStore.isPremium
+);
+
+function openPremium() {
+  emit('close');
+  router.push({ name: 'premium' });
+}
+
+// Lyric-card feature is only offered for synced lyrics (a real line to feature).
+const lyricSelection = useLyricSelection();
+const cardOpen = ref(false);
+const cardLines = computed(() =>
+  lyricSelection.sortedIndices.value
+    .map((index) => player.syncedLyrics[index]?.text)
+    .filter(Boolean)
+);
+
+function onLyricClick(index) {
+  if (!player.hasSyncedLyrics) return;
+  lyricSelection.toggle(index);
+}
+
+// Reset any selection whenever the track changes so lines never mismatch.
+watch(
+  () => player.currentTrack?.id,
+  () => lyricSelection.clear()
+);
 
 watch(activeLine, async (index) => {
   await nextTick();
@@ -75,16 +110,39 @@ watch(activeLine, async (index) => {
 
     <div class="min-h-0 flex-1 overflow-y-auto">
       <div v-if="activeTab === 'lyrics'" class="space-y-5 px-6 py-8">
-        <p
+        <div v-if="lyricsLocked" class="flex min-h-56 flex-col items-center justify-center text-center">
+          <span class="grid size-10 place-items-center rounded-xl bg-[#20E878] text-[#09090B]"><Crown :size="20" /></span>
+          <Lock :size="18" class="mt-4 text-[#20E878]" />
+          <p class="mt-3 text-sm font-black text-white">Synced lyrics are Premium</p>
+          <p class="mt-2 text-xs leading-5 text-[#858585]">Unlock karaoke lyrics and lyric cards.</p>
+          <button class="mt-4 inline-flex h-9 items-center gap-2 rounded-full bg-[#20E878] px-4 text-xs font-black text-[#09090B]" @click="openPremium"><Crown :size="14" /> View plans</button>
+        </div>
+        <template v-else>
+          <component
+          :is="player.hasSyncedLyrics ? 'button' : 'p'"
           v-for="(line, index) in lyrics"
           :key="`${player.currentTrack.id}-${index}`"
           :data-lyric="index"
-          class="origin-left transition-all duration-500"
-          :class="index === activeLine ? 'text-lg font-black text-[#16C65A]' : 'text-sm font-semibold text-[#6d6d6d]'"
+          :type="player.hasSyncedLyrics ? 'button' : undefined"
+          class="block w-full origin-left rounded-md text-left transition-all duration-500"
+          :class="[
+            index === activeLine ? 'text-lg font-black text-[#16C65A]' : 'text-sm font-semibold text-[#6d6d6d]',
+            player.hasSyncedLyrics ? 'px-2 py-1' : '',
+            lyricSelection.isSelected(index) ? 'bg-[#20E878]/15 ring-1 ring-inset ring-[#20E878]/40' : ''
+          ]"
+          @click="onLyricClick(index)"
         >
           {{ player.hasSyncedLyrics ? line.text : line }}
-        </p>
-        <p v-if="!lyrics.length" class="text-sm text-[#6d6d6d]">No lyrics available.</p>
+          </component>
+          <p v-if="!lyrics.length" class="text-sm text-[#6d6d6d]">No lyrics available.</p>
+          <button
+          v-if="lyricSelection.hasSelection.value"
+          class="sticky bottom-0 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#20E878] py-2.5 text-xs font-black text-[#09090B] transition hover:bg-[#64F4A1]"
+          @click="cardOpen = true"
+        >
+          <Sparkles :size="14" /> Create lyric card ({{ lyricSelection.sortedIndices.value.length }})
+          </button>
+        </template>
       </div>
 
       <div v-else-if="activeTab === 'bio'" class="p-5">
@@ -124,5 +182,14 @@ watch(activeLine, async (index) => {
         </button>
       </div>
     </div>
+
+    <LyricCardModal
+      :open="cardOpen"
+      :lines="cardLines"
+      :title="player.currentTrack.title || ''"
+      :artist="player.currentTrack.artist || ''"
+      :cover-url="player.currentTrack.cover || ''"
+      @close="cardOpen = false"
+    />
   </aside>
 </template>

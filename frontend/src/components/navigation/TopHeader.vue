@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import {
   AudioLines,
+  Check,
   ChevronDown,
   Crown,
   Heart,
@@ -142,9 +143,9 @@ onBeforeUnmount(() => document.removeEventListener('click', closeOnOutsideClick)
                 <Crown :size="9" :stroke-width="3" />
               </span>
             </span>
-            <span class="hidden max-w-[88px] sm:block">
-              <span class="block truncate text-xs font-semibold text-[#F4FFF7]">{{ displayName }}</span>
-              <span class="block text-[9px] font-bold uppercase tracking-widest text-[#20E878]">{{ badgeLabel }}</span>
+            <span class="hidden max-w-[128px] sm:block">
+              <span class="block truncate text-sm font-bold leading-tight text-[#F4FFF7]">{{ displayName }}</span>
+              <span class="mt-0.5 block text-[11px] font-bold uppercase leading-tight tracking-wider text-[#20E878]">{{ badgeLabel }}</span>
             </span>
             <ChevronDown
               :size="13"
@@ -217,6 +218,21 @@ onBeforeUnmount(() => document.removeEventListener('click', closeOnOutsideClick)
                 <button class="melodyhub-menu-item">
                   <Settings2 :size="15" /> Preferences
                 </button>
+
+                <RouterLink
+                  :to="{ name: 'premium' }"
+                  class="melodyhub-menu-item"
+                  :class="authStore.isPremium ? 'bg-[#20E878]/[0.08] text-sm font-bold !text-[#20E878]' : ''"
+                  @click="dropdownOpen = false"
+                >
+                  <component
+                    :is="authStore.isPremium ? Check : Crown"
+                    :size="authStore.isPremium ? 21 : 15"
+                    :stroke-width="authStore.isPremium ? 3 : 2"
+                    class="shrink-0"
+                  />
+                  {{ authStore.isPremium ? 'Premium active' : 'Upgrade to Premium' }}
+                </RouterLink>
 
                 <div class="my-1.5 border-t border-white/[0.05]" />
 

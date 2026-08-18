@@ -38,7 +38,7 @@ CREATE TABLE payment_orders (
     transfer_note VARCHAR(64) NOT NULL UNIQUE,
     status        VARCHAR(16) NOT NULL DEFAULT 'PENDING'
                   CHECK (status IN ('PENDING','CONFIRMED','REJECTED','EXPIRED')),
-    confirmed_by  INT NULL,
+    confirmed_by  INT NULL,                          -- NULL = nguoi dung tu kich hoat sau khi chuyen khoan
     confirmed_at  DATETIME(6) NULL,
     created_at    DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
     CONSTRAINT fk_payment_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -399,8 +399,8 @@ INSERT INTO artists (user_id, name, slug, bio, image_url) VALUES
 -- -----------------------------------------------------
 -- 10 bai hat mau (audio dung file mp3 cong khai cua SoundHelix)
 -- -----------------------------------------------------
-INSERT INTO songs (title, slug, duration_sec, file_path, cover_url, status, play_count) VALUES
-('Velvet Hours',  'velvet-hours',  238, 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',  'https://images.unsplash.com/photo-1516280440614-37939bbacd81?auto=format&fit=crop&w=500&q=85', 'PUBLISHED', 84291),
+INSERT INTO songs (title, slug, duration_sec, file_path, cover_url, lyrics, lyrics_type, status, play_count) VALUES
+('Velvet Hours',  'velvet-hours',  238, 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',  'https://images.unsplash.com/photo-1516280440614-37939bbacd81?auto=format&fit=crop&w=500&q=85', '{"lines":[{"startTime":0,"endTime":4,"text":"Velvet hours in the city glow"},{"startTime":4,"endTime":8,"text":"Hold the moment, let the speakers slow"},{"startTime":8,"endTime":12,"text":"We keep dancing through the neon blue"},{"startTime":12,"endTime":16,"text":"Every midnight leads me back to you"}]}', 'SYNCED', 'PUBLISHED', 84291),
 ('Afterglow',     'afterglow',     214, 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',  'https://images.unsplash.com/photo-1506157786151-b8491531f063?auto=format&fit=crop&w=500&q=85', 'PUBLISHED', 61830),
 ('Slow Motion',   'slow-motion',   201, 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3',  'https://images.unsplash.com/photo-1524368535928-5b5e00ddc76b?auto=format&fit=crop&w=500&q=85', 'PUBLISHED', 44105),
 ('No Signal',     'no-signal',     189, 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3',  'https://images.unsplash.com/photo-1511379938547-c1f69419868d?auto=format&fit=crop&w=500&q=85', 'PUBLISHED', 37826),
@@ -423,3 +423,10 @@ INSERT INTO song_artists (song_id, artist_id, role, position) VALUES
 ((SELECT id FROM songs WHERE slug = 'sunroom'),         (SELECT id FROM artists WHERE slug = 'eli-vale'),    'MAIN', 0),
 ((SELECT id FROM songs WHERE slug = 'frequency'),       (SELECT id FROM artists WHERE slug = 'eli-vale'),    'MAIN', 0),
 ((SELECT id FROM songs WHERE slug = 'low-light'),       (SELECT id FROM artists WHERE slug = 'eli-vale'),    'MAIN', 0);
+
+-- Bai hat mau co lyrics dong bo de kiem thu Premium lyrics / lyric card.
+INSERT INTO song_lyrics (song_id, line_number, start_time_ms, lyric_text) VALUES
+((SELECT id FROM songs WHERE slug = 'velvet-hours'), 1,     0, 'Velvet hours in the city glow'),
+((SELECT id FROM songs WHERE slug = 'velvet-hours'), 2,  4000, 'Hold the moment, let the speakers slow'),
+((SELECT id FROM songs WHERE slug = 'velvet-hours'), 3,  8000, 'We keep dancing through the neon blue'),
+((SELECT id FROM songs WHERE slug = 'velvet-hours'), 4, 12000, 'Every midnight leads me back to you');

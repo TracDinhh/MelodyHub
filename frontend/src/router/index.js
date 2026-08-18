@@ -253,12 +253,6 @@ const router = createRouter({
       }
     },
     {
-      path: '/admin/payments',
-      name: 'admin-payments',
-      component: () => import('../views/admin/PaymentAdminView.vue'),
-      meta: { requiresAuth: true, allowedRoles: ['ADMIN'], layout: 'admin', workspace: 'admin', title: 'Payments', breadcrumb: 'Admin / Payments' }
-    },
-    {
       path: '/login',
       name: 'login',
       component: () => import('../views/LoginView.vue'),

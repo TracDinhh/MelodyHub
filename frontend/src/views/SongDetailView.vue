@@ -1,6 +1,6 @@
 <script setup>
 import { computed, nextTick, onMounted, ref, watch } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import {
   ArrowLeft,
   Heart,
@@ -8,16 +8,20 @@ import {
   LoaderCircle,
   Music2,
   Pause,
-  Play
+  Play,
+  Sparkles
 } from '@lucide/vue';
 import { songService } from '../services/songService';
 import { usePlayerStore } from '../stores/player.store';
 import { useAuthStore } from '../stores/auth.store';
 import AddToPlaylistButton from '../components/music/AddToPlaylistButton.vue';
+import LyricCardModal from '../components/lyrics/LyricCardModal.vue';
+import { useLyricSelection } from '../composables/useLyricSelection';
 import { formatDuration } from '../utils/formatDate';
 import { toPlayerTrack } from '../utils/playerTrack';
 
 const route = useRoute();
+const router = useRouter();
 const player = usePlayerStore();
 const authStore = useAuthStore();
 
@@ -89,6 +93,10 @@ function toTrack(detail) {
 const isPlaying = computed(() => player.isPlaying && player.currentTrack.id === song.value?.id);
 const lyricsLocked = computed(() => song.value?.lyricsType === 'SYNCED' && !authStore.isPremium);
 
+function openPremium() {
+  router.push({ name: 'premium' });
+}
+
 // Heart state comes from the player store's liked set (persisted to the
 // backend), falling back to the detail payload's isLiked on first load.
 const isLiked = computed(() =>
@@ -97,6 +105,24 @@ const isLiked = computed(() =>
 
 function toggleLike() {
   if (song.value?.id) player.toggleLike(song.value.id);
+}
+
+// Lyric-card feature: pick 1..4 contiguous lines, then open the card modal.
+const lyricSelection = useLyricSelection();
+const cardOpen = ref(false);
+const cardLines = computed(() =>
+  lyricSelection.sortedIndices.value
+    .map((index) => lyricLines.value[index]?.text)
+    .filter(Boolean)
+);
+
+function openLyricCard() {
+  if (!lyricSelection.hasSelection.value) return;
+  cardOpen.value = true;
+}
+
+function closeLyricCard() {
+  cardOpen.value = false;
 }
 
 // Auto-scroll the active lyric line to the middle of the lyrics box while playing.
@@ -217,20 +243,38 @@ watch(() => route.params.slug, (slug) => slug && load(slug));
             </div>
             <p class="text-[10px] font-bold text-[#16C65A]">● SYNCED</p>
           </div>
+          <p class="mb-2 text-[11px] text-[#666]">Tap up to {{ lyricSelection.MAX_LINES }} lines to turn them into a shareable card.</p>
           <div ref="lyricsBox" class="max-h-[340px] space-y-1 overflow-y-auto scroll-smooth text-center">
-            <div
+            <button
               v-for="(line, index) in lyricLines"
               :key="index"
               :data-line="index"
-              class="py-1.5 text-base transition-all duration-300 sm:text-xl"
+              type="button"
+              class="block w-full rounded-md px-2 py-1.5 text-base transition-all duration-300 sm:text-xl"
               :class="{
+                'bg-[#20E878]/15 ring-1 ring-inset ring-[#20E878]/40': lyricSelection.isSelected(index),
                 'scale-105 font-bold text-[#16C65A]': player.currentLyricLine === index && player.currentTrack.id === song.id,
                 'text-[#555]': player.currentTrack.id === song.id && player.currentLyricLine !== null && index < player.currentLyricLine,
                 'text-[#888]': !(player.currentLyricLine === index && player.currentTrack.id === song.id) && !(player.currentTrack.id === song.id && player.currentLyricLine !== null && index < player.currentLyricLine)
               }"
+              @click="lyricSelection.toggle(index)"
             >
               {{ line.text }}
-            </div>
+            </button>
+          </div>
+          <div v-if="lyricSelection.hasSelection.value" class="mt-4 flex items-center justify-center gap-2">
+            <button
+              class="inline-flex h-10 items-center gap-2 rounded-full bg-[#20E878] px-5 text-xs font-black text-[#09090B] transition hover:bg-[#64F4A1]"
+              @click="openLyricCard"
+            >
+              <Sparkles :size="15" /> Create lyric card ({{ lyricSelection.sortedIndices.value.length }})
+            </button>
+            <button
+              class="inline-flex h-10 items-center rounded-full border border-white/10 px-4 text-xs font-bold text-[#A1A1AA] transition hover:border-white/25"
+              @click="lyricSelection.clear()"
+            >
+              Clear
+            </button>
           </div>
         </section>
 
@@ -238,7 +282,7 @@ watch(() => route.params.slug, (slug) => slug && load(slug));
           <Lock :size="24" class="mx-auto text-[#20E878]" />
           <h2 class="mt-3 text-lg font-bold text-white">Synced lyrics are a Premium feature</h2>
           <p class="mt-2 text-sm text-[#A1A1AA]">Upgrade to follow every line in time with the music.</p>
-          <RouterLink :to="{ name: 'premium' }" class="mt-4 inline-flex h-9 items-center rounded-full bg-[#20E878] px-4 text-xs font-bold text-[#09090B]">Upgrade to Premium</RouterLink>
+          <button class="mt-4 inline-flex h-9 items-center rounded-full bg-[#20E878] px-4 text-xs font-bold text-[#09090B]" @click="openPremium">Unlock synced lyrics</button>
         </section>
 
         <!-- Plain Lyrics Display (never used for SYNCED songs, so JSON never leaks) -->
@@ -287,6 +331,16 @@ watch(() => route.params.slug, (slug) => slug && load(slug));
           </div>
         </section>
       </div>
+
     </template>
+
+    <LyricCardModal
+      :open="cardOpen"
+      :lines="cardLines"
+      :title="song?.title || ''"
+      :artist="artistLabel"
+      :cover-url="song?.coverUrl || ''"
+      @close="closeLyricCard"
+    />
   </div>
 </template>
