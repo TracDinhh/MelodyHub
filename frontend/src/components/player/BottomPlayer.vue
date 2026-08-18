@@ -1,5 +1,6 @@
 <script setup>
 import { computed, nextTick, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import {
   Heart,
   Mic2,
@@ -21,6 +22,7 @@ import PremiumRequiredModal from '../premium/PremiumRequiredModal.vue';
 
 const player = usePlayerStore();
 const authStore = useAuthStore();
+const route = useRoute();
 const premiumPromptOpen = ref(false);
 const fullscreenLyricsBox = ref(null);
 const lyricCardOpen = ref(false);
@@ -97,6 +99,16 @@ watch(
   () => player.currentTrack.id,
   () => {
     lyricSelection.clear();
+    lyricCardOpen.value = false;
+  }
+);
+
+// Fullscreen lyrics belongs to the current page. Close it before exposing a
+// newly routed page so library/profile content is never trapped underneath.
+watch(
+  () => route.fullPath,
+  () => {
+    closeLyrics();
     lyricCardOpen.value = false;
   }
 );
@@ -285,7 +297,7 @@ function seekTo(e) {
     >
       <div
         v-if="player.fullscreenLyrics && authStore.isPremium"
-        class="fixed left-0 right-0 top-[4.5rem] bottom-24 z-50 flex flex-col overflow-hidden bg-[#0F0F12] p-6 sm:bottom-[6.5rem] sm:p-10 lg:left-[240px] lg:rounded-tl-3xl"
+        class="fixed left-0 right-0 top-[4.5rem] bottom-24 z-20 flex flex-col overflow-hidden bg-[#0F0F12] p-6 sm:bottom-[6.5rem] sm:p-10 lg:left-[240px] lg:rounded-tl-3xl"
       >
         <header class="flex shrink-0 items-center justify-between">
           <div class="flex items-center gap-4">
