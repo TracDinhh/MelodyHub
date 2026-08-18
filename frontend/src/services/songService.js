@@ -15,9 +15,10 @@ export const songService = {
   },
   
   getSyncedLyrics(slug) {
-    return apiClient.get(`/api/songs/${encodeURIComponent(slug)}/lyrics`, {
-      authenticated: false
-    });
+    // Sent with the bearer token when present: synced lyrics are premium-gated,
+    // so the backend needs the token to authorize the request. Guests simply
+    // get the 402 and fall back to no lyrics.
+    return apiClient.get(`/api/songs/${encodeURIComponent(slug)}/lyrics`);
   },
 
   getRelated(slug, params) {

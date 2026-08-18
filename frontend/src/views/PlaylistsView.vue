@@ -1,23 +1,27 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import { ListMusic, Music2, Plus, Trash2 } from '@lucide/vue';
 import { usePlaylistStore } from '../stores/playlist.store';
 import { useAuthStore } from '../stores/auth.store';
-import PremiumUpgradeModal from '../components/premium/PremiumUpgradeModal.vue';
 
 const store = usePlaylistStore();
 const authStore = useAuthStore();
+const router = useRouter();
 
 const showCreate = ref(false);
 const creating = ref(false);
 const createError = ref('');
 const form = reactive({ name: '', description: '', isPublic: false });
 const busy = ref(new Set());
-const premiumUpgradeOpen = ref(false);
+
+function openPremium() {
+  router.push({ name: 'premium' });
+}
 
 function openCreate() {
   if (!authStore.isPremium && store.total >= 3) {
-    premiumUpgradeOpen.value = true;
+    openPremium();
     return;
   }
   form.name = '';
@@ -44,7 +48,7 @@ async function submitCreate() {
   } catch (caught) {
     if (caught?.code === 'PLAYLIST_LIMIT') {
       showCreate.value = false;
-      premiumUpgradeOpen.value = true;
+      openPremium();
       return;
     }
     createError.value = caught?.message || 'Could not create the playlist.';
@@ -80,7 +84,7 @@ onMounted(() => store.loadPage(1));
           <h1 class="text-3xl font-black text-white sm:text-4xl">My playlists</h1>
         </div>
         <p class="text-sm text-[#8EA696]">Collections of the songs you love, in the order you want them.</p>
-        <button v-if="!authStore.isPremium && store.total >= 3" type="button" class="w-fit text-left text-xs text-[#FDA4AF] hover:text-[#fecdd3]" @click="premiumUpgradeOpen = true">Free accounts can create up to 3 playlists. <span class="font-bold text-[#20E878]">Upgrade for unlimited playlists.</span></button>
+        <button v-if="!authStore.isPremium && store.total >= 3" type="button" class="w-fit text-left text-xs text-[#FDA4AF] hover:text-[#fecdd3]" @click="openPremium">Free accounts can create up to 3 playlists. <span class="font-bold text-[#20E878]">Upgrade for unlimited playlists.</span></button>
       </div>
       <button
         class="inline-flex h-11 items-center gap-2 rounded-full bg-[#20E878] px-5 text-sm font-black text-[#0F0F12] transition hover:bg-[#54d67b]"
@@ -145,13 +149,6 @@ onMounted(() => store.loadPage(1));
         </button>
       </div>
     </div>
-
-    <PremiumUpgradeModal
-      :open="premiumUpgradeOpen"
-      feature="Unlimited playlists"
-      description="Free accounts can create up to three playlists. Upgrade to build as many collections as you want."
-      @close="premiumUpgradeOpen = false"
-    />
 
     <!-- Create modal -->
     <div
