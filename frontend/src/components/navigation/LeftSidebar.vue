@@ -97,11 +97,6 @@ watch(
       </RouterLink>
     </nav>
 
-    <RouterLink :to="{ name: 'premium' }" class="mx-3 mt-5 flex items-center gap-3 rounded-xl border border-[#20E878]/25 bg-[#20E878]/[0.08] px-3.5 py-3 text-sm font-semibold text-[#F4FFF7] transition hover:bg-[#20E878]/[0.14]" @click="emit('close')">
-      <Crown :size="16" class="text-[#20E878]" />
-      <span>{{ authStore.isPremium ? 'Premium active' : 'Upgrade to Premium' }}</span>
-    </RouterLink>
-
     <template v-if="authStore.isAuthenticated">
       <div class="mt-7 flex items-center justify-between px-5">
         <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-[#A1A1AA]">Your playlists</p>
@@ -150,5 +145,14 @@ watch(
         </p>
       </nav>
     </template>
+
+    <RouterLink
+      :to="{ name: 'premium' }"
+      class="mx-3 mb-4 mt-auto flex shrink-0 items-center gap-3 rounded-xl border border-[#20E878]/25 bg-[#20E878]/[0.08] px-3.5 py-3 text-sm font-semibold text-[#F4FFF7] transition hover:bg-[#20E878]/[0.14]"
+      @click="emit('close')"
+    >
+      <Crown :size="16" class="text-[#20E878]" />
+      <span>{{ authStore.isPremium ? 'Premium active' : 'Upgrade to Premium' }}</span>
+    </RouterLink>
   </aside>
 </template>
