@@ -823,6 +823,115 @@ public class SongRepository {
         );
     }
 
+    // ==================== ADMIN-SPECIFIC QUERIES ====================
+
+    /**
+     * Lists all songs (any status), optionally filtered by status and/or title.
+     * Excludes soft-deleted songs. Used exclusively by the admin song management page.
+     */
+    public List<Song> findAllPage(SongStatus status, String titleQuery, int size, int offset) throws SQLException {
+        List<Object> parameters = new ArrayList<>();
+        String sql = "SELECT " + SONG_COLUMNS + " FROM songs"
+                + buildAdminFilterClause(status, titleQuery, parameters)
+                + " ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?";
+        parameters.add(size);
+        parameters.add(offset);
+
+        try (var connection = getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            bindParameters(statement, parameters);
+            try (var resultSet = statement.executeQuery()) {
+                List<Song> songs = new ArrayList<>();
+                while (resultSet.next()) {
+                    songs.add(mapRow(resultSet));
+                }
+                return songs;
+            }
+        }
+    }
+
+    /**
+     * Counts all songs (any status), optionally filtered by status and/or title.
+     */
+    public long countAll(SongStatus status, String titleQuery) throws SQLException {
+        List<Object> parameters = new ArrayList<>();
+        String sql = "SELECT COUNT(*) FROM songs"
+                + buildAdminFilterClause(status, titleQuery, parameters);
+
+        try (var connection = getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            bindParameters(statement, parameters);
+            try (var resultSet = statement.executeQuery()) {
+                return resultSet.next() ? resultSet.getLong(1) : 0L;
+            }
+        }
+    }
+
+    /**
+     * Finds any non-deleted song by ID, regardless of status. Used by admin.
+     */
+    public Optional<Song> findByIdAdmin(int songId) throws SQLException {
+        String sql = "SELECT " + SONG_COLUMNS + " FROM songs WHERE id = ? AND deleted_at IS NULL";
+        try (var connection = getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, songId);
+            try (var resultSet = statement.executeQuery()) {
+                return resultSet.next() ? Optional.of(mapRow(resultSet)) : Optional.empty();
+            }
+        }
+    }
+
+    /**
+     * Admin: update song status (PUBLISHED/HIDDEN/DRAFT). Returns rows affected.
+     */
+    public int updateStatusAdmin(int songId, SongStatus newStatus) throws SQLException {
+        String sql = """
+                UPDATE songs
+                SET status = ?, updated_at = CURRENT_TIMESTAMP(6)
+                WHERE id = ? AND deleted_at IS NULL
+                """;
+        try (var connection = getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            statement.setString(1, newStatus.name());
+            statement.setInt(2, songId);
+            return statement.executeUpdate();
+        }
+    }
+
+    /**
+     * Admin: soft-delete a song. Returns rows affected.
+     */
+    public int softDeleteAdmin(int songId) throws SQLException {
+        String sql = """
+                UPDATE songs
+                SET deleted_at = CURRENT_TIMESTAMP(6), updated_at = CURRENT_TIMESTAMP(6)
+                WHERE id = ? AND deleted_at IS NULL
+                """;
+        try (var connection = getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, songId);
+            return statement.executeUpdate();
+        }
+    }
+
+    private String buildAdminFilterClause(SongStatus status, String titleQuery, List<Object> parameters) {
+        StringBuilder clause = new StringBuilder(" WHERE deleted_at IS NULL");
+
+        if (status != null) {
+            clause.append(" AND status = ?");
+            parameters.add(status.name());
+        }
+
+        if (titleQuery != null && !titleQuery.isBlank()) {
+            clause.append(" AND title LIKE ? ESCAPE '!'");
+            parameters.add("%" + escapeLike(titleQuery.trim()) + "%");
+        }
+
+        return clause.toString();
+    }
+
+    // ==================== END ADMIN QUERIES ====================
+
     private Connection getConnection() throws SQLException {
         return dataSource == null ? DatabaseConfig.getConnection() : dataSource.getConnection();
     }

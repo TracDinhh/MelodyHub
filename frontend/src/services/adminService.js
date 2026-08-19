@@ -50,5 +50,26 @@ export const adminService = {
    */
   getAnalytics() {
     return apiClient.get('/api/admin/analytics');
+  },
+
+  /**
+   * List all songs, optionally filtered by status and search query.
+   */
+  listSongs({ status = '', q = '', page = 1, size = 20 } = {}) {
+    return apiClient.get('/api/admin/songs', { params: { status, q, page, size } });
+  },
+
+  /**
+   * Update a song's status (PUBLISHED, HIDDEN, DRAFT).
+   */
+  updateSongStatus(songId, status) {
+    return apiClient.post(`/api/admin/songs/${songId}/status`, { status });
+  },
+
+  /**
+   * Soft-delete a song.
+   */
+  deleteSong(songId) {
+    return apiClient.delete(`/api/admin/songs/${songId}`);
   }
 };
