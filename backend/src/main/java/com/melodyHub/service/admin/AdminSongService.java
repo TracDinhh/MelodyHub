@@ -40,13 +40,14 @@ public class AdminSongService {
             String token,
             SongStatus status,
             String query,
+            String sort,
             int page,
             int size
     ) throws AuthException, SQLException {
         authorizationService.requireRole(token, UserRole.ADMIN);
 
         int offset = Pagination.offset(page, size);
-        List<Song> songs = songRepository.findAllPage(status, query, size, offset);
+        List<Song> songs = songRepository.findAllPage(status, query, sort, size, offset);
         long total = songRepository.countAll(status, query);
 
         // Batch-load artists for all songs in one query
@@ -58,6 +59,14 @@ public class AdminSongService {
                 .toList();
 
         return new PagedResponse<>(items, total, page, size);
+    }
+
+    /**
+     * Returns per-status song counts for admin summary badges.
+     */
+    public Map<String, Long> getStatusCounts(String token) throws AuthException, SQLException {
+        authorizationService.requireRole(token, UserRole.ADMIN);
+        return songRepository.countAllByStatus();
     }
 
     /**
