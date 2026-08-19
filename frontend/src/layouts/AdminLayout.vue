@@ -1,7 +1,7 @@
 <script setup>
 import { ref } from 'vue';
 import { RouterLink, useRouter } from 'vue-router';
-import { LayoutDashboard, LogOut, Menu, Mic2, ShieldCheck, UserCheck, Users, X } from '@lucide/vue';
+import { LayoutDashboard, LogOut, Menu, Mic2, Music2, ShieldCheck, UserCheck, Users, X } from '@lucide/vue';
 import { useAuthStore } from '../stores/auth.store';
 import logoUrl from '../assets/styles/icons/logo.png';
 
@@ -13,7 +13,8 @@ const navItems = [
   { label: 'Overview', route: 'admin-dashboard', icon: LayoutDashboard },
   { label: 'Artist Requests', route: 'admin-artist-requests', icon: UserCheck },
   { label: 'Users', route: 'admin-users', icon: Users },
-  { label: 'Artists', route: 'admin-artists', icon: Mic2 }
+  { label: 'Artists', route: 'admin-artists', icon: Mic2 },
+  { label: 'Songs', route: 'admin-songs', icon: Music2 }
 ];
 
 async function logout() {

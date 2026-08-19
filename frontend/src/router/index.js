@@ -253,6 +253,19 @@ const router = createRouter({
       }
     },
     {
+      path: '/admin/songs',
+      name: 'admin-songs',
+      component: () => import('../views/admin/AdminSongsView.vue'),
+      meta: {
+        requiresAuth: true,
+        allowedRoles: ['ADMIN'],
+        layout: 'admin',
+        workspace: 'admin',
+        title: 'Songs',
+        breadcrumb: 'Admin / Songs'
+      }
+    },
+    {
       path: '/login',
       name: 'login',
       component: () => import('../views/LoginView.vue'),
