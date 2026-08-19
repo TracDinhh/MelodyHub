@@ -53,10 +53,17 @@ export const adminService = {
   },
 
   /**
-   * List all songs, optionally filtered by status and search query.
+   * List all songs, optionally filtered by status, search query, and sort order.
    */
-  listSongs({ status = '', q = '', page = 1, size = 20 } = {}) {
-    return apiClient.get('/api/admin/songs', { params: { status, q, page, size } });
+  listSongs({ status = '', q = '', sort = 'newest', page = 1, size = 20 } = {}) {
+    return apiClient.get('/api/admin/songs', { params: { status, q, sort, page, size } });
+  },
+
+  /**
+   * Get per-status song counts for admin summary badges.
+   */
+  getSongStatusCounts() {
+    return apiClient.get('/api/admin/songs/counts');
   },
 
   /**

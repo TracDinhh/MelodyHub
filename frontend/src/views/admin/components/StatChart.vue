@@ -77,7 +77,15 @@ const chartOptions = computed(() => {
     legend: { labels: { colors: MUTED }, position: 'bottom' },
     xaxis: {
       categories: props.categories,
-      labels: { style: { colors: MUTED } },
+      tickAmount: Math.min(props.categories.length, 7),
+      labels: {
+        style: { colors: MUTED, fontSize: '11px' },
+        rotate: -45,
+        rotateAlways: false,
+        hideOverlappingLabels: true,
+        trim: true,
+        maxHeight: 60
+      },
       axisBorder: { color: GRID },
       axisTicks: { color: GRID }
     },

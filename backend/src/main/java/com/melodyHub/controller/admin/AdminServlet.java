@@ -72,6 +72,11 @@ public class AdminServlet extends JsonServlet {
                 handleListSongs(request, response);
                 return;
             }
+            if ("/songs/counts".equals(path)) {
+                writeJson(response, HttpServletResponse.SC_OK,
+                        adminSongService.getStatusCounts(getBearerToken(request)));
+                return;
+            }
 
             writeError(response, HttpServletResponse.SC_NOT_FOUND, "NOT_FOUND", "Admin endpoint was not found");
         } catch (AuthException exception) {
@@ -208,10 +213,11 @@ public class AdminServlet extends JsonServlet {
 
         SongStatus status = parseSongStatus(request.getParameter("status"));
         String query = request.getParameter("q");
+        String sort = request.getParameter("sort");
         writeJson(
                 response,
                 HttpServletResponse.SC_OK,
-                adminSongService.listSongs(getBearerToken(request), status, query, page, size)
+                adminSongService.listSongs(getBearerToken(request), status, query, sort, page, size)
         );
     }
 

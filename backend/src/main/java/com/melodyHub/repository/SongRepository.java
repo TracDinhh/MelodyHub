@@ -827,13 +827,16 @@ public class SongRepository {
 
     /**
      * Lists all songs (any status), optionally filtered by status and/or title.
-     * Excludes soft-deleted songs. Used exclusively by the admin song management page.
+     * Excludes soft-deleted songs. Supports admin-defined sort order.
+     *
+     * @param sort one of: newest, oldest, most_played, least_played, title_asc, title_desc
      */
-    public List<Song> findAllPage(SongStatus status, String titleQuery, int size, int offset) throws SQLException {
+    public List<Song> findAllPage(SongStatus status, String titleQuery, String sort, int size, int offset)
+            throws SQLException {
         List<Object> parameters = new ArrayList<>();
         String sql = "SELECT " + SONG_COLUMNS + " FROM songs"
                 + buildAdminFilterClause(status, titleQuery, parameters)
-                + " ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?";
+                + " ORDER BY " + resolveAdminSort(sort) + " LIMIT ? OFFSET ?";
         parameters.add(size);
         parameters.add(offset);
 
@@ -912,6 +915,40 @@ public class SongRepository {
             statement.setInt(1, songId);
             return statement.executeUpdate();
         }
+    }
+
+    /**
+     * Returns counts per status for admin summary badges (e.g. Published: 120, Hidden: 3).
+     * Excludes soft-deleted songs.
+     */
+    public java.util.Map<String, Long> countAllByStatus() throws SQLException {
+        String sql = """
+                SELECT status, COUNT(*) AS cnt
+                FROM songs
+                WHERE deleted_at IS NULL
+                GROUP BY status
+                """;
+        java.util.Map<String, Long> counts = new java.util.LinkedHashMap<>();
+        try (var connection = getConnection();
+             var statement = connection.prepareStatement(sql);
+             var resultSet = statement.executeQuery()) {
+            while (resultSet.next()) {
+                counts.put(resultSet.getString("status"), resultSet.getLong("cnt"));
+            }
+        }
+        return counts;
+    }
+
+    private String resolveAdminSort(String sort) {
+        if (sort == null) return "created_at DESC, id DESC";
+        return switch (sort) {
+            case "oldest" -> "created_at ASC, id ASC";
+            case "most_played" -> "play_count DESC, created_at DESC";
+            case "least_played" -> "play_count ASC, created_at DESC";
+            case "title_asc" -> "title ASC, id ASC";
+            case "title_desc" -> "title DESC, id DESC";
+            default -> "created_at DESC, id DESC";
+        };
     }
 
     private String buildAdminFilterClause(SongStatus status, String titleQuery, List<Object> parameters) {
