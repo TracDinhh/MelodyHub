@@ -10,6 +10,8 @@ import com.melodyHub.entity.Artist;
 import com.melodyHub.exception.ArtistException;
 import com.melodyHub.exception.AuthException;
 import com.melodyHub.exception.SongException;
+import com.melodyHub.lyrics.LyricsLookupResponse;
+import com.melodyHub.lyrics.LyricsLookupService;
 import com.melodyHub.service.artist.ArtistAccountService;
 import com.melodyHub.service.artist.ArtistRegistrationService;
 import com.melodyHub.service.artist.ArtistSongService;
@@ -29,12 +31,14 @@ public class ArtistServlet extends JsonServlet {
     private ArtistAccountService artistAccountService;
     private ArtistSongService artistSongService;
     private ArtistRegistrationService artistRegistrationService;
+    private LyricsLookupService lyricsLookupService;
 
     @Override
     public void init() throws ServletException {
         artistAccountService = new ArtistAccountService();
         artistSongService = new ArtistSongService();
         artistRegistrationService = new ArtistRegistrationService();
+        lyricsLookupService = new LyricsLookupService();
     }
 
     @Override
@@ -57,6 +61,13 @@ public class ArtistServlet extends JsonServlet {
                         HttpServletResponse.SC_OK,
                         artistAccountService.getCurrentArtistProfile(getBearerToken(request))
                 );
+                return;
+            }
+
+            if ("/lyrics/search".equals(path)) {
+                // Artist must be authenticated to use lyrics lookup
+                artistAccountService.getCurrentArtist(getBearerToken(request));
+                handleLyricsSearch(request, response);
                 return;
             }
 
@@ -140,6 +151,34 @@ public class ArtistServlet extends JsonServlet {
                 "SONG_NOT_FOUND",
                 "Song was not found"
         );
+    }
+
+    private void handleLyricsSearch(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+        String title = request.getParameter("title");
+        String artist = request.getParameter("artist");
+        String album = request.getParameter("album");
+        String durationParam = request.getParameter("duration");
+
+        Integer duration = null;
+        if (durationParam != null && !durationParam.isBlank()) {
+            try {
+                duration = Integer.parseInt(durationParam.trim());
+            } catch (NumberFormatException e) {
+                writeError(response, HttpServletResponse.SC_BAD_REQUEST,
+                        "INVALID_LYRICS_SEARCH", "Duration must be a number");
+                return;
+            }
+        }
+
+        try {
+            LyricsLookupResponse result = lyricsLookupService.lookup(
+                    title, artist, album, duration);
+            writeJson(response, HttpServletResponse.SC_OK, result);
+        } catch (IllegalArgumentException e) {
+            writeError(response, HttpServletResponse.SC_BAD_REQUEST,
+                    "INVALID_LYRICS_SEARCH", e.getMessage());
+        }
     }
 
     @Override

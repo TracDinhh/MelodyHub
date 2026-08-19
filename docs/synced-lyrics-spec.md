@@ -122,7 +122,100 @@ ALTER TABLE songs MODIFY COLUMN lyrics LONGTEXT; -- hỗ trợ cả plain và JS
 
 1. **Manual Input**: Artist nhập thời gian bằng tay (MM:SS.ms)
 2. **Tap to Set**: Click nút khi đang play nhạc → tự động capture thời gian hiện tại
-3. **Auto-sync (Future)**: AI/dịch vụ bên thứ 3 tự động sync
+3. **Auto Lyrics Lookup (LRCLIB)**: Tự tìm synced lyrics từ LRCLIB và fill vào editor
+
+### 3.4 Auto Lyrics Lookup (LRCLIB Integration)
+
+**LRCLIB does NOT generate lyrics.** It retrieves lyrics that already exist in its database.
+
+#### Flow
+
+```
+Artist nhập thông tin bài hát (title, artist, duration)
+        │
+        ▼
+Click "✨ Find Lyrics Automatically"
+        │
+        ▼
+Frontend → GET /api/artist/lyrics/search
+        │
+        ▼
+MelodyHub Backend → LyricsLookupService
+        │
+        ▼
+LrclibLyricsProvider
+        │
+        ├── GET /api/get (exact match)
+        │   └── 404? → fallback to search
+        │
+        └── GET /api/search (broader)
+        │
+        ▼
+LrcParser (parse LRC → MelodyHub format)
+        │
+        ▼
+MatchScorer (score candidates)
+        │
+        ▼
+LyricsLookupResponse (normalized DTO)
+        │
+        ▼
+Frontend receives candidates
+        │
+        ├── Single high-confidence → auto-select
+        └── Multiple → artist chọn
+        │
+        ▼
+Artist clicks "Use selected lyrics"
+        │
+        ▼
+LyricsEditor populated (SYNCED or PLAIN)
+        │
+        ▼
+Artist review/edit → Save → existing ArtistSongService → song_lyrics
+```
+
+#### Architecture
+
+```
+backend/src/main/java/com/melodyHub/lyrics/
+├── LyricsProvider.java           # Interface cho providers
+├── LyricsProviderException.java  # Exception type
+├── LyricsSearchResult.java       # Raw result from provider
+├── LyricsLookupService.java      # Orchestration + validation
+├── LyricsLookupResponse.java     # Normalized DTO for frontend
+├── LrcParser.java                # LRC format → structured lines
+├── MatchScorer.java              # Candidate scoring
+└── provider/
+    └── LrclibLyricsProvider.java # LRCLIB API implementation
+```
+
+#### Scoring
+
+| Criterion            | Points |
+|----------------------|--------|
+| Title exact match    | 40     |
+| Artist exact match   | 30     |
+| Album exact match    | 10     |
+| Duration ≤ 2 sec     | 20     |
+| Duration ≤ 5 sec     | 15     |
+| Duration ≤ 10 sec    | 5      |
+| Duration > 10 sec    | 0      |
+
+Score ≥ 90 → auto-select. Score < 30 → filtered out.
+
+#### Fallback Priority
+
+1. Synced lyrics (LRC format → parsed timestamps)
+2. Plain lyrics (text only)
+3. Manual editor (no auto-fill)
+
+#### Limitations
+
+- LRCLIB may not contain newly released or original songs
+- AI transcription is not implemented
+- Word-by-word synchronization is not implemented
+- Only retrieves existing lyrics, does not generate them
 
 ---
 

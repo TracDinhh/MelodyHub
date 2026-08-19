@@ -4,7 +4,10 @@ import { useRouter } from 'vue-router';
 import { AudioLines, ImagePlus, LoaderCircle, Music2, UploadCloud } from '@lucide/vue';
 import { songService } from '../../services/songService';
 import { uploadService } from '../../services/uploadService';
+import { useAuthStore } from '../../stores/auth.store';
 import LyricsEditor from './components/LyricsEditor.vue';
+
+const authStore = useAuthStore();
 
 const MAX_COVER_BYTES = 2 * 1024 * 1024;
 const MAX_AUDIO_BYTES = 30 * 1024 * 1024;
@@ -218,6 +221,9 @@ function formatDuration(seconds) {
             v-model="form.lyrics"
             v-model:lyricsType="lyricsType"
             :audioPreviewUrl="audioPreviewUrl"
+            :songTitle="form.title"
+            :songArtist="authStore.displayName"
+            :songDuration="durationSec"
           />
         </label>
 

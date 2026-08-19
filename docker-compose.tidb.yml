@@ -1,0 +1,39 @@
+# ============================================================
+# Docker Compose for TiDB Cloud (no local MySQL)
+# ============================================================
+# Chạy: docker compose -f docker-compose.tidb.yml --env-file .env.tidb up --build -d
+# ============================================================
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: melodyhub-backend
+    environment:
+      IMAGEKIT_PUBLIC_KEY: ${IMAGEKIT_PUBLIC_KEY}
+      IMAGEKIT_PRIVATE_KEY: ${IMAGEKIT_PRIVATE_KEY}
+      IMAGEKIT_URL_ENDPOINT: ${IMAGEKIT_URL_ENDPOINT}
+      CATALINA_OPTS: >-
+        -Ddb.url='${DB_URL:?Set DB_URL in .env.tidb}'
+        -Ddb.username='${DB_USERNAME:?Set DB_USERNAME in .env.tidb}'
+        -Ddb.password='${DB_PASSWORD:?Set DB_PASSWORD in .env.tidb}'
+        -Ddb.driver-class-name='com.mysql.cj.jdbc.Driver'
+        -Dupload.base-dir='/usr/local/tomcat/uploads'
+        -Dcors.allowed-origin='${CORS_ALLOWED_ORIGIN:?Set CORS_ALLOWED_ORIGIN in .env.tidb}'
+        -Djwt.secret='${JWT_SECRET:?Set JWT_SECRET in .env.tidb}'
+        -Djwt.expires-minutes='${JWT_EXPIRES_MINUTES:?Set JWT_EXPIRES_MINUTES in .env.tidb}'
+        -Drefresh-token.expires-days='${REFRESH_TOKEN_EXPIRES_DAYS:?Set REFRESH_TOKEN_EXPIRES_DAYS in .env.tidb}'
+        -Dpayment.plans='${PAYMENT_PLANS:?Set PAYMENT_PLANS in .env.tidb}'
+        -Dpayment.currency='${PAYMENT_CURRENCY:?Set PAYMENT_CURRENCY in .env.tidb}'
+        -Dpayment.qr.vietqr.bank='${PAYMENT_QR_VIETQR_BANK:?Set PAYMENT_QR_VIETQR_BANK in .env.tidb}'
+        -Dpayment.qr.vietqr.account='${PAYMENT_QR_VIETQR_ACCOUNT:?Set PAYMENT_QR_VIETQR_ACCOUNT in .env.tidb}'
+        -Dpayment.qr.vietqr.account-name='${PAYMENT_QR_VIETQR_ACCOUNT_NAME:?Set PAYMENT_QR_VIETQR_ACCOUNT_NAME in .env.tidb}'
+        -Dpayment.qr.static-image-url='${PAYMENT_QR_STATIC_IMAGE_URL}'
+    ports:
+      - "${BACKEND_PORT:?Set BACKEND_PORT in .env.tidb}:8080"
+    volumes:
+      - backend-uploads:/usr/local/tomcat/uploads
+
+volumes:
+  backend-uploads:
