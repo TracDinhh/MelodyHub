@@ -1,12 +1,13 @@
 <script setup>
 import { computed, onUnmounted, ref, watch } from 'vue';
-import { Play, Pause, Plus, Trash2, ListMusic } from '@lucide/vue';
+import { Play, Pause, Plus, Trash2, ListMusic, Sparkles, Check, AlertTriangle, LoaderCircle, X } from '@lucide/vue';
 import {
   convertLegacyLyricsTime,
   formatLyricsTime,
   looksLikeLegacyLyricsTimes,
   parseLyricsTime
 } from '../../../utils/lyricsTime';
+import { lyricsService } from '../../../services/lyricsService';
 
 const props = defineProps({
   modelValue: {
@@ -20,6 +21,26 @@ const props = defineProps({
   audioPreviewUrl: {
     type: String,
     default: ''
+  },
+  /** Song title — needed for auto-fetch. */
+  songTitle: {
+    type: String,
+    default: ''
+  },
+  /** Artist name — needed for auto-fetch. */
+  songArtist: {
+    type: String,
+    default: ''
+  },
+  /** Album name — optional for auto-fetch. */
+  songAlbum: {
+    type: String,
+    default: ''
+  },
+  /** Duration in seconds — optional for auto-fetch. */
+  songDuration: {
+    type: Number,
+    default: 0
   }
 });
 
@@ -33,6 +54,28 @@ const duration = ref(0);
 
 // Parse lyrics from JSON
 const lines = ref([]);
+
+// --- Auto-fetch lyrics state ---
+const isFetching = ref(false);
+const fetchResult = ref(null);  // LyricsLookupResponse from backend
+const fetchError = ref('');
+const selectedCandidate = ref(null);
+const showConfirmReplace = ref(false);
+
+const canAutoFetch = computed(() =>
+  !!(props.songTitle && props.songTitle.trim() && props.songArtist && props.songArtist.trim())
+);
+
+const autoFetchDisabledReason = computed(() => {
+  if (!props.songTitle || !props.songTitle.trim()) return 'Enter song title first.';
+  if (!props.songArtist || !props.songArtist.trim()) return 'Enter artist name first.';
+  return '';
+});
+
+const hasExistingLyrics = computed(() => {
+  if (props.lyricsType === 'SYNCED') return lines.value.some(l => l.text.trim());
+  return !!(props.modelValue && props.modelValue.trim());
+});
 
 // Tracks the exact JSON we last emitted so we can ignore the echo coming back
 // through modelValue (otherwise every SET/keystroke rebuilds `lines` and the
@@ -166,6 +209,13 @@ function formatTime(seconds) {
   return `${m}:${String(s).padStart(4, '0')}`;
 }
 
+function formatDurationDisplay(sec) {
+  if (!sec) return '';
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
 // Current active line index based on currentTime
 const activeLineIndex = computed(() => {
   if (props.lyricsType !== 'SYNCED') return -1;
@@ -220,6 +270,105 @@ function toggleLyricsType() {
   }
 }
 
+// --- Auto-fetch lyrics ---
+async function autoFetchLyrics() {
+  if (isFetching.value || !canAutoFetch.value) return;
+
+  isFetching.value = true;
+  fetchError.value = '';
+  fetchResult.value = null;
+  selectedCandidate.value = null;
+
+  try {
+    const result = await lyricsService.searchLyrics({
+      title: props.songTitle.trim(),
+      artist: props.songArtist.trim(),
+      album: props.songAlbum ? props.songAlbum.trim() : undefined,
+      duration: props.songDuration || undefined
+    });
+    fetchResult.value = result;
+
+    // Auto-select if single high-confidence result
+    if (result.found && result.candidates?.length === 1 && result.candidates[0].score >= 90) {
+      selectedCandidate.value = result.candidates[0];
+    }
+  } catch (err) {
+    const code = err?.code;
+    if (code === 'INVALID_LYRICS_SEARCH') {
+      fetchError.value = err.message || 'Invalid search parameters.';
+    } else if (code === 'NETWORK_ERROR') {
+      fetchError.value = 'Unable to reach the server. Check your connection.';
+    } else {
+      fetchError.value = err.message || 'An error occurred while searching for lyrics.';
+    }
+  } finally {
+    isFetching.value = false;
+  }
+}
+
+function selectCandidate(candidate) {
+  selectedCandidate.value = candidate;
+}
+
+function applySelectedLyrics() {
+  if (!selectedCandidate.value) return;
+
+  if (hasExistingLyrics.value) {
+    showConfirmReplace.value = true;
+    return;
+  }
+
+  doApplyLyrics(selectedCandidate.value);
+}
+
+function confirmReplace() {
+  showConfirmReplace.value = false;
+  if (selectedCandidate.value) {
+    doApplyLyrics(selectedCandidate.value);
+  }
+}
+
+function cancelReplace() {
+  showConfirmReplace.value = false;
+}
+
+function doApplyLyrics(candidate) {
+  if (candidate.lyricsType === 'SYNCED' && candidate.lyrics?.lines?.length) {
+    // Apply synced lyrics
+    lines.value = candidate.lyrics.lines.map(l => ({
+      startTime: l.startTime,
+      endTime: l.endTime,
+      text: l.text
+    }));
+    emit('update:lyricsType', 'SYNCED');
+    flushSynced();
+  } else if (candidate.lyricsType === 'PLAIN' && candidate.plainLyrics) {
+    // Apply plain lyrics
+    emit('update:lyricsType', 'PLAIN');
+    emit('update:modelValue', candidate.plainLyrics);
+    // Also seed lines for potential synced switch
+    lines.value = [];
+  }
+
+  // Clear the result panel after applying
+  fetchResult.value = null;
+  selectedCandidate.value = null;
+}
+
+function dismissResults() {
+  fetchResult.value = null;
+  fetchError.value = '';
+  selectedCandidate.value = null;
+}
+
+function providerErrorMessage(response) {
+  if (!response) return '';
+  const code = response.errorCode;
+  if (code === 'RATE_LIMITED') return 'Lyrics provider is temporarily rate limited. Try again later.';
+  if (code === 'PROVIDER_UNAVAILABLE') return 'Lyrics provider is currently unavailable. Try again later.';
+  return 'No synced lyrics were found. You can continue manually.';
+}
+
 onUnmounted(() => {
   if (emitTimer) {
     clearTimeout(emitTimer);
@@ -247,6 +396,126 @@ onUnmounted(() => {
       <span class="text-xs text-[#666]">
         {{ lyricsType === 'PLAIN' ? 'Simple text lyrics' : 'Lyrics with timestamps' }}
       </span>
+    </div>
+
+    <!-- ✨ Auto Find Lyrics Button -->
+    <div class="rounded-lg border border-white/10 bg-gradient-to-r from-[#16C65A]/5 to-transparent p-4">
+      <div class="flex flex-wrap items-center gap-3">
+        <button
+          id="auto-find-lyrics-btn"
+          type="button"
+          :disabled="!canAutoFetch || isFetching"
+          @click="autoFetchLyrics"
+          class="inline-flex items-center gap-2 rounded-lg border border-[#16C65A]/40 bg-[#16C65A]/10 px-4 py-2.5 text-sm font-bold text-[#16C65A] transition hover:bg-[#16C65A]/20 hover:border-[#16C65A]/70 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-[#16C65A]/10 disabled:hover:border-[#16C65A]/40"
+        >
+          <LoaderCircle v-if="isFetching" :size="16" class="animate-spin" />
+          <Sparkles v-else :size="16" />
+          {{ isFetching ? 'Finding lyrics...' : '✨ Find Lyrics Automatically' }}
+        </button>
+        <span v-if="!canAutoFetch" class="text-xs text-[#666]">
+          {{ autoFetchDisabledReason }}
+        </span>
+      </div>
+
+      <!-- Error message -->
+      <div v-if="fetchError" class="mt-3 flex items-start gap-2 rounded-md bg-red-500/10 px-3 py-2">
+        <AlertTriangle :size="14" class="mt-0.5 shrink-0 text-red-400" />
+        <p class="text-xs text-red-300">{{ fetchError }}</p>
+        <button type="button" @click="fetchError = ''" class="ml-auto shrink-0 text-red-400 hover:text-red-300">
+          <X :size="14" />
+        </button>
+      </div>
+
+      <!-- Results: Not Found -->
+      <div v-if="fetchResult && !fetchResult.found" class="mt-3 flex items-start gap-2 rounded-md bg-yellow-500/10 px-3 py-2">
+        <AlertTriangle :size="14" class="mt-0.5 shrink-0 text-yellow-400" />
+        <p class="text-xs text-yellow-300">{{ providerErrorMessage(fetchResult) }}</p>
+        <button type="button" @click="dismissResults" class="ml-auto shrink-0 text-yellow-400 hover:text-yellow-300">
+          <X :size="14" />
+        </button>
+      </div>
+
+      <!-- Results: Found candidates -->
+      <div v-if="fetchResult && fetchResult.found && fetchResult.candidates?.length" class="mt-3 space-y-3">
+        <div class="flex items-center gap-2">
+          <Check :size="14" class="text-[#16C65A]" />
+          <span class="text-xs font-bold text-[#16C65A]">
+            {{ fetchResult.candidates.length === 1 ? 'Lyrics found' : `Found ${fetchResult.candidates.length} possible matches` }}
+          </span>
+          <span class="text-xs text-[#666]">Source: {{ fetchResult.source }}</span>
+          <button type="button" @click="dismissResults" class="ml-auto text-[#666] hover:text-white">
+            <X :size="14" />
+          </button>
+        </div>
+
+        <!-- Candidate list -->
+        <div class="max-h-[280px] space-y-2 overflow-y-auto">
+          <button
+            v-for="(candidate, idx) in fetchResult.candidates"
+            :key="idx"
+            type="button"
+            @click="selectCandidate(candidate)"
+            class="flex w-full items-start gap-3 rounded-lg border px-3 py-2.5 text-left transition"
+            :class="selectedCandidate === candidate
+              ? 'border-[#16C65A]/70 bg-[#16C65A]/10'
+              : 'border-white/10 bg-white/[0.02] hover:border-white/20 hover:bg-white/[0.04]'"
+          >
+            <div class="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border"
+              :class="selectedCandidate === candidate ? 'border-[#16C65A] bg-[#16C65A]' : 'border-white/30'"
+            >
+              <div v-if="selectedCandidate === candidate" class="h-1.5 w-1.5 rounded-full bg-black" />
+            </div>
+            <div class="min-w-0 flex-1">
+              <p class="truncate text-sm font-bold text-white">{{ candidate.trackName }}</p>
+              <p class="truncate text-xs text-[#999]">{{ candidate.artistName }}</p>
+              <div class="mt-1 flex flex-wrap items-center gap-2">
+                <span v-if="candidate.albumName" class="text-xs text-[#666]">{{ candidate.albumName }}</span>
+                <span v-if="candidate.durationSec" class="text-xs text-[#666]">{{ formatDurationDisplay(candidate.durationSec) }}</span>
+                <span class="rounded-full px-1.5 py-0.5 text-[10px] font-bold"
+                  :class="candidate.lyricsType === 'SYNCED'
+                    ? 'bg-[#16C65A]/20 text-[#16C65A]'
+                    : 'bg-blue-500/20 text-blue-400'"
+                >
+                  {{ candidate.lyricsType === 'SYNCED' ? '✓ Synced' : 'Plain' }}
+                </span>
+                <span class="text-xs text-[#666]">Match: {{ candidate.score }}%</span>
+              </div>
+            </div>
+          </button>
+        </div>
+
+        <!-- Use selected button -->
+        <button
+          v-if="selectedCandidate"
+          type="button"
+          @click="applySelectedLyrics"
+          class="inline-flex items-center gap-2 rounded-lg bg-[#16C65A] px-4 py-2 text-xs font-black text-black transition hover:bg-[#22C55E]"
+        >
+          <Check :size="14" />
+          Use selected lyrics
+        </button>
+      </div>
+
+      <!-- Confirm replace dialog -->
+      <div v-if="showConfirmReplace" class="mt-3 rounded-lg border border-yellow-500/40 bg-yellow-500/10 p-3">
+        <p class="mb-3 text-xs text-yellow-200">Replace the current lyrics with the selected result?</p>
+        <div class="flex gap-2">
+          <button
+            type="button"
+            @click="confirmReplace"
+            class="rounded-lg bg-[#16C65A] px-3 py-1.5 text-xs font-bold text-black transition hover:bg-[#22C55E]"
+          >
+            Replace
+          </button>
+          <button
+            type="button"
+            @click="cancelReplace"
+            class="rounded-lg border border-white/20 bg-white/5 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-white/10"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- Plain Lyrics Mode -->

@@ -4,7 +4,10 @@ import { useRoute, useRouter } from 'vue-router';
 import { ImagePlus, LoaderCircle, Music2, Save } from '@lucide/vue';
 import { songService } from '../../services/songService';
 import { uploadService } from '../../services/uploadService';
+import { useAuthStore } from '../../stores/auth.store';
 import LyricsEditor from './components/LyricsEditor.vue';
+
+const authStore = useAuthStore();
 
 const MAX_COVER_BYTES = 2 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -20,6 +23,7 @@ const fieldErrors = reactive({ title: '', cover: '' });
 
 const form = reactive({ title: '', slug: '', lyrics: '', audioUrl: '' });
 const lyricsType = ref('PLAIN');
+const durationSec = ref(0);
 const currentCover = ref('');
 const coverFile = ref(null);
 const coverPreview = ref('');
@@ -32,6 +36,7 @@ async function load() {
     form.title = song.title || '';
     form.slug = song.slug || '';
     form.audioUrl = song.audioUrl || '';
+    durationSec.value = song.durationSec || 0;
     lyricsType.value = song.lyricsType || 'PLAIN';
     currentCover.value = song.coverUrl || '';
 
@@ -156,6 +161,9 @@ onMounted(load);
             v-model="form.lyrics"
             v-model:lyricsType="lyricsType"
             :audio-preview-url="form.audioUrl"
+            :songTitle="form.title"
+            :songArtist="authStore.displayName"
+            :songDuration="durationSec"
           />
         </label>
 
