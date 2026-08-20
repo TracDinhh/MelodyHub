@@ -515,6 +515,7 @@ public class SongRepository {
         }
 
         if (genreSlug != null) {
+            clause.append(' ');
             clause.append("""
                      AND EXISTS (
                          SELECT 1
