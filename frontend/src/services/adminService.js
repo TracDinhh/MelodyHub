@@ -68,10 +68,24 @@ export const adminService = {
   },
 
   /**
-   * Update a song's status (PUBLISHED, HIDDEN, DRAFT).
+   * Update a song's status (PUBLISHED ↔ HIDDEN only).
    */
   updateSongStatus(songId, status) {
     return apiClient.post(`/api/admin/songs/${songId}/status`, { status });
+  },
+
+  /**
+   * Approve a SUBMITTED song; publishes it to the catalog.
+   */
+  approveSong(songId) {
+    return apiClient.post(`/api/admin/songs/${songId}/approve`);
+  },
+
+  /**
+   * Reject a SUBMITTED song with a reason the artist will see.
+   */
+  rejectSong(songId, reviewNote) {
+    return apiClient.post(`/api/admin/songs/${songId}/reject`, { reviewNote });
   },
 
   /**

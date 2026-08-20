@@ -129,15 +129,22 @@ CREATE TABLE songs (
     lyrics       TEXT,
     lyrics_type  VARCHAR(10) NOT NULL DEFAULT 'PLAIN'
                  CHECK (lyrics_type IN ('PLAIN','SYNCED')),
-    status       VARCHAR(10) NOT NULL DEFAULT 'PUBLISHED'
-                 CHECK (status IN ('DRAFT','PUBLISHED','HIDDEN')),  -- admin duyet/an bai
+    status       VARCHAR(10) NOT NULL DEFAULT 'DRAFT'
+                 CONSTRAINT chk_songs_status
+                 CHECK (status IN ('DRAFT','SUBMITTED','PUBLISHED','REJECTED','HIDDEN')),
     play_count   BIGINT NOT NULL DEFAULT 0,
+    submitted_at DATETIME(6) NULL,                      -- Artist gui duyet
+    review_note  VARCHAR(500) NULL,                     -- Admin ly do reject
+    reviewed_by  INT NULL,                              -- Admin duyet/reject
+    reviewed_at  DATETIME(6) NULL,
     created_at   DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
     updated_at   DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
     deleted_at   DATETIME(6) NULL,
     CONSTRAINT uk_songs_slug UNIQUE (slug),
     CONSTRAINT fk_songs_album FOREIGN KEY (album_id)
-        REFERENCES albums(id) ON DELETE SET NULL
+        REFERENCES albums(id) ON DELETE SET NULL,
+    CONSTRAINT fk_songs_reviewer FOREIGN KEY (reviewed_by)
+        REFERENCES users(id) ON DELETE SET NULL
 );
 CREATE INDEX idx_songs_album     ON songs(album_id, track_number);
 CREATE INDEX idx_songs_playcount ON songs(play_count DESC);
@@ -187,12 +194,14 @@ CREATE TABLE genres (
     id   SMALLINT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(50) NOT NULL,
     slug VARCHAR(60) NOT NULL,
+    CONSTRAINT uk_genres_name UNIQUE (name),
     CONSTRAINT uk_genres_slug UNIQUE (slug)
 );
 
 CREATE TABLE song_genres (
     song_id  INT NOT NULL,
     genre_id SMALLINT NOT NULL,
+    position TINYINT NOT NULL DEFAULT 0,   -- 0 = primary genre, 1/2 = secondary
     PRIMARY KEY (song_id, genre_id),
     CONSTRAINT fk_sg_song  FOREIGN KEY (song_id)
         REFERENCES songs(id)  ON DELETE CASCADE,
@@ -399,6 +408,33 @@ WHERE a.slug = 'eli-vale'
   );
 
 -- -----------------------------------------------------
+-- Genre master data (Artist chon tu danh sach nay, khong free-text)
+-- -----------------------------------------------------
+INSERT INTO genres (name, slug) VALUES
+('Pop', 'pop'),
+('Hip-Hop', 'hip-hop'),
+('Rap', 'rap'),
+('R&B', 'r-and-b'),
+('Rock', 'rock'),
+('Alternative', 'alternative'),
+('Indie', 'indie'),
+('Electronic', 'electronic'),
+('EDM', 'edm'),
+('House', 'house'),
+('Dance', 'dance'),
+('Ballad', 'ballad'),
+('Jazz', 'jazz'),
+('Classical', 'classical'),
+('Country', 'country'),
+('Folk', 'folk'),
+('Metal', 'metal'),
+('Reggae', 'reggae'),
+('Soul', 'soul'),
+('Funk', 'funk'),
+('Lo-fi', 'lo-fi'),
+('Acoustic', 'acoustic');
+
+-- -----------------------------------------------------
 -- 10 bai hat mau (audio dung file mp3 cong khai cua SoundHelix)
 -- -----------------------------------------------------
 INSERT INTO songs (title, slug, duration_sec, file_path, cover_url, lyrics, lyrics_type, status, play_count) VALUES
@@ -425,6 +461,30 @@ INSERT INTO song_artists (song_id, artist_id, role, position) VALUES
 ((SELECT id FROM songs WHERE slug = 'sunroom'),         (SELECT id FROM artists WHERE slug = 'eli-vale'),    'MAIN', 0),
 ((SELECT id FROM songs WHERE slug = 'frequency'),       (SELECT id FROM artists WHERE slug = 'eli-vale'),    'MAIN', 0),
 ((SELECT id FROM songs WHERE slug = 'low-light'),       (SELECT id FROM artists WHERE slug = 'eli-vale'),    'MAIN', 0);
+
+-- Gan genre cho tung bai mau (position 0 = primary genre).
+INSERT INTO song_genres (song_id, genre_id, position) VALUES
+((SELECT id FROM songs WHERE slug = 'velvet-hours'),   (SELECT id FROM genres WHERE slug = 'alternative'), 0),
+((SELECT id FROM songs WHERE slug = 'velvet-hours'),   (SELECT id FROM genres WHERE slug = 'r-and-b'),      1),
+((SELECT id FROM songs WHERE slug = 'afterglow'),      (SELECT id FROM genres WHERE slug = 'electronic'),   0),
+((SELECT id FROM songs WHERE slug = 'afterglow'),      (SELECT id FROM genres WHERE slug = 'dance'),        1),
+((SELECT id FROM songs WHERE slug = 'slow-motion'),    (SELECT id FROM genres WHERE slug = 'r-and-b'),      0),
+((SELECT id FROM songs WHERE slug = 'slow-motion'),    (SELECT id FROM genres WHERE slug = 'soul'),         1),
+((SELECT id FROM songs WHERE slug = 'no-signal'),      (SELECT id FROM genres WHERE slug = 'electronic'),   0),
+((SELECT id FROM songs WHERE slug = 'no-signal'),      (SELECT id FROM genres WHERE slug = 'edm'),          1),
+((SELECT id FROM songs WHERE slug = 'open-water'),     (SELECT id FROM genres WHERE slug = 'indie'),        0),
+((SELECT id FROM songs WHERE slug = 'open-water'),     (SELECT id FROM genres WHERE slug = 'folk'),         1),
+((SELECT id FROM songs WHERE slug = 'midnight-bloom'), (SELECT id FROM genres WHERE slug = 'pop'),          0),
+((SELECT id FROM songs WHERE slug = 'midnight-bloom'), (SELECT id FROM genres WHERE slug = 'r-and-b'),      1),
+((SELECT id FROM songs WHERE slug = 'midnight-bloom'), (SELECT id FROM genres WHERE slug = 'ballad'),       2),
+((SELECT id FROM songs WHERE slug = 'paper-moons'),    (SELECT id FROM genres WHERE slug = 'indie'),        0),
+((SELECT id FROM songs WHERE slug = 'paper-moons'),    (SELECT id FROM genres WHERE slug = 'pop'),          1),
+((SELECT id FROM songs WHERE slug = 'sunroom'),        (SELECT id FROM genres WHERE slug = 'acoustic'),     0),
+((SELECT id FROM songs WHERE slug = 'sunroom'),        (SELECT id FROM genres WHERE slug = 'indie'),        1),
+((SELECT id FROM songs WHERE slug = 'frequency'),      (SELECT id FROM genres WHERE slug = 'edm'),          0),
+((SELECT id FROM songs WHERE slug = 'frequency'),      (SELECT id FROM genres WHERE slug = 'house'),        1),
+((SELECT id FROM songs WHERE slug = 'low-light'),      (SELECT id FROM genres WHERE slug = 'jazz'),         0),
+((SELECT id FROM songs WHERE slug = 'low-light'),      (SELECT id FROM genres WHERE slug = 'lo-fi'),        1);
 
 -- Bai hat mau co lyrics dong bo de kiem thu Premium lyrics / lyric card.
 INSERT INTO song_lyrics (song_id, line_number, start_time_ms, lyric_text) VALUES

@@ -21,8 +21,12 @@ public class Song {
     private String coverUrl;
     private String lyrics;
     private LyricsType lyricsType = LyricsType.PLAIN;
-    private SongStatus status = SongStatus.PUBLISHED;
+    private SongStatus status = SongStatus.DRAFT;
     private Long playCount = 0L;
+    private LocalDateTime submittedAt;
+    private String reviewNote;
+    private Integer reviewedBy;
+    private LocalDateTime reviewedAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private LocalDateTime deletedAt;

@@ -6,6 +6,7 @@ import com.melodyHub.entity.SongStatus;
 import com.melodyHub.entity.UserRole;
 import com.melodyHub.exception.ArtistException;
 import com.melodyHub.exception.AuthException;
+import com.melodyHub.exception.SongException;
 import com.melodyHub.service.admin.AdminArtistAccessRequestService;
 import com.melodyHub.service.admin.AdminSongService;
 import com.melodyHub.service.admin.AdminStatsService;
@@ -115,6 +116,27 @@ public class AdminServlet extends JsonServlet {
                 return;
             }
 
+            Integer songApproveId = matchSongAction(path, "approve");
+            if (songApproveId != null) {
+                writeJson(
+                        response,
+                        HttpServletResponse.SC_OK,
+                        adminSongService.approve(getBearerToken(request), songApproveId)
+                );
+                return;
+            }
+
+            Integer songRejectId = matchSongAction(path, "reject");
+            if (songRejectId != null) {
+                String note = readReviewNote(request);
+                writeJson(
+                        response,
+                        HttpServletResponse.SC_OK,
+                        adminSongService.reject(getBearerToken(request), songRejectId, note)
+                );
+                return;
+            }
+
             Integer songStatusId = matchSongAction(path, "status");
             if (songStatusId != null) {
                 handleUpdateSongStatus(request, response, songStatusId);
@@ -126,6 +148,8 @@ public class AdminServlet extends JsonServlet {
             writeError(response, getStatusCode(exception), exception.getCode(), exception.getMessage());
         } catch (ArtistException exception) {
             writeError(response, getStatusCode(exception), exception.getCode(), exception.getMessage());
+        } catch (SongException exception) {
+            writeError(response, HttpServletResponse.SC_CONFLICT, exception.getCode(), exception.getMessage());
         } catch (SQLException exception) {
             writeError(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "DATABASE_ERROR",
                     "Database error occurred");
@@ -221,7 +245,7 @@ public class AdminServlet extends JsonServlet {
     }
 
     private void handleUpdateSongStatus(HttpServletRequest request, HttpServletResponse response, int songId)
-            throws IOException, AuthException, SQLException {
+            throws IOException, AuthException, SQLException, SongException {
         try {
             var body = objectMapper.readValue(request.getInputStream(), java.util.Map.class);
             String statusStr = body != null ? (String) body.get("status") : null;
@@ -234,7 +258,7 @@ public class AdminServlet extends JsonServlet {
                     adminSongService.updateStatus(getBearerToken(request), songId, newStatus));
         } catch (IllegalArgumentException exception) {
             writeError(response, HttpServletResponse.SC_BAD_REQUEST, "INVALID_STATUS",
-                    "status must be PUBLISHED, HIDDEN, or DRAFT");
+                    "status must be PUBLISHED or HIDDEN");
         }
     }
 
@@ -269,7 +293,7 @@ public class AdminServlet extends JsonServlet {
         try {
             return SongStatus.valueOf(value.trim().toUpperCase());
         } catch (IllegalArgumentException exception) {
-            throw new InvalidQueryParamException("status must be PUBLISHED, HIDDEN, or DRAFT");
+            throw new InvalidQueryParamException("status must be DRAFT, SUBMITTED, PUBLISHED, REJECTED, or HIDDEN");
         }
     }
 

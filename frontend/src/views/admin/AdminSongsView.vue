@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue';
 import {
   AlertTriangle,
   ArrowDownUp,
+  BadgeCheck,
   CheckCircle,
   ChevronDown,
   ChevronLeft,
@@ -17,7 +18,8 @@ import {
   RefreshCw,
   Search,
   Trash2,
-  X
+  X,
+  XCircle
 } from '@lucide/vue';
 import { adminService } from '../../services/adminService';
 
@@ -25,12 +27,16 @@ import { adminService } from '../../services/adminService';
 const STATUS_TABS = [
   { key: '', label: 'All', color: 'text-white' },
   { key: 'PUBLISHED', label: 'Published', color: 'text-emerald-300' },
+  { key: 'SUBMITTED', label: 'Submitted', color: 'text-sky-300' },
+  { key: 'REJECTED', label: 'Rejected', color: 'text-red-300' },
   { key: 'HIDDEN', label: 'Hidden', color: 'text-amber-300' },
   { key: 'DRAFT', label: 'Draft', color: 'text-[#999]' }
 ];
 
 const STATUS_BADGE = {
   PUBLISHED: 'bg-emerald-400/15 text-emerald-300',
+  SUBMITTED: 'bg-sky-400/15 text-sky-300',
+  REJECTED: 'bg-red-400/15 text-red-300',
   HIDDEN: 'bg-amber-400/15 text-amber-300',
   DRAFT: 'bg-white/10 text-[#999]'
 };
@@ -65,6 +71,9 @@ const pageSizeOpen = ref(false);
 
 // Modal
 const confirmModal = ref(null);
+const rejectModal = ref(null);
+const rejectReason = ref('');
+const rejectLoading = ref(false);
 const actionLoading = ref(false);
 
 // Toast
@@ -184,8 +193,17 @@ function doSearch() {
 
 // ---- ACTIONS ----
 function openStatusChange(song, newStatus) {
-  const actionLabel = newStatus === 'PUBLISHED' ? 'Publish' : newStatus === 'HIDDEN' ? 'Hide' : 'Draft';
+  const actionLabel = newStatus === 'PUBLISHED' ? 'Publish' : 'Hide';
   confirmModal.value = { songId: song.id, songTitle: song.title, action: actionLabel, newStatus, type: 'status' };
+}
+
+function openApprove(song) {
+  confirmModal.value = { songId: song.id, songTitle: song.title, action: 'Approve', type: 'approve' };
+}
+
+function openReject(song) {
+  rejectModal.value = { songId: song.id, songTitle: song.title };
+  rejectReason.value = '';
 }
 
 function openDelete(song) {
@@ -194,11 +212,16 @@ function openDelete(song) {
 
 function closeModal() { confirmModal.value = null; }
 
+function closeReject() { rejectModal.value = null; }
+
 async function confirmAction() {
   if (!confirmModal.value || actionLoading.value) return;
   actionLoading.value = true;
   try {
-    if (confirmModal.value.type === 'status') {
+    if (confirmModal.value.type === 'approve') {
+      await adminService.approveSong(confirmModal.value.songId);
+      showToast('success', `"${confirmModal.value.songTitle}" published`);
+    } else if (confirmModal.value.type === 'status') {
       await adminService.updateSongStatus(confirmModal.value.songId, confirmModal.value.newStatus);
       showToast('success', `"${confirmModal.value.songTitle}" → ${confirmModal.value.newStatus}`);
     } else {
@@ -211,6 +234,26 @@ async function confirmAction() {
     showToast('error', e.message || 'Action failed');
   } finally {
     actionLoading.value = false;
+  }
+}
+
+async function confirmReject() {
+  if (!rejectModal.value || rejectLoading.value) return;
+  const note = rejectReason.value.trim();
+  if (!note) {
+    showToast('error', 'A review note is required.');
+    return;
+  }
+  rejectLoading.value = true;
+  try {
+    await adminService.rejectSong(rejectModal.value.songId, note);
+    showToast('success', `"${rejectModal.value.songTitle}" rejected`);
+    closeReject();
+    await Promise.all([load(), loadCounts()]);
+  } catch (e) {
+    showToast('error', e.message || 'Action failed');
+  } finally {
+    rejectLoading.value = false;
   }
 }
 
@@ -409,13 +452,25 @@ onMounted(() => {
               <td class="px-4 py-3" @click.stop>
                 <div class="flex items-center justify-center gap-1">
                   <button
-                    v-if="song.status !== 'PUBLISHED'"
+                    v-if="song.status === 'SUBMITTED'"
+                    class="grid size-8 place-items-center rounded-md text-emerald-400 transition hover:bg-emerald-400/15"
+                    title="Approve & publish"
+                    @click="openApprove(song)"
+                  ><BadgeCheck :size="15" /></button>
+                  <button
+                    v-if="song.status === 'SUBMITTED'"
+                    class="grid size-8 place-items-center rounded-md text-red-400 transition hover:bg-red-400/15"
+                    title="Reject with reason"
+                    @click="openReject(song)"
+                  ><XCircle :size="15" /></button>
+                  <button
+                    v-if="song.status === 'HIDDEN'"
                     class="grid size-8 place-items-center rounded-md text-emerald-400 transition hover:bg-emerald-400/15"
                     title="Publish"
                     @click="openStatusChange(song, 'PUBLISHED')"
                   ><Eye :size="15" /></button>
                   <button
-                    v-if="song.status !== 'HIDDEN'"
+                    v-if="song.status === 'PUBLISHED'"
                     class="grid size-8 place-items-center rounded-md text-amber-400 transition hover:bg-amber-400/15"
                     title="Hide"
                     @click="openStatusChange(song, 'HIDDEN')"
@@ -477,6 +532,29 @@ onMounted(() => {
                     <span class="font-medium">{{ a.name }}</span>
                   </span>
                 </div>
+                <div v-if="song.genres && song.genres.length" class="mt-3 flex flex-wrap gap-2">
+                  <span
+                    v-for="g in song.genres"
+                    :key="g.id"
+                    class="flex items-center gap-2 rounded-full bg-white/5 px-3 py-1.5 text-xs text-[#ccc]"
+                  >
+                    <span class="font-medium">{{ g.name }}</span>
+                  </span>
+                </div>
+                <div v-if="song.submittedAt" class="mt-3 grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <p class="text-[10px] font-bold uppercase tracking-wide text-[#777]">Submitted</p>
+                    <p class="text-sm text-white">{{ formatDate(song.submittedAt) }}</p>
+                  </div>
+                  <div v-if="song.reviewedAt">
+                    <p class="text-[10px] font-bold uppercase tracking-wide text-[#777]">Reviewed</p>
+                    <p class="text-sm text-white">{{ formatDate(song.reviewedAt) }}</p>
+                  </div>
+                </div>
+                <div v-if="song.reviewNote" class="mt-3 rounded-md border border-amber-500/20 bg-amber-500/5 px-3 py-2">
+                  <p class="text-[10px] font-bold uppercase tracking-wide text-amber-300">Review note</p>
+                  <p class="mt-0.5 text-xs text-[#ccc]">{{ song.reviewNote }}</p>
+                </div>
                 <div v-if="song.audioUrl" class="mt-3">
                   <audio :src="song.audioUrl" controls preload="none" class="h-8 w-full max-w-md rounded-lg" />
                 </div>
@@ -518,7 +596,9 @@ onMounted(() => {
           <div class="mb-4 flex items-center gap-3">
             <div
               class="grid size-10 place-items-center rounded-full"
-              :class="confirmModal.type === 'delete' ? 'bg-red-500/15 text-red-400' : 'bg-amber-500/15 text-amber-400'"
+              :class="confirmModal.type === 'delete' ? 'bg-red-500/15 text-red-400'
+                : confirmModal.type === 'approve' ? 'bg-emerald-500/15 text-emerald-400'
+                : 'bg-amber-500/15 text-amber-400'"
             ><AlertTriangle :size="20" /></div>
             <h3 class="text-lg font-bold text-white">{{ confirmModal.action }} song?</h3>
           </div>
@@ -526,6 +606,9 @@ onMounted(() => {
             <template v-if="confirmModal.type === 'delete'">
               This will permanently delete "<span class="font-bold text-white">{{ confirmModal.songTitle }}</span>".
               This action cannot be undone.
+            </template>
+            <template v-else-if="confirmModal.type === 'approve'">
+              Publish "<span class="font-bold text-white">{{ confirmModal.songTitle }}</span>" to the public catalog?
             </template>
             <template v-else>
               Change "<span class="font-bold text-white">{{ confirmModal.songTitle }}</span>" status to
@@ -546,6 +629,46 @@ onMounted(() => {
             >
               <LoaderCircle v-if="actionLoading" :size="14" class="mr-1 inline animate-spin" />
               {{ confirmModal.action }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Reject modal -->
+    <Teleport to="body">
+      <div v-if="rejectModal" class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm" @click.self="closeReject">
+        <div class="relative w-full max-w-md rounded-2xl border border-white/10 bg-[#111827] p-6 shadow-2xl">
+          <button class="absolute right-4 top-4 text-[#888] hover:text-white" @click="closeReject"><X :size="18" /></button>
+          <div class="mb-4 flex items-center gap-3">
+            <div class="grid size-10 place-items-center rounded-full bg-red-500/15 text-red-400"><XCircle :size="20" /></div>
+            <div>
+              <h3 class="text-lg font-bold text-white">Reject song</h3>
+              <p class="truncate text-xs text-[#888]">{{ rejectModal.songTitle }}</p>
+            </div>
+          </div>
+          <p class="mb-2 text-xs text-[#aaa]">The artist will see this note and can resubmit after fixing it.</p>
+          <textarea
+            v-model="rejectReason"
+            rows="3"
+            maxlength="500"
+            placeholder="Why is this song being rejected?"
+            class="w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-white outline-none placeholder:text-[#666] focus:border-red-400/60"
+          ></textarea>
+          <p class="mt-1 text-right text-[10px] text-[#666]">{{ rejectReason.length }}/500</p>
+          <div class="mt-4 flex justify-end gap-3">
+            <button
+              class="h-9 rounded-full border border-white/15 px-5 text-xs font-bold text-[#bbb] transition hover:border-white/30 hover:text-white"
+              :disabled="rejectLoading"
+              @click="closeReject"
+            >Cancel</button>
+            <button
+              class="h-9 rounded-full bg-red-500 px-5 text-xs font-bold text-white transition hover:bg-red-600 disabled:opacity-50"
+              :disabled="rejectLoading"
+              @click="confirmReject"
+            >
+              <LoaderCircle v-if="rejectLoading" :size="14" class="mr-1 inline animate-spin" />
+              Reject song
             </button>
           </div>
         </div>

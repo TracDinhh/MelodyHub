@@ -78,6 +78,15 @@ const router = createRouter({
       }
     },
     {
+      path: '/genres/:slug',
+      name: 'genre-browse',
+      component: () => import('../views/GenreBrowseView.vue'),
+      meta: {
+        title: 'Genre',
+        breadcrumb: 'Home / Genre'
+      }
+    },
+    {
       path: '/library',
       name: 'library',
       component: () => import('../views/LibraryView.vue'),

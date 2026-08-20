@@ -2,6 +2,7 @@ package com.melodyHub.dto.response;
 
 import com.melodyHub.entity.Album;
 import com.melodyHub.entity.Artist;
+import com.melodyHub.entity.Genre;
 import com.melodyHub.entity.LyricsType;
 import com.melodyHub.entity.Song;
 import com.melodyHub.entity.SongStatus;
@@ -41,6 +42,7 @@ public class SongDetailResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private List<ArtistSummaryResponse> artists;
+    private List<GenreResponse> genres;
     private Long likeCount;
     private Boolean isLiked;
 
@@ -48,6 +50,7 @@ public class SongDetailResponse {
             Song song,
             List<Artist> artists,
             Album album,
+            List<Genre> genres,
             long likeCount,
             boolean isLiked
     ) {
@@ -59,6 +62,12 @@ public class SongDetailResponse {
                 ? List.of()
                 : artists.stream()
                         .map(ArtistSummaryResponse::fromEntity)
+                        .toList();
+
+        List<GenreResponse> genrePayload = genres == null
+                ? List.of()
+                : genres.stream()
+                        .map(GenreResponse::fromEntity)
                         .toList();
 
         return new SongDetailResponse(
@@ -78,6 +87,7 @@ public class SongDetailResponse {
                 song.getCreatedAt(),
                 song.getUpdatedAt(),
                 artistPayload,
+                genrePayload,
                 likeCount,
                 isLiked
         );

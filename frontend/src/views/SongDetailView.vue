@@ -207,6 +207,15 @@ watch(() => route.params.slug, (slug) => slug && load(slug));
               <span>{{ formatDuration(song.durationSec) }}</span>
             </div>
 
+            <div v-if="song.genres?.length" class="mt-4 flex flex-wrap gap-2">
+              <RouterLink
+                v-for="genre in song.genres"
+                :key="genre.id"
+                :to="{ name: 'genre-browse', params: { slug: genre.slug } }"
+                class="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[11px] font-bold text-white/80 transition hover:border-[#16C65A]/60 hover:text-[#16C65A]"
+              >{{ genre.name }}</RouterLink>
+            </div>
+
             <div class="mt-5 flex flex-wrap items-center gap-3">
               <button
                 class="inline-flex h-11 items-center gap-2 rounded-full bg-[#16C65A] px-6 text-xs font-black text-black transition hover:scale-[1.03] disabled:opacity-50"

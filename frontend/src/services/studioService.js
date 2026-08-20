@@ -60,6 +60,13 @@ export const studioService = {
     return apiClient.put(`/api/studio/artists/${artistId}/songs/${songId}`, payload);
   },
 
+  /**
+   * Submit a DRAFT/REJECTED song for admin review. Moves it to SUBMITTED.
+   */
+  submitForReview(artistId, songId) {
+    return apiClient.post(`/api/studio/artists/${artistId}/songs/${songId}/submit`);
+  },
+
   updateSyncedLyrics(artistId, songId, payload) {
     return apiClient.put(`/api/studio/artists/${artistId}/songs/${songId}/lyrics`, payload);
   },
