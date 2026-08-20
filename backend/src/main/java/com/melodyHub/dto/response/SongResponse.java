@@ -4,6 +4,7 @@ import com.melodyHub.entity.LyricsType;
 import com.melodyHub.entity.Song;
 import com.melodyHub.entity.SongStatus;
 import java.time.LocalDateTime;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -26,8 +27,12 @@ public class SongResponse {
     private LyricsType lyricsType;
     private SongStatus status;
     private Long playCount;
+    private LocalDateTime submittedAt;
+    private String reviewNote;
+    private LocalDateTime reviewedAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private List<GenreResponse> genres;
 
     public static SongResponse fromEntity(Song song) {
         if (song == null) {
@@ -47,8 +52,12 @@ public class SongResponse {
                 song.getLyricsType(),
                 song.getStatus(),
                 song.getPlayCount(),
+                song.getSubmittedAt(),
+                song.getReviewNote(),
+                song.getReviewedAt(),
                 song.getCreatedAt(),
-                song.getUpdatedAt()
+                song.getUpdatedAt(),
+                null
         );
     }
 }

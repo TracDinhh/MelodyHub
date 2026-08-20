@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
 import { RouterLink, useRoute } from 'vue-router';
-import { LoaderCircle, Music2, Pencil, Plus, UploadCloud } from '@lucide/vue';
+import { LoaderCircle, Music2, Pencil, Plus, Send, UploadCloud } from '@lucide/vue';
 import { studioService } from '../../services/studioService';
 
 const route = useRoute();
@@ -12,6 +12,7 @@ const total = ref(0);
 const page = ref(1);
 const size = ref(20);
 const isLoading = ref(true);
+const submittingId = ref(null);
 const error = ref('');
 
 const isEmpty = computed(() => !isLoading.value && songs.value.length === 0 && page.value === 1);
@@ -52,8 +53,32 @@ function formatDuration(seconds) {
 
 function statusClass(status) {
   if (status === 'PUBLISHED') return 'bg-[#16C65A]/15 text-[#16C65A]';
+  if (status === 'SUBMITTED') return 'bg-sky-500/15 text-sky-300';
+  if (status === 'REJECTED') return 'bg-red-500/15 text-red-300';
   if (status === 'DRAFT') return 'bg-amber-500/15 text-amber-300';
   return 'bg-white/10 text-[#bbb]';
+}
+
+function isEditable(status) {
+  return status === 'DRAFT' || status === 'REJECTED';
+}
+
+function canSubmit(status) {
+  return status === 'DRAFT' || status === 'REJECTED';
+}
+
+async function submitForReview(song) {
+  if (submittingId.value) return;
+  submittingId.value = song.id;
+  error.value = '';
+  try {
+    await studioService.submitForReview(artistId, song.id);
+    await load();
+  } catch (requestError) {
+    error.value = requestError.message || 'Unable to submit the song for review.';
+  } finally {
+    submittingId.value = null;
+  }
 }
 
 onMounted(load);
@@ -103,7 +128,7 @@ onMounted(load);
         <span class="w-20 text-right">Plays</span>
         <span class="w-20 text-right">Likes</span>
         <span class="w-16 text-right">Duration</span>
-        <span class="w-8"></span>
+        <span class="w-24 text-right">Actions</span>
       </div>
 
       <!-- Song rows -->
@@ -120,6 +145,13 @@ onMounted(load);
           <div class="min-w-0 flex-1">
             <p class="truncate text-sm font-bold text-white">{{ song.title }}</p>
             <p class="truncate text-xs text-[#555]">/songs/{{ song.slug }}</p>
+            <div v-if="song.genres?.length" class="mt-1 flex flex-wrap gap-1">
+              <span
+                v-for="genre in song.genres"
+                :key="genre.id"
+                class="rounded-full bg-white/5 px-2 py-0.5 text-[10px] font-bold text-[#8EA696]"
+              >{{ genre.name }}</span>
+            </div>
           </div>
           <span
             class="hidden w-24 justify-center rounded-full px-2.5 py-1 text-center text-[11px] font-bold sm:inline-flex"
@@ -128,13 +160,26 @@ onMounted(load);
           <span class="hidden w-20 text-right text-xs text-[#888] sm:block">{{ (song.playCount || 0).toLocaleString() }}</span>
           <span class="hidden w-20 text-right text-xs text-[#888] sm:block">{{ (song.likeCount || 0).toLocaleString() }}</span>
           <span class="hidden w-16 text-right text-xs text-[#888] sm:block">{{ formatDuration(song.durationSec) }}</span>
-          <RouterLink
-            :to="{ name: 'studio-artist-song-edit', params: { artistId, songId: song.id } }"
-            class="grid size-8 place-items-center rounded-full text-[#888] transition hover:bg-white/10 hover:text-white"
-            title="Edit song"
-          >
-            <Pencil :size="15" />
-          </RouterLink>
+          <span class="flex w-24 items-center justify-end gap-1">
+            <RouterLink
+              v-if="isEditable(song.status)"
+              :to="{ name: 'studio-artist-song-edit', params: { artistId, songId: song.id } }"
+              class="grid size-8 place-items-center rounded-full text-[#888] transition hover:bg-white/10 hover:text-white"
+              title="Edit song"
+            >
+              <Pencil :size="15" />
+            </RouterLink>
+            <button
+              v-if="canSubmit(song.status)"
+              class="grid size-8 place-items-center rounded-full text-[#16C65A] transition hover:bg-[#16C65A]/15"
+              :title="song.status === 'REJECTED' ? 'Resubmit for review' : 'Submit for review'"
+              :disabled="submittingId === song.id"
+              @click="submitForReview(song)"
+            >
+              <LoaderCircle v-if="submittingId === song.id" :size="15" class="animate-spin" />
+              <Send v-else :size="15" />
+            </button>
+          </span>
         </li>
       </ul>
 

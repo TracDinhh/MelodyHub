@@ -105,8 +105,8 @@ public class StudioServlet extends JsonServlet {
             ArtistSongSubPath songPath = matchSongSubPath(path, null);
             if (songPath != null) {
                 artistAuthorizationService.requireCanManageMusic(token, songPath.artistId());
-                var song = artistSongService.getOwnSongById(songPath.artistId(), songPath.songId());
-                writeJson(response, HttpServletResponse.SC_OK, com.melodyHub.dto.response.SongResponse.fromEntity(song));
+                writeJson(response, HttpServletResponse.SC_OK,
+                        artistSongService.getOwnSongResponse(songPath.artistId(), songPath.songId()));
                 return;
             }
 
@@ -168,6 +168,15 @@ public class StudioServlet extends JsonServlet {
                 SongCreateRequest body = readBody(request, SongCreateRequest.class);
                 writeJson(response, HttpServletResponse.SC_CREATED,
                         artistSongService.createSong(songsPath.artistId(), body));
+                return;
+            }
+
+            // POST /artists/{artistId}/songs/{songId}/submit
+            ArtistSongSubPath submitPath = matchSongSubmit(path);
+            if (submitPath != null) {
+                artistAuthorizationService.requireCanManageMusic(token, submitPath.artistId());
+                writeJson(response, HttpServletResponse.SC_OK,
+                        artistSongService.submitForReview(submitPath.artistId(), submitPath.songId()));
                 return;
             }
 
@@ -322,6 +331,13 @@ public class StudioServlet extends JsonServlet {
             String suffix = "/" + subPath;
             return rest.endsWith(suffix) ? new ArtistSongSubPath(artistId, songId, subPath) : null;
         }
+    }
+
+    /**
+     * Matches paths of the form {@code /artists/{artistId}/songs/{songId}/submit}.
+     */
+    private ArtistSongSubPath matchSongSubmit(String path) {
+        return matchSongSubPath(path, "submit");
     }
 
     private <T> T readBody(HttpServletRequest request, Class<T> type) throws IOException {

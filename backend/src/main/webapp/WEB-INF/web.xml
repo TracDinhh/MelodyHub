@@ -86,6 +86,11 @@
         <servlet-class>com.melodyHub.controller.artist.ArtistAccessRequestServlet</servlet-class>
     </servlet>
 
+    <servlet>
+        <servlet-name>GenreServlet</servlet-name>
+        <servlet-class>com.melodyHub.controller.genre.GenreServlet</servlet-class>
+    </servlet>
+
     <servlet-mapping>
         <servlet-name>AuthServlet</servlet-name>
         <url-pattern>/api/auth/*</url-pattern>
@@ -149,6 +154,11 @@
     <servlet-mapping>
         <servlet-name>ArtistAccessRequestServlet</servlet-name>
         <url-pattern>/api/artist-access-requests/*</url-pattern>
+    </servlet-mapping>
+
+    <servlet-mapping>
+        <servlet-name>GenreServlet</servlet-name>
+        <url-pattern>/api/genres/*</url-pattern>
     </servlet-mapping>
 
     <session-config>

@@ -195,7 +195,7 @@ class PlaylistServiceTest {
         return new Song(
                 id, title, "slug-" + id, null, null, 180,
                 "/audio/" + id + ".mp3", null, null, LyricsType.PLAIN, SongStatus.PUBLISHED,
-                0L, timestamp, timestamp, null
+                0L, null, null, null, null, timestamp, timestamp, null
         );
     }
 

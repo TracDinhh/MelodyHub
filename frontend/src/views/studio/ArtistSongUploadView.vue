@@ -1,9 +1,10 @@
 <script setup>
-import { reactive, ref } from 'vue';
+import { onMounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { AudioLines, ImagePlus, LoaderCircle, Music2, UploadCloud } from '@lucide/vue';
 import { studioService } from '../../services/studioService';
 import { uploadService } from '../../services/uploadService';
+import { genreService } from '../../services/genreService';
 import { useAuthStore } from '../../stores/auth.store';
 import LyricsEditor from './components/LyricsEditor.vue';
 
@@ -15,6 +16,7 @@ const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const ALLOWED_AUDIO_TYPES = [
   'audio/mpeg', 'audio/mp3', 'audio/mp4', 'audio/aac', 'audio/wav', 'audio/x-wav', 'audio/ogg', 'audio/flac'
 ];
+const MAX_GENRES = 3;
 
 const route = useRoute();
 const router = useRouter();
@@ -28,11 +30,27 @@ const audioFile = ref(null);
 const audioName = ref('');
 const durationSec = ref(0);
 const audioPreviewUrl = ref('');
+const genres = ref([]);
+const selectedGenres = ref([]);
+const fieldErrors = reactive({ title: '', slug: '', cover: '', audio: '', genres: '' });
 
 const isSubmitting = ref(false);
 const progressText = ref('');
 const error = ref('');
-const fieldErrors = reactive({ title: '', slug: '', cover: '', audio: '' });
+
+function toggleGenre(genre) {
+  fieldErrors.genres = '';
+  const index = selectedGenres.value.findIndex((id) => id === genre.id);
+  if (index >= 0) {
+    selectedGenres.value.splice(index, 1);
+    return;
+  }
+  if (selectedGenres.value.length >= MAX_GENRES) {
+    fieldErrors.genres = `You can pick up to ${MAX_GENRES} genres.`;
+    return;
+  }
+  selectedGenres.value.push(genre.id);
+}
 
 function toSlug(value) {
   return value
@@ -110,6 +128,7 @@ function validate() {
   fieldErrors.title = '';
   fieldErrors.slug = '';
   fieldErrors.audio = '';
+  fieldErrors.genres = '';
   let valid = true;
 
   if (form.title.trim().length < 1) {
@@ -123,6 +142,10 @@ function validate() {
   }
   if (!audioFile.value) {
     fieldErrors.audio = 'An audio file is required.';
+    valid = false;
+  }
+  if (selectedGenres.value.length < 1) {
+    fieldErrors.genres = 'Pick at least one genre.';
     valid = false;
   }
   return valid;
@@ -152,7 +175,8 @@ async function submit() {
       coverUrl,
       durationSec: durationSec.value || 0,
       lyrics: form.lyrics.trim() || null,
-      lyricsType: lyricsType.value
+      lyricsType: lyricsType.value,
+      genreIds: selectedGenres.value
     });
 
     router.push({ name: 'studio-artist-music', params: { artistId } });
@@ -164,6 +188,8 @@ async function submit() {
       fieldErrors.title = requestError.message;
     } else if (code === 'INVALID_SONG_SLUG') {
       fieldErrors.slug = requestError.message;
+    } else if (code === 'SONG_GENRE_REQUIRED' || code === 'SONG_GENRE_LIMIT_EXCEEDED' || code === 'INVALID_GENRE_IDS') {
+      fieldErrors.genres = requestError.message;
     } else if (code === 'INVALID_FILE' || code === 'UPLOAD_FAILED') {
       fieldErrors.audio = requestError.message || 'Upload failed. Try another file.';
     } else {
@@ -174,6 +200,16 @@ async function submit() {
     progressText.value = '';
   }
 }
+
+async function loadGenres() {
+  try {
+    genres.value = (await genreService.listGenres())?.items || [];
+  } catch {
+    genres.value = [];
+  }
+}
+
+onMounted(loadGenres);
 
 function formatDuration(seconds) {
   if (!seconds) return '';
@@ -216,6 +252,25 @@ function formatDuration(seconds) {
           </div>
           <small v-if="fieldErrors.title" class="mt-1 block text-red-300">{{ fieldErrors.title }}</small>
         </label>
+
+        <div>
+          <p class="mb-2 text-xs font-black text-[#aaa]">
+            Genres <span class="font-normal text-[#666]">(1–{{ MAX_GENRES }})</span>
+          </p>
+          <div class="flex flex-wrap gap-2">
+            <button
+              v-for="genre in genres"
+              :key="genre.id"
+              type="button"
+              class="rounded-full border px-3 py-1.5 text-xs font-bold transition"
+              :class="selectedGenres.includes(genre.id)
+                ? 'border-[#16C65A] bg-[#16C65A] text-black'
+                : 'border-white/15 text-[#bbb] hover:border-[#16C65A]/70 hover:text-white'"
+              @click="toggleGenre(genre)"
+            >{{ genre.name }}</button>
+          </div>
+          <p v-if="fieldErrors.genres" class="mt-1 text-xs text-red-300">{{ fieldErrors.genres }}</p>
+        </div>
 
         <label class="melodyhub-field">
           <span>Lyrics <span class="font-normal text-[#666]">(optional)</span></span>

@@ -358,6 +358,10 @@ public class PlaylistRepository {
                 LyricsType.fromDatabaseValue(resultSet.getString("lyrics_type")),
                 SongStatus.fromDatabaseValue(resultSet.getString("status")),
                 resultSet.getLong("play_count"),
+                null,
+                null,
+                null,
+                null,
                 getLocalDateTime(resultSet, "created_at"),
                 getLocalDateTime(resultSet, "updated_at"),
                 getLocalDateTime(resultSet, "deleted_at")

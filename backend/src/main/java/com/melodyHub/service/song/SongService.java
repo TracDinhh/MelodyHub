@@ -1,17 +1,21 @@
 package com.melodyHub.service.song;
 
+import com.melodyHub.dto.response.GenreResponse;
 import com.melodyHub.dto.response.PagedResponse;
 import com.melodyHub.dto.response.SongDetailResponse;
 import com.melodyHub.dto.response.SongResponse;
 import com.melodyHub.dto.response.SongSummaryResponse;
 import com.melodyHub.entity.Album;
 import com.melodyHub.entity.Artist;
+import com.melodyHub.entity.Genre;
 import com.melodyHub.entity.Song;
 import com.melodyHub.repository.AlbumRepository;
+import com.melodyHub.repository.GenreRepository;
 import com.melodyHub.repository.SongRepository;
 import com.melodyHub.util.Pagination;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -21,14 +25,21 @@ public class SongService {
 
     private final SongRepository songRepository;
     private final AlbumRepository albumRepository;
+    private final GenreRepository genreRepository;
 
     public SongService() {
-        this(new SongRepository(), new AlbumRepository());
+        this(new SongRepository(), new AlbumRepository(), new GenreRepository());
     }
 
     public SongService(SongRepository songRepository, AlbumRepository albumRepository) {
+        this(songRepository, albumRepository, new GenreRepository());
+    }
+
+    public SongService(SongRepository songRepository, AlbumRepository albumRepository,
+                       GenreRepository genreRepository) {
         this.songRepository = Objects.requireNonNull(songRepository, "songRepository must not be null");
         this.albumRepository = Objects.requireNonNull(albumRepository, "albumRepository must not be null");
+        this.genreRepository = Objects.requireNonNull(genreRepository, "genreRepository must not be null");
     }
 
     public PagedResponse<SongResponse> getPage(int page, int size, String titleQuery, String genreSlug)
@@ -37,11 +48,20 @@ public class SongService {
         String normalizedTitle = normalize(titleQuery);
         String normalizedGenre = normalize(genreSlug);
 
-        List<SongResponse> items = songRepository.getPage(size, offset, normalizedTitle, normalizedGenre)
-                .stream()
-                .map(SongResponse::fromEntity)
-                .toList();
+        List<Song> songs = songRepository.getPage(size, offset, normalizedTitle, normalizedGenre);
         long total = songRepository.count(normalizedTitle, normalizedGenre);
+
+        Map<Integer, List<Genre>> genresBySong = genreRepository.findForSongs(
+                songs.stream().map(Song::getId).toList());
+
+        List<SongResponse> items = songs.stream()
+                .map(song -> {
+                    SongResponse response = SongResponse.fromEntity(song);
+                    response.setGenres(genresBySong.getOrDefault(song.getId(), List.of())
+                            .stream().map(GenreResponse::fromEntity).toList());
+                    return response;
+                })
+                .toList();
 
         return new PagedResponse<>(items, total, page, size);
     }
@@ -58,8 +78,15 @@ public class SongService {
             return Optional.empty();
         }
 
-        return songRepository.findBySlug(slug.trim())
-                .map(SongResponse::fromEntity);
+        Optional<Song> songOpt = songRepository.findBySlug(slug.trim());
+        if (songOpt.isEmpty()) {
+            return Optional.empty();
+        }
+        Song song = songOpt.get();
+        SongResponse response = SongResponse.fromEntity(song);
+        response.setGenres(genreRepository.findForSong(song.getId())
+                .stream().map(GenreResponse::fromEntity).toList());
+        return Optional.of(response);
     }
 
     /**
@@ -86,9 +113,12 @@ public class SongService {
         long likeCount = songRepository.countLikes(song.getId());
         boolean isLiked = userId != null && songRepository.isLikedBy(song.getId(), userId);
 
+        List<Genre> genres = genreRepository.findForSong(song.getId());
+
         songRepository.incrementPlayCount(song.getId());
 
-        SongDetailResponse response = SongDetailResponse.build(song, artists, album.orElse(null), likeCount, isLiked);
+        SongDetailResponse response = SongDetailResponse.build(
+                song, artists, album.orElse(null), genres, likeCount, isLiked);
         return Optional.of(response);
     }
 

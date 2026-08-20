@@ -36,6 +36,10 @@ public class SongRepository {
             lyrics_type,
             status,
             play_count,
+            submitted_at,
+            review_note,
+            reviewed_by,
+            reviewed_at,
             created_at,
             updated_at,
             deleted_at
@@ -57,6 +61,10 @@ public class SongRepository {
             s.lyrics_type,
             s.status,
             s.play_count,
+            s.submitted_at,
+            s.review_note,
+            s.reviewed_by,
+            s.reviewed_at,
             s.created_at,
             s.updated_at,
             s.deleted_at
@@ -73,7 +81,7 @@ public class SongRepository {
     }
 
 
-    public Song create(Song song, int artistId) throws SQLException {
+    public Song create(Song song, int artistId, List<Integer> genreIds) throws SQLException {
         String insertSong = """
                 INSERT INTO songs (title, slug, duration_sec, file_path, cover_url, lyrics, lyrics_type, status)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -81,6 +89,10 @@ public class SongRepository {
         String linkArtist = """
                 INSERT INTO song_artists (song_id, artist_id, role, position)
                 VALUES (?, ?, 'MAIN', 0)
+                """;
+        String linkGenre = """
+                INSERT INTO song_genres (song_id, genre_id, position)
+                VALUES (?, ?, ?)
                 """;
 
         Connection connection = getConnection();
@@ -96,7 +108,7 @@ public class SongRepository {
                 statement.setString(5, song.getCoverUrl());
                 statement.setString(6, song.getLyrics());
                 statement.setString(7, (song.getLyricsType() == null ? LyricsType.PLAIN : song.getLyricsType()).name());
-                statement.setString(8, (song.getStatus() == null ? SongStatus.PUBLISHED : song.getStatus()).name());
+                statement.setString(8, (song.getStatus() == null ? SongStatus.DRAFT : song.getStatus()).name());
                 statement.executeUpdate();
 
                 try (var keys = statement.getGeneratedKeys()) {
@@ -113,6 +125,8 @@ public class SongRepository {
                 statement.executeUpdate();
             }
 
+            replaceGenres(connection, songId, genreIds);
+
             connection.commit();
 
             return findByIdInternal(connection, songId)
@@ -123,6 +137,34 @@ public class SongRepository {
         } finally {
             connection.setAutoCommit(true);
             connection.close();
+        }
+    }
+
+    /** Replaces the genre mappings of a song (delete + insert with position). */
+    private void replaceGenres(Connection connection, int songId, List<Integer> genreIds) throws SQLException {
+        String delete = "DELETE FROM song_genres WHERE song_id = ?";
+        try (var statement = connection.prepareStatement(delete)) {
+            statement.setInt(1, songId);
+            statement.executeUpdate();
+        }
+
+        if (genreIds == null || genreIds.isEmpty()) {
+            return;
+        }
+
+        String insert = "INSERT INTO song_genres (song_id, genre_id, position) VALUES (?, ?, ?)";
+        try (var statement = connection.prepareStatement(insert)) {
+            int position = 0;
+            for (Integer genreId : genreIds) {
+                if (genreId == null) {
+                    continue;
+                }
+                statement.setInt(1, songId);
+                statement.setInt(2, genreId);
+                statement.setInt(3, position++);
+                statement.addBatch();
+            }
+            statement.executeBatch();
         }
     }
 
@@ -260,10 +302,14 @@ public class SongRepository {
     }
 
     /**
-     * Updates editable fields of a song owned (MAIN) by the artist. Returns the
-     * updated song, or empty if the artist does not own it / it does not exist.
+     * Updates editable fields of a song owned (MAIN) by the artist, replacing
+     * its genre mappings and clearing stale review metadata in the same
+     * transaction. Only allowed while the song is DRAFT or REJECTED. Returns
+     * the updated song, or empty if the artist does not own it / it does not
+     * exist / it is not editable.
      */
-    public Optional<Song> updateOwn(int artistId, int songId, String title, String coverUrl, String lyrics, String lyricsType)
+    public Optional<Song> updateOwn(int artistId, int songId, String title, String coverUrl, String lyrics,
+                                    String lyricsType, List<Integer> genreIds)
             throws SQLException {
         String sql = """
                 UPDATE songs s
@@ -271,9 +317,71 @@ public class SongRepository {
                     s.cover_url = ?,
                     s.lyrics = ?,
                     s.lyrics_type = ?,
+                    s.review_note = NULL,
+                    s.reviewed_by = NULL,
+                    s.reviewed_at = NULL,
                     s.updated_at = CURRENT_TIMESTAMP(6)
                 WHERE s.id = ?
                   AND s.deleted_at IS NULL
+                  AND s.status IN ('DRAFT', 'REJECTED')
+                  AND EXISTS (
+                      SELECT 1 FROM song_artists sa
+                      WHERE sa.song_id = s.id AND sa.artist_id = ? AND sa.role = ?
+                  )
+                """;
+
+        Connection connection = getConnection();
+        try {
+            connection.setAutoCommit(false);
+            int updated;
+            try (var statement = connection.prepareStatement(sql)) {
+                statement.setString(1, title);
+                statement.setString(2, coverUrl);
+                statement.setString(3, lyrics);
+                statement.setString(4, lyricsType);
+                statement.setInt(5, songId);
+                statement.setInt(6, artistId);
+                statement.setString(7, MAIN_ARTIST_ROLE);
+
+                updated = statement.executeUpdate();
+            }
+
+            if (updated == 0) {
+                connection.rollback();
+                return Optional.empty();
+            }
+
+            replaceGenres(connection, songId, genreIds);
+            connection.commit();
+        } catch (SQLException exception) {
+            connection.rollback();
+            throw exception;
+        } finally {
+            connection.setAutoCommit(true);
+            connection.close();
+        }
+
+        return findOwnedById(artistId, songId);
+    }
+
+    /**
+     * Moves a song owned (MAIN) by the artist into SUBMITTED, recording when it
+     * was submitted and clearing stale review metadata. Allowed only from DRAFT
+     * or REJECTED. Returns the updated song, or empty when the song is not owned
+     * or is not submittable.
+     */
+    public Optional<Song> submitForReview(int artistId, int songId) throws SQLException {
+        String sql = """
+                UPDATE songs s
+                SET s.status = ?,
+                    s.submitted_at = CURRENT_TIMESTAMP(6),
+                    s.review_note = NULL,
+                    s.reviewed_by = NULL,
+                    s.reviewed_at = NULL,
+                    s.updated_at = CURRENT_TIMESTAMP(6)
+                WHERE s.id = ?
+                  AND s.deleted_at IS NULL
+                  AND s.status IN ('DRAFT', 'REJECTED')
                   AND EXISTS (
                       SELECT 1 FROM song_artists sa
                       WHERE sa.song_id = s.id AND sa.artist_id = ? AND sa.role = ?
@@ -282,13 +390,10 @@ public class SongRepository {
 
         try (var connection = getConnection();
              var statement = connection.prepareStatement(sql)) {
-            statement.setString(1, title);
-            statement.setString(2, coverUrl);
-            statement.setString(3, lyrics);
-            statement.setString(4, lyricsType);
-            statement.setInt(5, songId);
-            statement.setInt(6, artistId);
-            statement.setString(7, MAIN_ARTIST_ROLE);
+            statement.setString(1, SongStatus.SUBMITTED.name());
+            statement.setInt(2, songId);
+            statement.setInt(3, artistId);
+            statement.setString(4, MAIN_ARTIST_ROLE);
 
             if (statement.executeUpdate() == 0) {
                 return Optional.empty();
@@ -296,6 +401,67 @@ public class SongRepository {
         }
 
         return findOwnedById(artistId, songId);
+    }
+
+    /**
+     * Admin approval: SUBMITTED → PUBLISHED. Records the reviewer. Returns the
+     * updated song, or empty when the song does not exist / is not SUBMITTED.
+     */
+    public Optional<Song> approveSong(int songId, int adminId) throws SQLException {
+        String sql = """
+                UPDATE songs
+                SET status = ?,
+                    review_note = NULL,
+                    reviewed_by = ?,
+                    reviewed_at = CURRENT_TIMESTAMP(6),
+                    updated_at = CURRENT_TIMESTAMP(6)
+                WHERE id = ? AND deleted_at IS NULL AND status = ?
+                """;
+
+        try (var connection = getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            statement.setString(1, SongStatus.PUBLISHED.name());
+            statement.setInt(2, adminId);
+            statement.setInt(3, songId);
+            statement.setString(4, SongStatus.SUBMITTED.name());
+
+            if (statement.executeUpdate() == 0) {
+                return Optional.empty();
+            }
+        }
+
+        return findByIdAdmin(songId);
+    }
+
+    /**
+     * Admin rejection: SUBMITTED → REJECTED, storing the review reason. Returns
+     * the updated song, or empty when the song does not exist / is not SUBMITTED.
+     */
+    public Optional<Song> rejectSong(int songId, int adminId, String reviewNote) throws SQLException {
+        String sql = """
+                UPDATE songs
+                SET status = ?,
+                    review_note = ?,
+                    reviewed_by = ?,
+                    reviewed_at = CURRENT_TIMESTAMP(6),
+                    updated_at = CURRENT_TIMESTAMP(6)
+                WHERE id = ? AND deleted_at IS NULL AND status = ?
+                """;
+
+        try (var connection = getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            statement.setString(1, SongStatus.REJECTED.name());
+            statement.setString(2, reviewNote);
+            statement.setInt(3, adminId);
+            statement.setInt(4, songId);
+            statement.setString(5, SongStatus.SUBMITTED.name());
+
+            if (statement.executeUpdate() == 0) {
+                return Optional.empty();
+            }
+        }
+
+        return findByIdAdmin(songId);
     }
 
     public Optional<Song> findOwnedById(int artistId, int songId) throws SQLException {
@@ -658,7 +824,8 @@ public class SongRepository {
 
         String sql = """
                 SELECT s.id, s.title, s.slug, s.album_id, s.track_number, s.duration_sec,
-                       s.file_path, s.cover_url, s.lyrics, s.status, s.play_count,
+                       s.file_path, s.cover_url, s.lyrics, s.lyrics_type, s.status, s.play_count,
+                       s.submitted_at, s.review_note, s.reviewed_by, s.reviewed_at,
                        s.created_at, s.updated_at, s.deleted_at,
                        (
                            SELECT MIN(
@@ -1156,6 +1323,10 @@ public class SongRepository {
                 LyricsType.fromDatabaseValue(resultSet.getString("lyrics_type")),
                 SongStatus.fromDatabaseValue(resultSet.getString("status")),
                 resultSet.getLong("play_count"),
+                getLocalDateTime(resultSet, "submitted_at"),
+                resultSet.getString("review_note"),
+                getNullableInteger(resultSet, "reviewed_by"),
+                getLocalDateTime(resultSet, "reviewed_at"),
                 getLocalDateTime(resultSet, "created_at"),
                 getLocalDateTime(resultSet, "updated_at"),
                 getLocalDateTime(resultSet, "deleted_at")
