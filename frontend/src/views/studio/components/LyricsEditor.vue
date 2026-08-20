@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onUnmounted, ref, watch } from 'vue';
-import { Play, Pause, Plus, Trash2, ListMusic, Sparkles, Check, AlertTriangle, LoaderCircle, X } from '@lucide/vue';
+import { Play, Pause, Plus, Trash2, ListMusic, Check, AlertTriangle, X } from '@lucide/vue';
 import {
   convertLegacyLyricsTime,
   formatLyricsTime,
@@ -408,8 +408,6 @@ onUnmounted(() => {
           @click="autoFetchLyrics"
           class="inline-flex items-center gap-2 rounded-lg border border-[#16C65A]/40 bg-[#16C65A]/10 px-4 py-2.5 text-sm font-bold text-[#16C65A] transition hover:bg-[#16C65A]/20 hover:border-[#16C65A]/70 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-[#16C65A]/10 disabled:hover:border-[#16C65A]/40"
         >
-          <LoaderCircle v-if="isFetching" :size="16" class="animate-spin" />
-          <Sparkles v-else :size="16" />
           {{ isFetching ? 'Finding lyrics...' : '✨ Find Lyrics Automatically' }}
         </button>
         <span v-if="!canAutoFetch" class="text-xs text-[#666]">

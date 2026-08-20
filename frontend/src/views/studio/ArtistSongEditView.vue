@@ -35,6 +35,7 @@ const status = ref('');
 const reviewNote = ref('');
 const genres = ref([]);
 const selectedGenres = ref([]);
+const artistName = ref(''); // real artist name for lyrics search
 
 const isEditable = computed(() => status.value === 'DRAFT' || status.value === 'REJECTED');
 const canSubmit = computed(() => status.value === 'DRAFT' || status.value === 'REJECTED');
@@ -43,10 +44,12 @@ async function load() {
   isLoading.value = true;
   error.value = '';
   try {
-    const [song, catalog] = await Promise.all([
+    const [song, catalog, profile] = await Promise.all([
       studioService.getSong(artistId, songId),
-      genreService.listGenres().catch(() => ({ items: [] }))
+      genreService.listGenres().catch(() => []),
+      studioService.getProfile(artistId).catch(() => null)
     ]);
+    artistName.value = profile?.name || '';
     form.title = song.title || '';
     form.slug = song.slug || '';
     form.audioUrl = song.audioUrl || '';
@@ -56,7 +59,7 @@ async function load() {
     status.value = song.status || 'DRAFT';
     reviewNote.value = song.reviewNote || '';
     selectedGenres.value = (song.genres || []).map((g) => g.id);
-    genres.value = catalog?.items || [];
+    genres.value = Array.isArray(catalog) ? catalog : (catalog?.items || []);
 
     // For synced songs, load the authoritative lines from song_lyrics and rebuild
     // the editor JSON — songs.lyrics alone is not the source of truth.
@@ -255,7 +258,7 @@ onMounted(load);
             v-model:lyricsType="lyricsType"
             :audio-preview-url="form.audioUrl"
             :songTitle="form.title"
-            :songArtist="authStore.displayName"
+            :songArtist="artistName"
             :songDuration="durationSec"
           />
         </label>

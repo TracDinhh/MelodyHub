@@ -37,6 +37,7 @@ const fieldErrors = reactive({ title: '', slug: '', cover: '', audio: '', genres
 const isSubmitting = ref(false);
 const progressText = ref('');
 const error = ref('');
+const artistName = ref(''); // real artist name for lyrics search
 
 function toggleGenre(genre) {
   fieldErrors.genres = '';
@@ -203,13 +204,27 @@ async function submit() {
 
 async function loadGenres() {
   try {
-    genres.value = (await genreService.listGenres())?.items || [];
+    const response = await genreService.listGenres();
+    // Backend returns List<GenreResponse> directly (not PagedResponse)
+    genres.value = Array.isArray(response) ? response : (response?.items || []);
   } catch {
     genres.value = [];
   }
 }
 
-onMounted(loadGenres);
+async function loadArtistProfile() {
+  try {
+    const profile = await studioService.getProfile(artistId);
+    artistName.value = profile?.name || '';
+  } catch {
+    artistName.value = '';
+  }
+}
+
+onMounted(() => {
+  loadGenres();
+  loadArtistProfile();
+});
 
 function formatDuration(seconds) {
   if (!seconds) return '';
@@ -279,7 +294,7 @@ function formatDuration(seconds) {
             v-model:lyricsType="lyricsType"
             :audioPreviewUrl="audioPreviewUrl"
             :songTitle="form.title"
-            :songArtist="authStore.displayName"
+            :songArtist="artistName"
             :songDuration="durationSec"
           />
         </label>
