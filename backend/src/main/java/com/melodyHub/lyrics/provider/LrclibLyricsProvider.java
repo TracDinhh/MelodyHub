@@ -31,7 +31,7 @@ public class LrclibLyricsProvider implements LyricsProvider {
     private static final String DEFAULT_CLIENT_NAME = "MelodyHub/1.0";
     private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(5);
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(10);
-    private static final int MAX_SEARCH_RESULTS = 10;
+    private static final int MAX_SEARCH_RESULTS = 50;
 
     private final String baseUrl;
     private final String clientName;
@@ -68,8 +68,14 @@ public class LrclibLyricsProvider implements LyricsProvider {
             return List.of(exact);
         }
 
-        // 2. Fall back to search endpoint
-        return searchEndpoint(trackName, artistName, albumName);
+        // 2. Search with the catalog artist first.
+        List<LyricsSearchResult> results = searchEndpoint(trackName, artistName, albumName);
+        if (!results.isEmpty()) {
+            return results;
+        }
+
+        // 3. LRCLIB may store collaborations under a different artist string.
+        return searchEndpoint(trackName, null, null);
     }
 
     /**
@@ -114,8 +120,11 @@ public class LrclibLyricsProvider implements LyricsProvider {
                                                      String albumName)
             throws LyricsProviderException {
         StringBuilder url = new StringBuilder(baseUrl)
-                .append("/api/search?track_name=").append(encode(trackName))
-                .append("&artist_name=").append(encode(artistName));
+                .append("/api/search?track_name=").append(encode(trackName));
+
+        if (artistName != null && !artistName.isBlank()) {
+            url.append("&artist_name=").append(encode(artistName));
+        }
 
         if (albumName != null && !albumName.isBlank()) {
             url.append("&album_name=").append(encode(albumName));

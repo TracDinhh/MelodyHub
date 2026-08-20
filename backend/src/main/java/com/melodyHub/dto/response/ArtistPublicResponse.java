@@ -8,6 +8,8 @@ import lombok.Setter;
 
 /**
  * Public-facing artist info for browsing (home, artist page).
+ * {@code followerCount} and {@code following} are only populated by the
+ * artist-detail endpoint; list/search results leave them null.
  */
 @Getter
 @Setter
@@ -19,6 +21,8 @@ public class ArtistPublicResponse {
     private String slug;
     private String bio;
     private String imageUrl;
+    private Long followerCount;
+    private Boolean following;
 
     public static ArtistPublicResponse fromEntity(Artist artist) {
         if (artist == null) {
@@ -30,7 +34,9 @@ public class ArtistPublicResponse {
                 artist.getName(),
                 artist.getSlug(),
                 artist.getBio(),
-                artist.getImageUrl()
+                artist.getImageUrl(),
+                null,
+                null
         );
     }
 }

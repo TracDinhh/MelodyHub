@@ -1,7 +1,9 @@
 package com.melodyHub.service.artist;
 
+import com.melodyHub.repository.ArtistFollowRepository;
 import com.melodyHub.repository.SongRepository;
 import java.sql.SQLException;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -12,20 +14,28 @@ import java.util.Objects;
  */
 public class ArtistStatsService {
     private final SongRepository songRepository;
+    private final ArtistFollowRepository followRepository;
 
     public ArtistStatsService() {
-        this(new SongRepository());
+        this(new SongRepository(), new ArtistFollowRepository());
     }
 
     public ArtistStatsService(SongRepository songRepository) {
+        this(songRepository, new ArtistFollowRepository());
+    }
+
+    public ArtistStatsService(SongRepository songRepository, ArtistFollowRepository followRepository) {
         this.songRepository = Objects.requireNonNull(songRepository, "songRepository must not be null");
+        this.followRepository = Objects.requireNonNull(followRepository, "followRepository must not be null");
     }
 
     /**
      * Summary statistics for the artist overview cards.
      */
     public Map<String, Object> getStats(int artistId) throws SQLException {
-        return songRepository.getArtistStats(artistId);
+        Map<String, Object> stats = new LinkedHashMap<>(songRepository.getArtistStats(artistId));
+        stats.put("totalFollowers", followRepository.countFollowers(artistId));
+        return stats;
     }
 
     /**

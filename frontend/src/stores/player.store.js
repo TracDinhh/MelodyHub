@@ -77,6 +77,14 @@ export const usePlayerStore = defineStore('player', () => {
     return trackerInstance;
   }
 
+  function canLoadSyncedLyrics() {
+    try {
+      return useAuthStore().isPremium;
+    } catch {
+      return false;
+    }
+  }
+
   if (audio) {
     audio.volume = volume.value / 100;
     audio.addEventListener('timeupdate', () => {
@@ -122,7 +130,9 @@ export const usePlayerStore = defineStore('player', () => {
     syncedLyrics.value = [];
     const requestId = ++lyricsRequestId;
 
-    if (track?.lyricsType === 'SYNCED' && track?.slug) {
+    // Audio is public. Synced lyrics are Premium-only, so guests/free users
+    // must not trigger the protected endpoint just by pressing Play.
+    if (track?.lyricsType === 'SYNCED' && track?.slug && canLoadSyncedLyrics()) {
       void loadSyncedLyrics(track.slug, track.id, requestId);
     }
 

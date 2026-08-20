@@ -10,6 +10,7 @@ public final class MatchScorer {
 
     private static final int TITLE_EXACT = 40;
     private static final int ARTIST_EXACT = 30;
+    private static final int ARTIST_COLLABORATION = 20;
     private static final int ALBUM_EXACT = 10;
     private static final int DURATION_MATCH_2 = 20;
     private static final int DURATION_MATCH_5 = 15;
@@ -35,8 +36,12 @@ public final class MatchScorer {
         if (normalize(result.trackName()).equals(normalize(queryTitle))) {
             score += TITLE_EXACT;
         }
-        if (normalize(result.artistName()).equals(normalize(queryArtist))) {
+        String resultArtist = normalize(result.artistName());
+        String queryArtistNormalized = normalize(queryArtist);
+        if (resultArtist.equals(queryArtistNormalized)) {
             score += ARTIST_EXACT;
+        } else if (containsWholeArtistName(resultArtist, queryArtistNormalized)) {
+            score += ARTIST_COLLABORATION;
         }
         if (queryAlbum != null && result.albumName() != null
                 && normalize(result.albumName()).equals(normalize(queryAlbum))) {
@@ -54,6 +59,16 @@ public final class MatchScorer {
         }
 
         return Math.min(score, 100);
+    }
+
+    private static boolean containsWholeArtistName(String resultArtist, String queryArtist) {
+        if (resultArtist.isEmpty() || queryArtist.isEmpty()) {
+            return false;
+        }
+
+        String paddedResult = " " + resultArtist + " ";
+        String paddedQuery = " " + queryArtist + " ";
+        return paddedResult.contains(paddedQuery) || paddedQuery.contains(paddedResult);
     }
 
     /**

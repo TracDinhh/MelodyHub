@@ -7,7 +7,8 @@ import {
   LayoutDashboard,
   LoaderCircle,
   Music2,
-  RefreshCw
+  RefreshCw,
+  Users
 } from '@lucide/vue';
 import { studioService } from '../../services/studioService';
 import StatChart from '../admin/components/StatChart.vue';
@@ -27,6 +28,7 @@ const cards = computed(() => {
     { label: 'Total Songs', value: s.totalSongs, icon: Music2, tint: 'text-[#16C65A]' },
     { label: 'Total Plays', value: (s.totalPlays || 0).toLocaleString(), icon: BarChart3, tint: 'text-sky-300' },
     { label: 'Total Likes', value: (s.totalLikes || 0).toLocaleString(), icon: Heart, tint: 'text-rose-300' },
+    { label: 'Total Followers', value: (s.totalFollowers || 0).toLocaleString(), icon: Users, tint: 'text-violet-300' },
     {
       label: 'Status Breakdown',
       value: `${s.publishedSongs || 0} / ${s.draftSongs || 0} / ${s.hiddenSongs || 0}`,
@@ -123,7 +125,7 @@ onMounted(load);
 
     <template v-else-if="stats">
       <!-- Stat cards -->
-      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <div
           v-for="card in cards"
           :key="card.label"
