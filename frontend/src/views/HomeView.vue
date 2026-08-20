@@ -5,6 +5,7 @@ import { ArrowRight, CheckCircle2, ChevronLeft, ChevronRight, Music2, Play, Sear
 import { playlists, podcasts, tracks } from '../data/music';
 import AddToPlaylistButton from '../components/music/AddToPlaylistButton.vue';
 import { artistBrowseService } from '../services/artistBrowseService';
+import { genreService } from '../services/genreService';
 import { songService } from '../services/songService';
 import { useAuthStore } from '../stores/auth.store';
 import { usePlayerStore } from '../stores/player.store';
@@ -14,6 +15,7 @@ const route = useRoute();
 const authStore = useAuthStore();
 const player = usePlayerStore();
 const artistScroller = ref(null);
+const genreScroller = ref(null);
 
 // Newest published songs from the real API.
 const newReleases = ref([]);
@@ -21,6 +23,19 @@ const newReleasesTotal = ref(0);
 const newReleasesPage = ref(1);
 const NEW_RELEASES_SIZE = 6;
 const newReleasesLoading = ref(true);
+
+// Published songs grouped by genre. Home shows a compact preview; the genre
+// page remains the source for the complete paginated list.
+const genreSections = ref([]);
+const genreSectionsLoading = ref(true);
+const selectedGenreSlug = ref('');
+const GENRE_SECTION_SIZE = 6;
+
+const visibleGenreSections = computed(() =>
+  selectedGenreSlug.value
+    ? genreSections.value.filter((section) => section.genre.slug === selectedGenreSlug.value)
+    : genreSections.value
+);
 
 const newReleasesTotalPages = computed(() =>
   Math.max(1, Math.ceil(newReleasesTotal.value / NEW_RELEASES_SIZE))
@@ -81,6 +96,40 @@ async function loadNewReleases() {
   }
 }
 
+async function loadGenreSections() {
+  genreSectionsLoading.value = true;
+  try {
+    const catalogResponse = await genreService.listGenres();
+    const genres = Array.isArray(catalogResponse)
+      ? catalogResponse
+      : (catalogResponse?.items || []);
+
+    const responses = await Promise.allSettled(
+      genres.map(async (genre) => {
+        const paged = await genreService.getGenreSongs(genre.slug, {
+          page: 1,
+          size: GENRE_SECTION_SIZE
+        });
+        return {
+          genre,
+          songs: paged?.items || [],
+          total: paged?.total || 0
+        };
+      })
+    );
+
+    genreSections.value = responses
+      .filter((response) => response.status === 'fulfilled' && response.value.songs.length > 0)
+      .map((response) => response.value);
+    selectedGenreSlug.value = '';
+  } catch {
+    genreSections.value = [];
+    selectedGenreSlug.value = '';
+  } finally {
+    genreSectionsLoading.value = false;
+  }
+}
+
 async function changeNewReleasesPage(nextPage) {
   if (
     nextPage < 1 ||
@@ -100,6 +149,14 @@ function toTrack(song) {
 function playNewRelease(song) {
   const list = newReleases.value.map(toTrack);
   player.playTrack(toTrack(song), list);
+}
+
+function playGenreSong(song, songs) {
+  player.playTrack(toTrack(song), songs.map(toTrack));
+}
+
+function selectGenre(slug) {
+  selectedGenreSlug.value = slug;
 }
 
 function playSearchSong(song, list) {
@@ -188,6 +245,7 @@ watch(() => route.query.q, () => {
 onMounted(() => {
   loadNewReleases();
   loadTopArtists();
+  loadGenreSections();
   if (isSearchMode.value) doSearch();
 });
 
@@ -214,6 +272,10 @@ const sectionTitle = computed(() => {
 
 function scrollArtists(direction) {
   artistScroller.value?.scrollBy({ left: direction * 320, behavior: 'smooth' });
+}
+
+function scrollGenres(direction) {
+  genreScroller.value?.scrollBy({ left: direction * 280, behavior: 'smooth' });
 }
 
 const hasMoreSongs = computed(() => searchSongs.value.length < searchSongsTotal.value);
@@ -485,6 +547,128 @@ const hasMoreArtists = computed(() => searchArtists.value.length < searchArtists
         >
           Next
         </button>
+      </div>
+    </section>
+
+    <!-- Songs grouped by genre -->
+    <section>
+      <div class="mb-5">
+        <p class="melodyhub-kicker">Browse by sound</p>
+        <h2 class="melodyhub-section-title">Music for every mood</h2>
+      </div>
+
+      <div v-if="genreSectionsLoading">
+        <div class="no-scrollbar mb-5 flex gap-2 overflow-x-auto pb-2">
+          <span v-for="item in 5" :key="item" class="h-9 w-24 shrink-0 animate-pulse rounded-full bg-white/5" />
+        </div>
+        <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+          <div v-for="card in 6" :key="card" class="space-y-3">
+            <div class="aspect-square animate-pulse rounded-2xl bg-white/5" />
+            <div class="h-4 w-3/4 animate-pulse rounded bg-white/5" />
+          </div>
+        </div>
+      </div>
+
+      <div v-else-if="genreSections.length > 0">
+        <div class="mb-6 flex items-center gap-2">
+          <button
+            type="button"
+            class="melodyhub-icon-btn hidden shrink-0 sm:grid"
+            aria-label="Show previous genres"
+            @click="scrollGenres(-1)"
+          >
+            <ChevronLeft :size="18" />
+          </button>
+          <div ref="genreScroller" class="no-scrollbar flex min-w-0 flex-1 gap-2 overflow-x-auto scroll-smooth pb-1" aria-label="Filter songs by genre">
+            <button
+              type="button"
+              :aria-pressed="!selectedGenreSlug"
+              class="shrink-0 rounded-full border px-4 py-2 text-sm font-semibold transition"
+              :class="!selectedGenreSlug
+                ? 'border-[#20E878] bg-[#20E878] text-[#09090B]'
+                : 'border-white/[0.10] bg-white/[0.04] text-[#C4C4CC] hover:border-[#20E878]/50 hover:text-[#F4FFF7]'"
+              @click="selectGenre('')"
+            >All</button>
+            <button
+              v-for="section in genreSections"
+              :key="section.genre.id"
+              type="button"
+              :aria-pressed="selectedGenreSlug === section.genre.slug"
+              class="shrink-0 rounded-full border px-4 py-2 text-sm font-semibold transition"
+              :class="selectedGenreSlug === section.genre.slug
+                ? 'border-[#20E878] bg-[#20E878] text-[#09090B]'
+                : 'border-white/[0.10] bg-white/[0.04] text-[#C4C4CC] hover:border-[#20E878]/50 hover:text-[#F4FFF7]'"
+              @click="selectGenre(section.genre.slug)"
+            >{{ section.genre.name }}</button>
+          </div>
+          <button
+            type="button"
+            class="melodyhub-icon-btn hidden shrink-0 sm:grid"
+            aria-label="Show more genres"
+            @click="scrollGenres(1)"
+          >
+            <ChevronRight :size="18" />
+          </button>
+        </div>
+
+        <article v-for="section in visibleGenreSections" :key="section.genre.id" class="mb-10 last:mb-0">
+          <div class="mb-4 flex items-end justify-between gap-4">
+            <div>
+              <h3 class="text-xl font-bold tracking-tight text-[#F4FFF7]">{{ section.genre.name }}</h3>
+              <p class="mt-1 text-xs text-[#71717A]">
+                {{ section.total }} {{ section.total === 1 ? 'song' : 'songs' }}
+              </p>
+            </div>
+            <RouterLink
+              :to="{ name: 'genre-browse', params: { slug: section.genre.slug } }"
+              class="inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold text-[#20E878] transition hover:text-[#64F4A1]"
+            >
+              View all <ArrowRight :size="14" />
+            </RouterLink>
+          </div>
+
+          <div class="no-scrollbar grid auto-cols-[minmax(158px,1fr)] grid-flow-col gap-4 overflow-x-auto pb-2 lg:grid-flow-row lg:grid-cols-6">
+            <article
+              v-for="song in section.songs"
+              :key="song.id"
+              class="group min-w-0 rounded-2xl border border-white/[0.05] bg-[#121214] p-3 transition duration-200 hover:-translate-y-1 hover:border-white/[0.10] hover:bg-[#18181B]"
+            >
+              <div class="relative aspect-square overflow-hidden rounded-xl bg-white/[0.04]">
+                <RouterLink :to="{ name: 'song-detail', params: { slug: song.slug } }" class="block h-full">
+                  <img
+                    v-if="song.coverUrl"
+                    :src="song.coverUrl"
+                    :alt="`${song.title} cover`"
+                    class="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                  />
+                  <span v-else class="grid h-full w-full place-items-center text-[#52525B]">
+                    <Music2 :size="28" />
+                  </span>
+                </RouterLink>
+                <button
+                  :aria-label="`Play ${song.title}`"
+                  class="absolute bottom-2.5 right-2.5 grid size-10 translate-y-2 place-items-center rounded-full bg-[#20E878] text-[#09090B] opacity-0 shadow-lg shadow-black/40 transition duration-200 hover:scale-105 group-hover:translate-y-0 group-hover:opacity-100 focus-visible:translate-y-0 focus-visible:opacity-100"
+                  @click="playGenreSong(song, section.songs)"
+                >
+                  <Play :size="17" class="ml-0.5 fill-current" />
+                </button>
+              </div>
+
+              <div class="mt-3 flex min-w-0 items-start gap-1">
+                <RouterLink
+                  :to="{ name: 'song-detail', params: { slug: song.slug } }"
+                  class="min-w-0 flex-1"
+                >
+                  <span class="block truncate text-sm font-semibold text-[#F4FFF7] transition group-hover:text-[#20E878]">{{ song.title }}</span>
+                  <span class="mt-1 block truncate text-[11px] text-[#71717A]">
+                    {{ song.genres?.map((genre) => genre.name).join(' · ') || section.genre.name }}
+                  </span>
+                </RouterLink>
+                <AddToPlaylistButton :song-id="song.id" hide-until-hover size="sm" />
+              </div>
+            </article>
+          </div>
+        </article>
       </div>
     </section>
 
