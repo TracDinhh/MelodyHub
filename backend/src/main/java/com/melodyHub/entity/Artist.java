@@ -12,7 +12,6 @@ import lombok.Setter;
 @AllArgsConstructor
 public class Artist {
     private Integer id;
-    private Integer userId;
     private String name;
     private String slug;
     private String bio;

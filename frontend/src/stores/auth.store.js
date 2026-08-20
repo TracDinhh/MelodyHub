@@ -28,7 +28,6 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isAuthenticated = computed(() => Boolean(token.value));
   const isUser = computed(() => user.value?.role === 'USER');
-  const isArtist = computed(() => user.value?.role === 'ARTIST');
   const isAdmin = computed(() => user.value?.role === 'ADMIN');
   const isPremium = computed(() => Boolean(user.value?.premium));
   const premiumUntil = computed(() => user.value?.premiumUntil || null);
@@ -127,7 +126,6 @@ export const useAuthStore = defineStore('auth', () => {
     initialized,
     isAuthenticated,
     isUser,
-    isArtist,
     isAdmin,
     isPremium,
     premiumUntil,

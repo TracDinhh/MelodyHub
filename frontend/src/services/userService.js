@@ -5,14 +5,6 @@ export const userService = {
     return apiClient.get('/api/auth/me');
   },
 
-  getArtistProfile() {
-    return apiClient.get('/api/artist/profile');
-  },
-
-  updateArtistProfile(profile) {
-    return apiClient.put('/api/artist/profile', profile);
-  },
-
   updateMyProfile(payload) {
     return apiClient.patch('/api/users/me', payload);
   }

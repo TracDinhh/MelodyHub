@@ -12,7 +12,7 @@ export const lyricsService = {
    * @returns {Promise<import('../types/lyrics').LyricsLookupResponse>}
    */
   searchLyrics({ title, artist, album, duration }) {
-    return apiClient.get('/api/artist/lyrics/search', {
+    return apiClient.get('/api/studio/lyrics/search', {
       params: { title, artist, album, duration }
     });
   }

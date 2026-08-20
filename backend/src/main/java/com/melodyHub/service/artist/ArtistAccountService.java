@@ -3,12 +3,9 @@ package com.melodyHub.service.artist;
 import com.melodyHub.dto.request.ArtistProfileUpdateRequest;
 import com.melodyHub.dto.response.ArtistProfileResponse;
 import com.melodyHub.entity.Artist;
-import com.melodyHub.entity.User;
-import com.melodyHub.entity.UserRole;
 import com.melodyHub.exception.AuthException;
 import com.melodyHub.exception.ArtistException;
 import com.melodyHub.repository.ArtistRepository;
-import com.melodyHub.service.auth.AuthorizationService;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
@@ -23,32 +20,35 @@ public class ArtistAccountService {
     private static final int DUPLICATE_KEY_ERROR_CODE = 1062;
     private static final Pattern SLUG_PATTERN = Pattern.compile("[a-z0-9]+(?:-[a-z0-9]+)*");
 
-    private final AuthorizationService authorizationService;
     private final ArtistRepository artistRepository;
 
     public ArtistAccountService() {
-        this(new AuthorizationService(), new ArtistRepository());
+        this(new ArtistRepository());
     }
 
-    public ArtistAccountService(AuthorizationService authorizationService, ArtistRepository artistRepository) {
-        this.authorizationService = Objects.requireNonNull(
-                authorizationService,
-                "authorizationService must not be null"
-        );
+    public ArtistAccountService(ArtistRepository artistRepository) {
         this.artistRepository = Objects.requireNonNull(artistRepository, "artistRepository must not be null");
     }
 
-    public Artist getCurrentArtist(String token) throws AuthException, SQLException {
-        User user = authorizationService.requireRole(token, UserRole.ARTIST);
-        return artistRepository.findActiveByUserId(user.getId())
-                .orElseThrow(() -> new AuthException(
-                        "ARTIST_PROFILE_NOT_FOUND",
-                        "Artist profile was not found"
-                ));
+    /**
+     * Returns the profile for a specific artist. Membership is verified by the
+     * caller via {@link ArtistAuthorizationService}. Used by Studio endpoints.
+     */
+    public ArtistProfileResponse getArtistProfile(int artistId) throws ArtistException, SQLException {
+        return ArtistProfileResponse.fromEntity(getArtistEntity(artistId));
     }
 
-    public ArtistProfileResponse getCurrentArtistProfile(String token) throws AuthException, SQLException {
-        return ArtistProfileResponse.fromEntity(getCurrentArtist(token));
+    /**
+     * Resolves the active {@link Artist} entity by id, or throws when the artist
+     * does not exist or has been soft-deleted. Membership is verified by the
+     * caller. Used by Studio endpoints.
+     */
+    public Artist getArtistEntity(int artistId) throws ArtistException, SQLException {
+        return artistRepository.findActiveById(artistId)
+                .orElseThrow(() -> new ArtistException(
+                        "ARTIST_NOT_FOUND",
+                        "Artist was not found"
+                ));
     }
 
     public ArtistProfileResponse updateCurrentArtistProfile(Artist artist, ArtistProfileUpdateRequest request)

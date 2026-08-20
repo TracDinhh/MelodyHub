@@ -1,12 +1,10 @@
 import { computed, ref } from 'vue';
 import { defineStore } from 'pinia';
 import { songService } from '../services/songService';
-import { useAuthStore } from './auth.store';
 
 const PAGE_SIZE = 10;
 
 export const useSongStore = defineStore('songs', () => {
-  const authStore = useAuthStore();
   const songs = ref([]);
   const total = ref(0);
   const page = ref(1);
@@ -27,13 +25,11 @@ export const useSongStore = defineStore('songs', () => {
         page: nextPage,
         size: size.value
       };
-      if (!authStore.isArtist && query.value) {
+      if (query.value) {
         params.q = query.value;
       }
 
-      const response = authStore.isArtist
-        ? await songService.listMine(params)
-        : await songService.listPublic(params);
+      const response = await songService.listPublic(params);
       songs.value = response.items || [];
       total.value = response.total || 0;
       page.value = response.page || nextPage;

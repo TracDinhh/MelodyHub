@@ -20,6 +20,7 @@ public class UserRepository {
             email,
             password_hash,
             display_name,
+            phone,
             avatar_url,
             role,
             status,
@@ -35,11 +36,12 @@ public class UserRepository {
                     email,
                     password_hash,
                     display_name,
+                    phone,
                     avatar_url,
                     role,
                     status
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """;
 
         try (var connection = DatabaseConfig.getConnection();
@@ -48,9 +50,10 @@ public class UserRepository {
             statement.setString(2, user.getEmail());
             statement.setString(3, user.getPasswordHash());
             statement.setString(4, user.getDisplayName());
-            statement.setString(5, user.getAvatarUrl());
-            statement.setString(6, getRoleOrDefault(user).name());
-            statement.setString(7, getStatusOrDefault(user).name());
+            statement.setString(5, user.getPhone());
+            statement.setString(6, user.getAvatarUrl());
+            statement.setString(7, getRoleOrDefault(user).name());
+            statement.setString(8, getStatusOrDefault(user).name());
 
             statement.executeUpdate();
 
@@ -234,35 +237,20 @@ public class UserRepository {
         return counts;
     }
 
-    public Optional<User> updateRole(int userId, UserRole role) throws SQLException {
-        String sql = "UPDATE users SET role = ?, updated_at = CURRENT_TIMESTAMP(6) WHERE id = ?";
-
-        try (var connection = DatabaseConfig.getConnection();
-             var statement = connection.prepareStatement(sql)) {
-            statement.setString(1, role.name());
-            statement.setInt(2, userId);
-
-            if (statement.executeUpdate() == 0) {
-                return Optional.empty();
-            }
-
-            return findById(userId);
-        }
-    }
-
-    public Optional<User> updateProfile(int userId, String displayName, String email, String avatarUrl) throws SQLException {
+    public Optional<User> updateProfile(int userId, String displayName, String phone, String email, String avatarUrl) throws SQLException {
         String sql = """
                 UPDATE users
-                SET display_name = ?, email = ?, avatar_url = ?, updated_at = CURRENT_TIMESTAMP(6)
+                SET display_name = ?, phone = ?, email = ?, avatar_url = ?, updated_at = CURRENT_TIMESTAMP(6)
                 WHERE id = ?
                 """;
 
         try (var connection = DatabaseConfig.getConnection();
              var statement = connection.prepareStatement(sql)) {
             statement.setString(1, displayName);
-            statement.setString(2, email);
-            statement.setString(3, avatarUrl);
-            statement.setInt(4, userId);
+            statement.setString(2, phone);
+            statement.setString(3, email);
+            statement.setString(4, avatarUrl);
+            statement.setInt(5, userId);
 
             if (statement.executeUpdate() == 0) {
                 return Optional.empty();
@@ -306,6 +294,7 @@ public class UserRepository {
                 resultSet.getString("email"),
                 resultSet.getString("password_hash"),
                 resultSet.getString("display_name"),
+                resultSet.getString("phone"),
                 resultSet.getString("avatar_url"),
                 UserRole.fromDatabaseValue(resultSet.getString("role")),
                 UserStatus.fromDatabaseValue(resultSet.getString("status")),

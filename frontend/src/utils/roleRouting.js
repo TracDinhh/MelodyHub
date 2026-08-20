@@ -1,6 +1,5 @@
 const ROLE_HOME_BY_ROLE = Object.freeze({
   USER: 'home',
-  ARTIST: 'artist-dashboard',
   ADMIN: 'admin-dashboard'
 });
 

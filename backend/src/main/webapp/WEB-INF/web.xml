@@ -27,11 +27,6 @@
     </servlet>
 
     <servlet>
-        <servlet-name>ArtistServlet</servlet-name>
-        <servlet-class>com.melodyHub.controller.artist.ArtistServlet</servlet-class>
-    </servlet>
-
-    <servlet>
         <servlet-name>PublicArtistServlet</servlet-name>
         <servlet-class>com.melodyHub.controller.artist.PublicArtistServlet</servlet-class>
     </servlet>
@@ -76,6 +71,21 @@
         <servlet-class>com.melodyHub.controller.payment.PaymentServlet</servlet-class>
     </servlet>
 
+    <servlet>
+        <servlet-name>StudioServlet</servlet-name>
+        <servlet-class>com.melodyHub.controller.studio.StudioServlet</servlet-class>
+    </servlet>
+
+    <servlet>
+        <servlet-name>MeServlet</servlet-name>
+        <servlet-class>com.melodyHub.controller.user.MeServlet</servlet-class>
+    </servlet>
+
+    <servlet>
+        <servlet-name>ArtistAccessRequestServlet</servlet-name>
+        <servlet-class>com.melodyHub.controller.artist.ArtistAccessRequestServlet</servlet-class>
+    </servlet>
+
     <servlet-mapping>
         <servlet-name>AuthServlet</servlet-name>
         <url-pattern>/api/auth/*</url-pattern>
@@ -84,11 +94,6 @@
     <servlet-mapping>
         <servlet-name>SongServlet</servlet-name>
         <url-pattern>/api/songs/*</url-pattern>
-    </servlet-mapping>
-
-    <servlet-mapping>
-        <servlet-name>ArtistServlet</servlet-name>
-        <url-pattern>/api/artist/*</url-pattern>
     </servlet-mapping>
 
     <servlet-mapping>
@@ -131,6 +136,20 @@
         <url-pattern>/api/payments/*</url-pattern>
     </servlet-mapping>
 
+    <servlet-mapping>
+        <servlet-name>StudioServlet</servlet-name>
+        <url-pattern>/api/studio/*</url-pattern>
+    </servlet-mapping>
+
+    <servlet-mapping>
+        <servlet-name>MeServlet</servlet-name>
+        <url-pattern>/api/me/*</url-pattern>
+    </servlet-mapping>
+
+    <servlet-mapping>
+        <servlet-name>ArtistAccessRequestServlet</servlet-name>
+        <url-pattern>/api/artist-access-requests/*</url-pattern>
+    </servlet-mapping>
 
     <session-config>
         <session-timeout>30</session-timeout>

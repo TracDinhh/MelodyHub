@@ -15,6 +15,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -404,7 +405,7 @@ public class SongRepository {
      */
     public List<Artist> findArtistsForSong(int songId) throws SQLException {
         String sql = """
-                SELECT a.id, a.user_id, a.name, a.slug, a.bio, a.image_url,
+                SELECT a.id, a.name, a.slug, a.bio, a.image_url,
                        a.created_at, a.updated_at, a.deleted_at
                 FROM song_artists sa
                 JOIN artists a ON a.id = sa.artist_id
@@ -448,7 +449,7 @@ public class SongRepository {
         String placeholders = SqlSupport.placeholders(ids.size());
         String sql = """
                 SELECT sa.song_id,
-                       a.id, a.user_id, a.name, a.slug, a.bio, a.image_url,
+                       a.id, a.name, a.slug, a.bio, a.image_url,
                        a.created_at, a.updated_at, a.deleted_at
                 FROM song_artists sa
                 JOIN artists a ON a.id = sa.artist_id
@@ -795,7 +796,6 @@ public class SongRepository {
     private Artist mapArtistRow(ResultSet resultSet) throws SQLException {
         return new Artist(
                 resultSet.getInt("id"),
-                getNullableInteger(resultSet, "user_id"),
                 resultSet.getString("name"),
                 resultSet.getString("slug"),
                 resultSet.getString("bio"),
@@ -821,6 +821,175 @@ public class SongRepository {
                 getLocalDateTime(resultSet, "updated_at"),
                 getLocalDateTime(resultSet, "deleted_at")
         );
+    }
+
+    // ==================== ARTIST-SPECIFIC STATS ====================
+
+    /**
+     * Summary statistics for an artist's own songs: total songs, total plays,
+     * total likes, and per-status breakdown. Returns a Map suitable for JSON
+     * serialization.
+     */
+    public Map<String, Object> getArtistStats(int artistId) throws SQLException {
+        String sql = """
+                SELECT
+                    COUNT(*) AS total_songs,
+                    COALESCE(SUM(s.play_count), 0) AS total_plays,
+                    SUM(CASE WHEN s.status = 'PUBLISHED' THEN 1 ELSE 0 END) AS published_songs,
+                    SUM(CASE WHEN s.status = 'DRAFT' THEN 1 ELSE 0 END) AS draft_songs,
+                    SUM(CASE WHEN s.status = 'HIDDEN' THEN 1 ELSE 0 END) AS hidden_songs
+                FROM songs s
+                JOIN song_artists sa ON sa.song_id = s.id
+                WHERE sa.artist_id = ? AND sa.role = 'MAIN' AND s.deleted_at IS NULL
+                """;
+        String likesSql = """
+                SELECT COUNT(*) AS total_likes
+                FROM song_likes sl
+                JOIN song_artists sa ON sa.song_id = sl.song_id
+                WHERE sa.artist_id = ? AND sa.role = 'MAIN'
+                """;
+
+        Map<String, Object> stats = new java.util.LinkedHashMap<>();
+        try (var connection = getConnection()) {
+            try (var statement = connection.prepareStatement(sql)) {
+                statement.setInt(1, artistId);
+                try (var resultSet = statement.executeQuery()) {
+                    if (resultSet.next()) {
+                        stats.put("totalSongs", resultSet.getLong("total_songs"));
+                        stats.put("totalPlays", resultSet.getLong("total_plays"));
+                        stats.put("publishedSongs", resultSet.getLong("published_songs"));
+                        stats.put("draftSongs", resultSet.getLong("draft_songs"));
+                        stats.put("hiddenSongs", resultSet.getLong("hidden_songs"));
+                    }
+                }
+            }
+            try (var statement = connection.prepareStatement(likesSql)) {
+                statement.setInt(1, artistId);
+                try (var resultSet = statement.executeQuery()) {
+                    stats.put("totalLikes", resultSet.next() ? resultSet.getLong("total_likes") : 0L);
+                }
+            }
+        }
+        return stats;
+    }
+
+    /**
+     * Returns daily listen counts for an artist's songs over the last N days.
+     */
+    public List<Map<String, Object>> getArtistListensByDay(int artistId, int days) throws SQLException {
+        String sql = """
+                SELECT DATE(lh.listened_at) AS d, COUNT(*) AS cnt
+                FROM listen_history lh
+                JOIN song_artists sa ON sa.song_id = lh.song_id
+                WHERE sa.artist_id = ? AND sa.role = 'MAIN'
+                  AND lh.listened_at >= NOW() - INTERVAL ? DAY
+                GROUP BY d ORDER BY d
+                """;
+        List<Map<String, Object>> rows = new ArrayList<>();
+        try (var connection = getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, artistId);
+            statement.setInt(2, days);
+            try (var resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    java.sql.Date day = resultSet.getDate("d");
+                    Map<String, Object> row = new java.util.LinkedHashMap<>();
+                    row.put("date", day != null ? day.toLocalDate().toString() : null);
+                    row.put("count", resultSet.getLong("cnt"));
+                    rows.add(row);
+                }
+            }
+        }
+        return rows;
+    }
+
+    /**
+     * Returns daily like counts for an artist's songs over the last N days.
+     */
+    public List<Map<String, Object>> getArtistLikesByDay(int artistId, int days) throws SQLException {
+        String sql = """
+                SELECT DATE(sl.created_at) AS d, COUNT(*) AS cnt
+                FROM song_likes sl
+                JOIN song_artists sa ON sa.song_id = sl.song_id
+                WHERE sa.artist_id = ? AND sa.role = 'MAIN'
+                  AND sl.created_at >= NOW() - INTERVAL ? DAY
+                GROUP BY d ORDER BY d
+                """;
+        List<Map<String, Object>> rows = new ArrayList<>();
+        try (var connection = getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, artistId);
+            statement.setInt(2, days);
+            try (var resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    java.sql.Date day = resultSet.getDate("d");
+                    Map<String, Object> row = new java.util.LinkedHashMap<>();
+                    row.put("date", day != null ? day.toLocalDate().toString() : null);
+                    row.put("count", resultSet.getLong("cnt"));
+                    rows.add(row);
+                }
+            }
+        }
+        return rows;
+    }
+
+    /**
+     * Returns top N songs by play count for a given artist.
+     */
+    public List<Map<String, Object>> getArtistTopSongs(int artistId, int limit) throws SQLException {
+        String sql = """
+                SELECT s.title, s.slug, s.play_count,
+                       (SELECT COUNT(*) FROM song_likes sl WHERE sl.song_id = s.id) AS like_count
+                FROM songs s
+                JOIN song_artists sa ON sa.song_id = s.id
+                WHERE sa.artist_id = ? AND sa.role = 'MAIN' AND s.deleted_at IS NULL
+                ORDER BY s.play_count DESC
+                LIMIT ?
+                """;
+        List<Map<String, Object>> rows = new ArrayList<>();
+        try (var connection = getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, artistId);
+            statement.setInt(2, limit);
+            try (var resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> row = new java.util.LinkedHashMap<>();
+                    row.put("title", resultSet.getString("title"));
+                    row.put("slug", resultSet.getString("slug"));
+                    row.put("playCount", resultSet.getLong("play_count"));
+                    row.put("likeCount", resultSet.getLong("like_count"));
+                    rows.add(row);
+                }
+            }
+        }
+        return rows;
+    }
+
+    /**
+     * Returns songs count grouped by status for an artist.
+     */
+    public List<Map<String, Object>> getArtistSongsByStatus(int artistId) throws SQLException {
+        String sql = """
+                SELECT s.status AS label, COUNT(*) AS cnt
+                FROM songs s
+                JOIN song_artists sa ON sa.song_id = s.id
+                WHERE sa.artist_id = ? AND sa.role = 'MAIN' AND s.deleted_at IS NULL
+                GROUP BY s.status
+                """;
+        List<Map<String, Object>> rows = new ArrayList<>();
+        try (var connection = getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, artistId);
+            try (var resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> row = new java.util.LinkedHashMap<>();
+                    row.put("label", resultSet.getString("label"));
+                    row.put("count", resultSet.getLong("cnt"));
+                    rows.add(row);
+                }
+            }
+        }
+        return rows;
     }
 
     // ==================== ADMIN-SPECIFIC QUERIES ====================

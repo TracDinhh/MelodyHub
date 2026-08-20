@@ -2,7 +2,6 @@ package com.melodyHub.service.artist;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.melodyHub.dto.request.SongCreateRequest;
 import com.melodyHub.dto.response.PagedResponse;
@@ -35,7 +34,7 @@ class ArtistSongServiceTest {
 
         SongException exception = assertThrows(
                 SongException.class,
-                () -> service.createOwnSong(12, request)
+                () -> service.createSong(12, request)
         );
 
         assertEquals("INVALID_SYNCED_LYRICS", exception.getCode());
@@ -52,7 +51,7 @@ class ArtistSongServiceTest {
         repository.total = 3;
         ArtistSongService service = new ArtistSongService(repository, new SongLyricsRepository());
 
-        PagedResponse<SongResponse> response = service.getOwnPage(12, 2, 10);
+        PagedResponse<SongResponse> response = service.getSongs(12, 2, 10);
 
         assertEquals(12, repository.artistId);
         assertEquals(10, repository.size);
@@ -67,42 +66,42 @@ class ArtistSongServiceTest {
     }
 
     @Test
-    void findsAnOwnedSongById() throws SQLException {
+    void findsAnOwnedSongById() throws SQLException, SongException {
         StubSongRepository repository = new StubSongRepository();
         repository.byId = Optional.of(song(31, "Draft Song", "draft-song", SongStatus.DRAFT));
         ArtistSongService service = new ArtistSongService(repository, new SongLyricsRepository());
 
-        Optional<SongResponse> response = service.getOwnByIdentifier(12, "31");
+        Song song = service.getOwnSongById(12, 31);
 
-        assertTrue(response.isPresent());
-        assertEquals(31, response.get().getId());
+        assertEquals(31, song.getId());
         assertEquals(12, repository.artistId);
         assertEquals(31, repository.songId);
     }
 
     @Test
-    void findsAnOwnedSongBySlugIncludingANumericSlugFallback() throws SQLException {
+    void throwsWhenAnOwnedSongDoesNotExist() throws SQLException {
         StubSongRepository repository = new StubSongRepository();
-        repository.bySlug = Optional.of(song(32, "2026", "2026", SongStatus.HIDDEN));
+        repository.byId = Optional.empty();
         ArtistSongService service = new ArtistSongService(repository, new SongLyricsRepository());
 
-        Optional<SongResponse> response = service.getOwnByIdentifier(12, "2026");
+        SongException exception = assertThrows(
+                SongException.class,
+                () -> service.getOwnSongById(12, 99)
+        );
 
-        assertTrue(response.isPresent());
-        assertEquals("2026", response.get().getSlug());
-        assertEquals("2026", repository.slug);
+        assertEquals("SONG_NOT_FOUND", exception.getCode());
     }
 
     @Test
-    void rejectsAPageWhoseOffsetExceedsTheRepositoryIntegerRange() {
-        ArtistSongService service = new ArtistSongService(new StubSongRepository(), new SongLyricsRepository());
+    void clampsTheOffsetWhenPageExceedsTheIntegerRange() throws SQLException {
+        StubSongRepository repository = new StubSongRepository();
+        repository.page = List.of();
+        repository.total = 0;
+        ArtistSongService service = new ArtistSongService(repository, new SongLyricsRepository());
 
-        IllegalArgumentException exception = assertThrows(
-                IllegalArgumentException.class,
-                () -> service.getOwnPage(12, Integer.MAX_VALUE, 50)
-        );
+        service.getSongs(12, Integer.MAX_VALUE, 50);
 
-        assertEquals("page is too large", exception.getMessage());
+        assertEquals(Integer.MAX_VALUE, repository.offset);
     }
 
     private static Song song(int id, String title, String slug, SongStatus status) {
@@ -130,12 +129,10 @@ class ArtistSongServiceTest {
         private List<Song> page = List.of();
         private long total;
         private Optional<Song> byId = Optional.empty();
-        private Optional<Song> bySlug = Optional.empty();
         private int artistId;
         private int songId;
         private int size;
         private int offset;
-        private String slug;
 
         @Override
         public List<Song> getOwnedPage(int artistId, int size, int offset) {
@@ -156,13 +153,6 @@ class ArtistSongServiceTest {
             this.artistId = artistId;
             this.songId = songId;
             return byId;
-        }
-
-        @Override
-        public Optional<Song> findOwnedBySlug(int artistId, String slug) {
-            this.artistId = artistId;
-            this.slug = slug;
-            return bySlug;
         }
     }
 }

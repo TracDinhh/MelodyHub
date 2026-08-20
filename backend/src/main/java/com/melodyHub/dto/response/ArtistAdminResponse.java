@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 /**
- * Artist row for the admin artist list, including the linked account (if any).
+ * Artist row for the admin artist list.
  */
 @Getter
 @Setter
@@ -17,13 +17,10 @@ import lombok.Setter;
 @AllArgsConstructor
 public class ArtistAdminResponse {
     private Integer id;
-    private Integer userId;
     private String name;
     private String slug;
     private String bio;
     private String imageUrl;
-    private String linkedUsername;
-    private String linkedEmail;
     private LocalDateTime createdAt;
 
     public static ArtistAdminResponse fromRow(ArtistRepository.AdminRow row) {
@@ -34,13 +31,10 @@ public class ArtistAdminResponse {
         Artist artist = row.artist();
         return new ArtistAdminResponse(
                 artist.getId(),
-                artist.getUserId(),
                 artist.getName(),
                 artist.getSlug(),
                 artist.getBio(),
                 artist.getImageUrl(),
-                row.linkedUsername(),
-                row.linkedEmail(),
                 artist.getCreatedAt()
         );
     }

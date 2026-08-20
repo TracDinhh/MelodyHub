@@ -18,6 +18,7 @@ public class UserResponse {
     private String username;
     private String email;
     private String displayName;
+    private String phone;
     private String avatarUrl;
     private UserRole role;
     private UserStatus status;
@@ -36,6 +37,7 @@ public class UserResponse {
                 user.getUsername(),
                 user.getEmail(),
                 user.getDisplayName(),
+                user.getPhone(),
                 user.getAvatarUrl(),
                 user.getRole(),
                 user.getStatus(),

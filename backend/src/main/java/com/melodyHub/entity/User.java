@@ -16,6 +16,7 @@ public class User {
     private String email;
     private String passwordHash;
     private String displayName;
+    private String phone;
     private String avatarUrl;
     private UserRole role = UserRole.USER;
     private UserStatus status = UserStatus.ACTIVE;

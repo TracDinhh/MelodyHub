@@ -18,27 +18,31 @@ const actingId = ref(null); // id currently being approved/rejected
 
 const isEmpty = computed(() => !isLoading.value && requests.value.length === 0);
 
+function displayName(item) {
+  return item.existingArtistName || item.requestedArtistName || 'Artist request';
+}
+
+function typeBadge(type) {
+  return type === 'CLAIM_ARTIST'
+    ? 'bg-sky-400/15 text-sky-300'
+    : 'bg-[#8b5cf6]/15 text-[#a78bfa]';
+}
+
+function requesterName(item) {
+  return item.requesterDisplayName || item.requesterUsername;
+}
+
 async function load() {
   isLoading.value = true;
   error.value = '';
-  console.log('[AdminRequests] Loading start, isLoading:', isLoading.value);
   try {
-    console.log('[AdminRequests] Calling API with status:', activeTab.value);
     const paged = await adminService.listArtistRequests({ status: activeTab.value, page: 1, size: 50 });
-    console.log('[AdminRequests] API Response:', JSON.stringify(paged));
-    console.log('[AdminRequests] Items:', paged?.items);
-    console.log('[AdminRequests] Total:', paged?.total);
     requests.value = paged?.items || [];
     total.value = paged?.total || 0;
-    console.log('[AdminRequests] After assignment, requests:', requests.value);
   } catch (requestError) {
-    console.error('[AdminRequests] CATCH error:', requestError);
-    console.error('[AdminRequests] Error message:', requestError.message);
-    console.error('[AdminRequests] Error code:', requestError.code);
-    error.value = requestError.message || 'Unable to load artist requests.';
+    error.value = requestError.message || 'Unable to load artist access requests.';
   } finally {
     isLoading.value = false;
-    console.log('[AdminRequests] Finally block, isLoading:', isLoading.value);
   }
 }
 
@@ -64,7 +68,7 @@ async function approve(item) {
 
 async function reject(item) {
   if (actingId.value) return;
-  const note = window.prompt(`Reject "${item.artistName}"? Optionally add a reason:`, '');
+  const note = window.prompt(`Reject "${displayName(item)}"? Optionally add a reason:`, '');
   if (note === null) return; // cancelled
   actingId.value = item.id;
   error.value = '';
@@ -94,7 +98,7 @@ onMounted(load);
       <ShieldCheck :size="28" class="text-[#16C65A]" />
       <div>
         <p class="melodyhub-kicker">ADMIN</p>
-        <h1 class="melodyhub-section-title">Artist Requests</h1>
+        <h1 class="melodyhub-section-title">Artist Access Requests</h1>
       </div>
     </div>
 
@@ -131,7 +135,7 @@ onMounted(load);
     </div>
 
     <div v-else-if="isEmpty" class="flex min-h-48 items-center justify-center border border-white/10 bg-[#111827] text-sm text-[#888]">
-      No {{ activeTab.toLowerCase() }} requests.
+      No {{ activeTab.toLowerCase() }} access requests.
     </div>
 
     <ul v-else class="space-y-3">
@@ -142,7 +146,7 @@ onMounted(load);
       >
         <!-- Avatar -->
         <div class="size-16 shrink-0 overflow-hidden rounded-lg bg-white/[0.04]">
-          <img v-if="item.imageUrl" :src="item.imageUrl" :alt="item.artistName" class="h-full w-full object-cover" />
+          <img v-if="item.requestedImageUrl" :src="item.requestedImageUrl" :alt="displayName(item)" class="h-full w-full object-cover" />
           <span v-else class="grid h-full w-full place-items-center text-[#555]">
             <UserRound :size="24" />
           </span>
@@ -150,13 +154,27 @@ onMounted(load);
 
         <!-- Info -->
         <div class="min-w-0 flex-1">
-          <p class="truncate text-base font-black text-white">{{ item.artistName }}</p>
+          <div class="flex flex-wrap items-center gap-2">
+            <p class="truncate text-base font-black text-white">{{ displayName(item) }}</p>
+            <span class="rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide" :class="typeBadge(item.requestType)">
+              {{ item.requestType === 'CLAIM_ARTIST' ? 'Claim' : 'Create' }}
+            </span>
+            <span v-if="item.resolvedMemberRole" class="rounded-full bg-white/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#bbb]">
+              {{ item.resolvedMemberRole }}
+            </span>
+          </div>
+
           <p class="mt-1 truncate text-xs text-[#aaa]">
             Requested by
-            <span class="text-[#ddd]">{{ item.requesterDisplayName || item.requesterUsername }}</span>
+            <span class="text-[#ddd]">{{ requesterName(item) }}</span>
             <span class="text-[#666]"> · {{ item.requesterEmail }}</span>
           </p>
-          <p v-if="item.bio" class="mt-2 line-clamp-2 text-xs leading-5 text-[#999]">{{ item.bio }}</p>
+
+          <p v-if="item.existingArtistSlug" class="mt-1 text-[11px] text-[#666]">
+            Existing artist: /artist/{{ item.existingArtistSlug }}
+          </p>
+          <p v-if="item.requestedBio" class="mt-2 line-clamp-2 text-xs leading-5 text-[#999]">{{ item.requestedBio }}</p>
+          <p v-if="item.message" class="mt-1 line-clamp-2 text-xs italic leading-5 text-[#777]">"{{ item.message }}"</p>
           <p class="mt-1 text-[11px] text-[#666]">Submitted {{ formatDate(item.createdAt) }}</p>
         </div>
 
