@@ -26,7 +26,6 @@ const cards = computed(() => {
   return [
     { label: 'Total users', value: s.totalUsers, icon: Users, tint: 'text-[#16C65A]' },
     { label: 'Listeners', value: s.listeners, icon: UserRound, tint: 'text-sky-300' },
-    { label: 'Artists', value: s.artists, icon: Mic2, tint: 'text-fuchsia-300' },
     { label: 'Admins', value: s.admins, icon: ShieldCheck, tint: 'text-amber-300' },
     { label: 'Artist profiles', value: s.artistProfiles, icon: Mic2, tint: 'text-fuchsia-300' },
     { label: 'Published songs', value: s.publishedSongs, icon: Music2, tint: 'text-emerald-300' }

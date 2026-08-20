@@ -11,7 +11,7 @@ const navOpen = ref(false);
 
 const navItems = [
   { label: 'Overview', route: 'admin-dashboard', icon: LayoutDashboard },
-  { label: 'Artist Requests', route: 'admin-artist-requests', icon: UserCheck },
+  { label: 'Access Requests', route: 'admin-artist-requests', icon: UserCheck },
   { label: 'Users', route: 'admin-users', icon: Users },
   { label: 'Artists', route: 'admin-artists', icon: Mic2 },
   { label: 'Songs', route: 'admin-songs', icon: Music2 }

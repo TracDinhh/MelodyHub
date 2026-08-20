@@ -16,11 +16,12 @@ CREATE TABLE users (
     email         VARCHAR(255) NOT NULL,
     password_hash VARCHAR(255) NOT NULL,           -- BCrypt, khong luu plain text
     display_name  VARCHAR(100),
+    phone         VARCHAR(20),
     avatar_url    VARCHAR(500),
     role          VARCHAR(10) NOT NULL DEFAULT 'USER'
-                  CHECK (role IN ('USER','ARTIST','ADMIN')),
+                  CONSTRAINT chk_users_role CHECK (role IN ('USER','ADMIN')),
     status        VARCHAR(10) NOT NULL DEFAULT 'ACTIVE'
-                  CHECK (status IN ('ACTIVE','BANNED')),
+                  CONSTRAINT chk_users_status CHECK (status IN ('ACTIVE','BANNED')),
     premium_until DATETIME(6) NULL,
     created_at    DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
     updated_at    DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
@@ -52,7 +53,6 @@ CREATE TABLE payment_orders (
 -- =====================================================
 CREATE TABLE artists (
     id          INT AUTO_INCREMENT PRIMARY KEY,
-    user_id     INT NULL,                           -- NULL = artist profile chua lien ket tai khoan
     name        VARCHAR(200) NOT NULL,
     slug        VARCHAR(220) NOT NULL,              -- URL: /artist/son-tung-mtp
     bio         TEXT,
@@ -60,10 +60,7 @@ CREATE TABLE artists (
     created_at  DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
     updated_at  DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
     deleted_at  DATETIME(6) NULL,                   -- soft delete: admin an thay vi xoa
-    CONSTRAINT uk_artists_slug UNIQUE (slug),
-    CONSTRAINT uk_artists_user UNIQUE (user_id),
-    CONSTRAINT fk_artists_user FOREIGN KEY (user_id)
-        REFERENCES users(id) ON DELETE SET NULL
+    CONSTRAINT uk_artists_slug UNIQUE (slug)
 );
 CREATE INDEX idx_artists_name ON artists(name);
 
@@ -95,58 +92,6 @@ CREATE TABLE password_reset_tokens (
         REFERENCES users(id) ON DELETE CASCADE
 );
 CREATE INDEX idx_password_reset_tokens_user ON password_reset_tokens(user_id, expires_at);
-
-DELIMITER //
-
-CREATE TRIGGER trg_artists_user_must_be_artist_before_insert
-BEFORE INSERT ON artists
-FOR EACH ROW
-BEGIN
-    IF NEW.user_id IS NOT NULL
-       AND NOT EXISTS (
-           SELECT 1
-           FROM users
-           WHERE id = NEW.user_id
-             AND role = 'ARTIST'
-       ) THEN
-        SIGNAL SQLSTATE '45000'
-            SET MESSAGE_TEXT = 'Artist profile user_id must reference an ARTIST user';
-    END IF;
-END//
-
-CREATE TRIGGER trg_artists_user_must_be_artist_before_update
-BEFORE UPDATE ON artists
-FOR EACH ROW
-BEGIN
-    IF NEW.user_id IS NOT NULL
-       AND NOT EXISTS (
-           SELECT 1
-           FROM users
-           WHERE id = NEW.user_id
-             AND role = 'ARTIST'
-       ) THEN
-        SIGNAL SQLSTATE '45000'
-            SET MESSAGE_TEXT = 'Artist profile user_id must reference an ARTIST user';
-    END IF;
-END//
-
-CREATE TRIGGER trg_users_artist_link_role_before_update
-BEFORE UPDATE ON users
-FOR EACH ROW
-BEGIN
-    IF OLD.role = 'ARTIST'
-       AND NEW.role <> 'ARTIST'
-       AND EXISTS (
-           SELECT 1
-           FROM artists
-           WHERE user_id = OLD.id
-       ) THEN
-        SIGNAL SQLSTATE '45000'
-            SET MESSAGE_TEXT = 'Linked Artist accounts must keep the ARTIST role';
-    END IF;
-END//
-
-DELIMITER ;
 
 -- =====================================================
 -- 3. ALBUM
@@ -334,32 +279,69 @@ CREATE INDEX idx_lh_user_time ON listen_history(user_id, listened_at DESC);
 CREATE INDEX idx_lh_song_time ON listen_history(song_id, listened_at);
 
 -- =====================================================
--- 10. YEU CAU TRO THANH NGHE SI (ARTIST REQUEST)
 -- =====================================================
--- User gui yeu cau -> PENDING. Admin duyet -> APPROVED (nang role + tao artist)
--- hoac tu choi -> REJECTED. Moi user chi co 1 yeu cau PENDING tai mot thoi diem
--- (rang buoc o tang service).
-CREATE TABLE artist_requests (
-    id           INT AUTO_INCREMENT PRIMARY KEY,
-    user_id      INT NOT NULL,
-    artist_name  VARCHAR(200) NOT NULL,
-    slug         VARCHAR(220) NOT NULL,
-    bio          TEXT,
-    image_url    VARCHAR(500),
-    status       VARCHAR(10) NOT NULL DEFAULT 'PENDING'
-                 CHECK (status IN ('PENDING','APPROVED','REJECTED')),
-    review_note  VARCHAR(500),                       -- ly do tu choi (tuy chon)
-    reviewed_by  INT NULL,                           -- admin da xu ly
-    reviewed_at  DATETIME(6) NULL,
-    created_at   DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
-    updated_at   DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
-    CONSTRAINT fk_ar_user FOREIGN KEY (user_id)
-        REFERENCES users(id) ON DELETE CASCADE,
-    CONSTRAINT fk_ar_reviewer FOREIGN KEY (reviewed_by)
-        REFERENCES users(id) ON DELETE SET NULL
+-- 10b. ARTIST MEMBERSHIP (V2 artist architecture)
+-- Replaces the 1:1 artists.user_id model with an N:N membership table.
+-- MVP roles: OWNER, MANAGER. No status column: exists = active.
+-- =====================================================
+CREATE TABLE IF NOT EXISTS artist_members (
+    id         INT AUTO_INCREMENT PRIMARY KEY,
+    artist_id  INT NOT NULL,
+    user_id    INT NOT NULL,
+    role       VARCHAR(10) NOT NULL DEFAULT 'OWNER'
+               CHECK (role IN ('OWNER','MANAGER')),
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    CONSTRAINT uk_artist_members UNIQUE (artist_id, user_id),
+    CONSTRAINT fk_am_artist FOREIGN KEY (artist_id)
+        REFERENCES artists(id) ON DELETE CASCADE,
+    CONSTRAINT fk_am_user FOREIGN KEY (user_id)
+        REFERENCES users(id) ON DELETE CASCADE
 );
-CREATE INDEX idx_ar_user   ON artist_requests(user_id, created_at DESC);
-CREATE INDEX idx_ar_status ON artist_requests(status, created_at);
+CREATE INDEX idx_am_user   ON artist_members(user_id);
+CREATE INDEX idx_am_artist ON artist_members(artist_id);
+
+-- =====================================================
+-- 10c. ARTIST ACCESS REQUESTS (V2 artist architecture)
+-- Replaces artist_requests with richer semantics:
+--   CLAIM_ARTIST: user claims an existing artist profile
+--   CREATE_ARTIST: user requests creation of a new artist profile
+-- MVP restriction: CREATE_ARTIST only allows relationship=ARTIST.
+-- =====================================================
+CREATE TABLE IF NOT EXISTS artist_access_requests (
+    id                    INT AUTO_INCREMENT PRIMARY KEY,
+    user_id               INT NOT NULL,
+    artist_id             INT NULL,                              -- CLAIM_ARTIST only
+
+    request_type          VARCHAR(20) NOT NULL
+                          CHECK (request_type IN ('CLAIM_ARTIST','CREATE_ARTIST')),
+
+    requested_artist_name VARCHAR(200) NULL,                     -- CREATE_ARTIST only
+    requested_bio         TEXT NULL,                             -- CREATE_ARTIST only
+    requested_image_url   VARCHAR(500) NULL,                     -- CREATE_ARTIST only
+
+    relationship          VARCHAR(20) NOT NULL DEFAULT 'ARTIST'
+                          CHECK (relationship IN ('ARTIST','MANAGER','LABEL','TEAM_MEMBER','OTHER')),
+
+    website_url           VARCHAR(500) NULL,
+    social_url            VARCHAR(500) NULL,
+    message               TEXT NULL,
+
+    status                VARCHAR(10) NOT NULL DEFAULT 'PENDING'
+                          CHECK (status IN ('PENDING','APPROVED','REJECTED')),
+    review_note           VARCHAR(500) NULL,
+    reviewed_by           INT NULL,
+    reviewed_at           DATETIME(6) NULL,
+    created_at            DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    updated_at            DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+
+    CONSTRAINT fk_aar_user     FOREIGN KEY (user_id)     REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_aar_artist   FOREIGN KEY (artist_id)   REFERENCES artists(id) ON DELETE SET NULL,
+    CONSTRAINT fk_aar_reviewer FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL
+);
+CREATE INDEX idx_aar_user_status   ON artist_access_requests(user_id, status);
+CREATE INDEX idx_aar_artist_status ON artist_access_requests(artist_id, status);
+CREATE INDEX idx_aar_status_date   ON artist_access_requests(status, created_at);
 
 -- =====================================================
 -- 11. SEED DATA
@@ -379,22 +361,42 @@ VALUES (
 );
 
 -- -----------------------------------------------------
--- Tai khoan ARTIST mau (password = Admin@123456)
+-- Tai khoan nghe si mau (password = Admin@123456)
 -- -----------------------------------------------------
 INSERT INTO users (username, email, password_hash, display_name, role, status) VALUES
-('lena', 'lena@melodyhub.local', '$2a$12$OH.JXdKvdtxZ6SC5JY908uJzOmylnn/6vUIrQKvY3ZGB8jvqWV9hS', 'Lena Rivers', 'ARTIST', 'ACTIVE'),
-('eli',  'eli@melodyhub.local',  '$2a$12$OH.JXdKvdtxZ6SC5JY908uJzOmylnn/6vUIrQKvY3ZGB8jvqWV9hS', 'Eli Vale',    'ARTIST', 'ACTIVE');
+('lena', 'lena@melodyhub.local', '$2a$12$OH.JXdKvdtxZ6SC5JY908uJzOmylnn/6vUIrQKvY3ZGB8jvqWV9hS', 'Lena Rivers', 'USER', 'ACTIVE'),
+('eli',  'eli@melodyhub.local',  '$2a$12$OH.JXdKvdtxZ6SC5JY908uJzOmylnn/6vUIrQKvY3ZGB8jvqWV9hS', 'Eli Vale',    'USER', 'ACTIVE');
 
--- Ho so nghe si (user_id lay theo username de khong phu thuoc AUTO_INCREMENT)
-INSERT INTO artists (user_id, name, slug, bio, image_url) VALUES
-((SELECT id FROM users WHERE username = 'lena'),
- 'Lena Rivers', 'lena-rivers',
+-- Ho so nghe si (lien ket qua artist_members)
+INSERT INTO artists (name, slug, bio, image_url) VALUES
+('Lena Rivers', 'lena-rivers',
  'Lena Rivers uon alternative R&B quanh synth dem, day dan song va giong hat mong.',
  'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=600&q=85'),
-((SELECT id FROM users WHERE username = 'eli'),
- 'Eli Vale', 'eli-vale',
+('Eli Vale', 'eli-vale',
  'Eli Vale mang mau indie pop tuoi sang, giai dieu de nghe.',
  'https://images.unsplash.com/photo-1521337581100-8ca9a73a5f79?auto=format&fit=crop&w=600&q=85');
+
+-- Seed memberships for the sample artist accounts.
+-- Linked by username so the seed does not depend on AUTO_INCREMENT ids.
+INSERT INTO artist_members (artist_id, user_id, role)
+SELECT a.id, u.id, 'OWNER'
+FROM artists a
+JOIN users u ON u.username = 'lena'
+WHERE a.slug = 'lena-rivers'
+  AND NOT EXISTS (
+      SELECT 1 FROM artist_members am
+      WHERE am.artist_id = a.id AND am.user_id = u.id
+  );
+
+INSERT INTO artist_members (artist_id, user_id, role)
+SELECT a.id, u.id, 'OWNER'
+FROM artists a
+JOIN users u ON u.username = 'eli'
+WHERE a.slug = 'eli-vale'
+  AND NOT EXISTS (
+      SELECT 1 FROM artist_members am
+      WHERE am.artist_id = a.id AND am.user_id = u.id
+  );
 
 -- -----------------------------------------------------
 -- 10 bai hat mau (audio dung file mp3 cong khai cua SoundHelix)

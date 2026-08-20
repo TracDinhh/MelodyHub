@@ -15,7 +15,6 @@ import lombok.Setter;
 public class AdminStatsResponse {
     private long totalUsers;
     private long listeners;
-    private long artists;
     private long admins;
     private long artistProfiles;
     private long pendingArtistRequests;

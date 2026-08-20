@@ -1,8 +1,8 @@
 <script setup>
 import { reactive, ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { AudioLines, ImagePlus, LoaderCircle, Music2, UploadCloud } from '@lucide/vue';
-import { songService } from '../../services/songService';
+import { studioService } from '../../services/studioService';
 import { uploadService } from '../../services/uploadService';
 import { useAuthStore } from '../../stores/auth.store';
 import LyricsEditor from './components/LyricsEditor.vue';
@@ -16,7 +16,9 @@ const ALLOWED_AUDIO_TYPES = [
   'audio/mpeg', 'audio/mp3', 'audio/mp4', 'audio/aac', 'audio/wav', 'audio/x-wav', 'audio/ogg', 'audio/flac'
 ];
 
+const route = useRoute();
 const router = useRouter();
+const artistId = Number(route.params.artistId);
 
 const form = reactive({ title: '', slug: '', lyrics: '' });
 const lyricsType = ref('PLAIN');
@@ -143,7 +145,7 @@ async function submit() {
     }
 
     progressText.value = 'Saving song...';
-    await songService.createMine({
+    await studioService.createSong(artistId, {
       title: form.title.trim(),
       slug: form.slug.trim(),
       audioUrl: audioUpload.imageUrl,
@@ -153,7 +155,7 @@ async function submit() {
       lyricsType: lyricsType.value
     });
 
-    router.push({ name: 'artist-dashboard' });
+    router.push({ name: 'studio-artist-music', params: { artistId } });
   } catch (requestError) {
     const code = requestError.code;
     if (code === 'SONG_SLUG_EXISTS') {
@@ -184,9 +186,9 @@ function formatDuration(seconds) {
 <template>
   <div class="mx-auto w-full max-w-5xl px-5 py-8 pb-12 sm:px-8">
     <div class="mb-8 max-w-2xl">
-      <p class="melodyhub-kicker">ARTIST</p>
+      <p class="melodyhub-kicker">STUDIO</p>
       <h1 class="melodyhub-section-title">Upload a Song</h1>
-      <p class="mt-3 text-sm leading-6 text-[#999]">Add your track, cover art, and lyrics.</p>
+      <p class="mt-3 text-sm leading-6 text-[#999]">Add your track, cover art, and lyrics. New songs start as drafts.</p>
     </div>
 
     <form class="grid max-w-4xl gap-8 lg:grid-cols-[minmax(0,1fr)_220px]" novalidate @submit.prevent="submit">
@@ -236,7 +238,7 @@ function formatDuration(seconds) {
         >
           <LoaderCircle v-if="isSubmitting" :size="16" class="animate-spin" />
           <UploadCloud v-else :size="16" />
-          {{ isSubmitting ? (progressText || 'UPLOADING...') : 'PUBLISH SONG' }}
+          {{ isSubmitting ? (progressText || 'UPLOADING...') : 'SAVE AS DRAFT' }}
         </button>
       </div>
 

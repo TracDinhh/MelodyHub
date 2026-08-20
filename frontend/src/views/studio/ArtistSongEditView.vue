@@ -2,7 +2,7 @@
 import { onMounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ImagePlus, LoaderCircle, Music2, Save } from '@lucide/vue';
-import { songService } from '../../services/songService';
+import { studioService } from '../../services/studioService';
 import { uploadService } from '../../services/uploadService';
 import { useAuthStore } from '../../stores/auth.store';
 import LyricsEditor from './components/LyricsEditor.vue';
@@ -14,7 +14,8 @@ const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 const route = useRoute();
 const router = useRouter();
-const songId = route.params.id;
+const artistId = Number(route.params.artistId);
+const songId = Number(route.params.songId);
 
 const isLoading = ref(true);
 const isSaving = ref(false);
@@ -32,7 +33,7 @@ async function load() {
   isLoading.value = true;
   error.value = '';
   try {
-    const song = await songService.getMine(songId);
+    const song = await studioService.getSong(artistId, songId);
     form.title = song.title || '';
     form.slug = song.slug || '';
     form.audioUrl = song.audioUrl || '';
@@ -44,7 +45,7 @@ async function load() {
     // the editor JSON — songs.lyrics alone is not the source of truth.
     if (lyricsType.value === 'SYNCED') {
       try {
-        const data = await songService.getSyncedLyrics(song.slug);
+        const data = await studioService.getSyncedLyrics(song.slug);
         form.lyrics = data?.lines?.length
           ? JSON.stringify({ lines: data.lines, language: 'en' })
           : (song.lyrics || '');
@@ -99,14 +100,14 @@ async function save() {
 
     // Pass the lyrics payload as-is (JSON for SYNCED, plain text otherwise).
     // The backend stores songs.lyrics AND persists parsed lines into song_lyrics.
-    await songService.updateMine(songId, {
+    await studioService.updateSong(artistId, songId, {
       title: form.title.trim(),
       coverUrl,
       lyrics: form.lyrics.trim() || null,
       lyricsType: lyricsType.value
     });
 
-    router.push({ name: 'artist-dashboard' });
+    router.push({ name: 'studio-artist-music', params: { artistId } });
   } catch (requestError) {
     const code = requestError.code;
     if (code === 'INVALID_SONG_TITLE') {
@@ -127,7 +128,7 @@ onMounted(load);
 <template>
   <div class="mx-auto w-full max-w-5xl px-5 py-8 pb-12 sm:px-8">
     <div class="mb-8 max-w-2xl">
-      <p class="melodyhub-kicker">ARTIST</p>
+      <p class="melodyhub-kicker">STUDIO</p>
       <h1 class="melodyhub-section-title">Edit Song</h1>
       <p class="mt-3 text-sm leading-6 text-[#999]">Update the title, cover art, or lyrics.</p>
     </div>

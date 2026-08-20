@@ -154,50 +154,131 @@ const router = createRouter({
       }
     },
     {
-      path: '/become-an-artist',
-      name: 'become-an-artist',
-      component: () => import('../views/BecomeArtistView.vue'),
+      path: '/for-artists',
+      name: 'artist-landing',
+      component: () => import('../views/artist/ArtistLandingView.vue'),
       meta: {
-        requiresAuth: true,
-        allowedRoles: ['USER'],
-        title: 'Become an Artist',
-        breadcrumb: 'Home / Become an Artist'
+        layout: 'auth',
+        title: 'MelodyHub for Artists'
       }
     },
     {
-      path: '/artist/dashboard',
-      name: 'artist-dashboard',
-      component: () => import('../views/artist/ArtistDashboardView.vue'),
+      path: '/artist/login',
+      name: 'artist-login',
+      component: () => import('../views/artist/ArtistLoginView.vue'),
       meta: {
-        requiresAuth: true,
-        allowedRoles: ['ARTIST'],
-        workspace: 'artist',
-        title: 'Artist Dashboard',
-        breadcrumb: 'Artist Dashboard'
+        layout: 'auth',
+        title: 'Artist Login'
       }
     },
     {
-      path: '/artist/songs/new',
-      name: 'artist-song-upload',
-      component: () => import('../views/artist/ArtistSongUploadView.vue'),
+      path: '/studio',
+      name: 'studio-entry',
+      component: () => import('../views/studio/StudioEntryView.vue'),
       meta: {
         requiresAuth: true,
-        allowedRoles: ['ARTIST'],
-        workspace: 'artist',
+        layout: 'studio',
+        title: 'Artist Studio',
+        breadcrumb: 'Studio'
+      }
+    },
+    {
+      path: '/studio/access',
+      name: 'studio-access',
+      component: () => import('../views/studio/GetArtistAccessView.vue'),
+      meta: {
+        requiresAuth: true,
+        layout: 'studio',
+        title: 'Get Artist Access',
+        breadcrumb: 'Studio / Get Access'
+      }
+    },
+    {
+      path: '/studio/access/claim',
+      name: 'studio-claim',
+      component: () => import('../views/studio/ClaimArtistView.vue'),
+      meta: {
+        requiresAuth: true,
+        layout: 'studio',
+        title: 'Claim an Artist',
+        breadcrumb: 'Studio / Get Access / Claim'
+      }
+    },
+    {
+      path: '/studio/access/create',
+      name: 'studio-create',
+      component: () => import('../views/studio/CreateArtistView.vue'),
+      meta: {
+        requiresAuth: true,
+        layout: 'studio',
+        title: 'Create an Artist',
+        breadcrumb: 'Studio / Get Access / Create'
+      }
+    },
+    {
+      path: '/studio/requests',
+      name: 'studio-requests',
+      component: () => import('../views/studio/RequestStatusView.vue'),
+      meta: {
+        requiresAuth: true,
+        layout: 'studio',
+        title: 'Request Status',
+        breadcrumb: 'Studio / Request Status'
+      }
+    },
+    {
+      path: '/studio/artists/:artistId',
+      name: 'studio-artist-overview',
+      component: () => import('../views/studio/ArtistOverviewView.vue'),
+      meta: {
+        requiresAuth: true,
+        layout: 'studio',
+        title: 'Artist Overview',
+        breadcrumb: 'Studio / Overview'
+      }
+    },
+    {
+      path: '/studio/artists/:artistId/music',
+      name: 'studio-artist-music',
+      component: () => import('../views/studio/ArtistSongsView.vue'),
+      meta: {
+        requiresAuth: true,
+        layout: 'studio',
+        title: 'My Songs',
+        breadcrumb: 'Studio / Music'
+      }
+    },
+    {
+      path: '/studio/artists/:artistId/music/new',
+      name: 'studio-artist-upload',
+      component: () => import('../views/studio/ArtistSongUploadView.vue'),
+      meta: {
+        requiresAuth: true,
+        layout: 'studio',
         title: 'Upload Song',
-        breadcrumb: 'Artist / Upload Song'
+        breadcrumb: 'Studio / Music / Upload'
       }
     },
     {
-      path: '/artist/songs/:id/edit',
-      name: 'artist-song-edit',
-      component: () => import('../views/artist/ArtistSongEditView.vue'),
+      path: '/studio/artists/:artistId/music/:songId/edit',
+      name: 'studio-artist-song-edit',
+      component: () => import('../views/studio/ArtistSongEditView.vue'),
       meta: {
         requiresAuth: true,
-        allowedRoles: ['ARTIST'],
-        workspace: 'artist',
+        layout: 'studio',
         title: 'Edit Song',
-        breadcrumb: 'Artist / Edit Song'
+        breadcrumb: 'Studio / Music / Edit'
+      }
+    },
+    {
+      path: '/studio/artists/:artistId/profile',
+      name: 'studio-artist-profile',
+      component: () => import('../views/studio/ArtistProfileView.vue'),
+      meta: {
+        requiresAuth: true,
+        layout: 'studio',
+        title: 'Artist Profile',
+        breadcrumb: 'Studio / Profile'
       }
     },
     {

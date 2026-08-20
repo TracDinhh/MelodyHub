@@ -20,7 +20,6 @@ class ArtistProfileResponseTest {
     void exposesDashboardProfileFieldsWithoutOwnershipOrDeletionInternals() {
         Artist artist = new Artist(
                 12,
-                44,
                 "Son Tung M-TP",
                 "son-tung-mtp",
                 "Vietnamese artist",

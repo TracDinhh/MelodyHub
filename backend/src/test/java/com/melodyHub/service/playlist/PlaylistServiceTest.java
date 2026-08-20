@@ -17,7 +17,9 @@ import com.melodyHub.repository.PlaylistRepository;
 import com.melodyHub.repository.SongRepository;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
@@ -79,15 +81,15 @@ class PlaylistServiceTest {
     }
 
     @Test
-    void getPageRejectsAnOffsetBeyondIntegerRange() {
-        PlaylistService service = new PlaylistService(new StubPlaylistRepository(), new StubSongRepository());
+    void getPageClampsAnOffsetBeyondIntegerRange() throws SQLException {
+        StubPlaylistRepository playlistRepository = new StubPlaylistRepository();
+        playlistRepository.page = List.of();
+        playlistRepository.total = 0;
+        PlaylistService service = new PlaylistService(playlistRepository, new StubSongRepository());
 
-        IllegalArgumentException exception = assertThrows(
-                IllegalArgumentException.class,
-                () -> service.getPage(12, Integer.MAX_VALUE, 50)
-        );
+        service.getPage(12, Integer.MAX_VALUE, 50);
 
-        assertEquals("page is too large", exception.getMessage());
+        assertEquals(Integer.MAX_VALUE, playlistRepository.offset);
     }
 
     @Test
@@ -249,6 +251,15 @@ class PlaylistServiceTest {
         }
 
         @Override
+        public Map<Integer, Integer> countSongsFor(java.util.Collection<Integer> playlistIds) {
+            Map<Integer, Integer> counts = new HashMap<>();
+            for (Integer playlistId : playlistIds) {
+                counts.put(playlistId, songCount);
+            }
+            return counts;
+        }
+
+        @Override
         public Optional<Playlist> findByIdForUser(int userId, int playlistId) {
             this.userId = userId;
             return byId;
@@ -287,6 +298,15 @@ class PlaylistServiceTest {
         @Override
         public List<Artist> findArtistsForSong(int songId) {
             return artists;
+        }
+
+        @Override
+        public Map<Integer, List<Artist>> findArtistsForSongs(java.util.Collection<Integer> songIds) {
+            Map<Integer, List<Artist>> result = new HashMap<>();
+            for (Integer songId : songIds) {
+                result.put(songId, artists);
+            }
+            return result;
         }
     }
 }

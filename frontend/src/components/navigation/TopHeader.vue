@@ -195,13 +195,10 @@ onBeforeUnmount(() => document.removeEventListener('click', closeOnOutsideClick)
                   <History :size="15" /> Listen history
                 </RouterLink>
 
-                <div v-if="authStore.isUser || authStore.isArtist || authStore.isAdmin" class="my-1.5 border-t border-white/[0.05]" />
+                <div v-if="authStore.isAuthenticated" class="my-1.5 border-t border-white/[0.05]" />
 
-                <RouterLink v-if="authStore.isUser" :to="{ name: 'become-an-artist' }" class="melodyhub-menu-item" @click="dropdownOpen = false">
-                  <Mic2 :size="15" /> Become an Artist
-                </RouterLink>
-                <RouterLink v-if="authStore.isArtist" :to="{ name: 'artist-dashboard' }" class="melodyhub-menu-item" @click="dropdownOpen = false">
-                  <Mic2 :size="15" /> Artist Dashboard
+                <RouterLink v-if="authStore.isAuthenticated" :to="{ name: 'studio-entry' }" class="melodyhub-menu-item" @click="dropdownOpen = false">
+                  <Mic2 :size="15" /> Artist Studio
                 </RouterLink>
                 <RouterLink v-if="authStore.isAdmin" :to="{ name: 'admin-dashboard' }" class="melodyhub-menu-item" @click="dropdownOpen = false">
                   <ShieldCheck :size="15" /> Admin Dashboard

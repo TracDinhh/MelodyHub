@@ -34,6 +34,12 @@ public class PublicArtistServlet extends JsonServlet {
                 return;
             }
 
+            if ("/search".equals(path)) {
+                writeJson(response, HttpServletResponse.SC_OK,
+                        publicArtistService.search(request.getParameter("q")));
+                return;
+            }
+
             String slug = getSlug(path);
             if (slug != null && path.equals("/" + slug)) {
                 handleDetail(response, slug);

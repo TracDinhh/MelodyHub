@@ -2,26 +2,27 @@ import { apiClient } from './http';
 
 export const adminService = {
   /**
-   * List artist requests by status (defaults to PENDING). Returns a PagedResponse.
+   * List artist access requests by status (defaults to PENDING). Returns a PagedResponse.
    */
   listArtistRequests({ status = 'PENDING', page = 1, size = 20 } = {}) {
-    return apiClient.get('/api/admin/artist-requests', {
+    return apiClient.get('/api/admin/artist-access-requests', {
       params: { status, page, size }
     });
   },
 
   /**
-   * Approve a pending request: promotes the user to ARTIST and creates their profile.
+   * Approve a pending access request (CLAIM/CREATE). Creates the membership and,
+   * for CREATE_ARTIST, the artist profile in a single transaction.
    */
   approveArtistRequest(id) {
-    return apiClient.post(`/api/admin/artist-requests/${id}/approve`);
+    return apiClient.post(`/api/admin/artist-access-requests/${id}/approve`);
   },
 
   /**
-   * Reject a pending request with an optional note.
+   * Reject a pending access request with an optional note.
    */
   rejectArtistRequest(id, reviewNote) {
-    return apiClient.post(`/api/admin/artist-requests/${id}/reject`, { reviewNote });
+    return apiClient.post(`/api/admin/artist-access-requests/${id}/reject`, { reviewNote });
   },
 
   /**

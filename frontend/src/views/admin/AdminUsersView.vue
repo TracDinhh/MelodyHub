@@ -6,13 +6,11 @@ import { adminService } from '../../services/adminService';
 const ROLE_TABS = [
   { key: '', label: 'All' },
   { key: 'USER', label: 'Users' },
-  { key: 'ARTIST', label: 'Artists' },
   { key: 'ADMIN', label: 'Admins' }
 ];
 
 const ROLE_BADGE = {
   USER: 'bg-white/10 text-[#ccc]',
-  ARTIST: 'bg-[#16C65A]/15 text-[#16C65A]',
   ADMIN: 'bg-amber-400/15 text-amber-300'
 };
 

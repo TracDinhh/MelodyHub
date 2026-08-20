@@ -45,7 +45,7 @@ public class ArtistSongService {
         this.lyricsRepository = Objects.requireNonNull(lyricsRepository, "lyricsRepository must not be null");
     }
 
-    public SongResponse createOwnSong(int artistId, SongCreateRequest request)
+    public SongResponse createSong(int artistId, SongCreateRequest request)
             throws SongException, SQLException {
         validateCreateRequest(request);
 
@@ -57,7 +57,8 @@ public class ArtistSongService {
         song.setDurationSec(request.getDurationSec() == null ? 0 : Math.max(0, request.getDurationSec()));
         song.setLyrics(normalizeOptional(request.getLyrics()));
         song.setLyricsType(parseLyricsType(request.getLyricsType()));
-        song.setStatus(SongStatus.PUBLISHED);
+        // New songs default to DRAFT until the OWNER/MANAGER publishes them.
+        song.setStatus(SongStatus.DRAFT);
 
         try {
             Song created = songRepository.create(song, artistId);
@@ -239,7 +240,7 @@ public class ArtistSongService {
         }
     }
 
-    public PagedResponse<SongResponse> getOwnPage(int artistId, int page, int size) throws SQLException {
+    public PagedResponse<SongResponse> getSongs(int artistId, int page, int size) throws SQLException {
         int offset = Pagination.offset(page, size);
         List<SongResponse> items = songRepository.getOwnedPage(artistId, size, offset)
                 .stream()
@@ -250,36 +251,28 @@ public class ArtistSongService {
         return new PagedResponse<>(items, total, page, size);
     }
 
-    public Optional<SongResponse> getOwnByIdentifier(int artistId, String identifier) throws SQLException {
-        String normalizedIdentifier = normalize(identifier);
-        if (normalizedIdentifier == null) {
-            return Optional.empty();
-        }
-
-        Integer songId = parsePositiveInteger(normalizedIdentifier);
-        if (songId != null) {
-            Optional<SongResponse> songById = songRepository.findOwnedById(artistId, songId)
-                    .map(SongResponse::fromEntity);
-            if (songById.isPresent()) {
-                return songById;
-            }
-        }
-
-        return songRepository.findOwnedBySlug(artistId, normalizedIdentifier)
-                .map(SongResponse::fromEntity);
-    }
-    
     /**
-     * Updates synced lyrics for a song. Replaces all existing lyric lines.
+     * Resolves a song that belongs to the given artist by id. Throws
+     * {@link SongException#SONG_NOT_FOUND} when the song does not exist or is
+     * owned by a different artist. Used by Studio lyrics lookup.
      */
-    public void updateSyncedLyrics(int artistId, int songId, SyncedLyricsRequest request)
+    public Song getOwnSongById(int artistId, int songId) throws SongException, SQLException {
+        return songRepository.findOwnedById(artistId, songId)
+                .orElseThrow(() -> new SongException("SONG_NOT_FOUND", "Song was not found"));
+    }
+
+    /**
+     * Updates synced lyrics for a song owned by the given artist. Replaces all
+     * existing lyric lines. Membership is verified by the caller.
+     */
+    public void updateOwnSongSyncedLyrics(int artistId, int songId, SyncedLyricsRequest request)
             throws SongException, SQLException {
         // Verify ownership
         Optional<Song> song = songRepository.findOwnedById(artistId, songId);
         if (song.isEmpty()) {
             throw new SongException("SONG_NOT_FOUND", "Song was not found");
         }
-        
+
         // Parse and save synced lyrics
         List<SongLyricsRepository.SyncedLyricLine> lines = new ArrayList<>();
         if (request != null && request.getLines() != null) {
@@ -303,15 +296,6 @@ public class ArtistSongService {
         }
         lines.sort(Comparator.comparingLong(SongLyricsRepository.SyncedLyricLine::startTimeMs));
         lyricsRepository.replaceForSong(songId, lines);
-    }
-
-    private Integer parsePositiveInteger(String value) {
-        try {
-            int parsed = Integer.parseInt(value);
-            return parsed > 0 ? parsed : null;
-        } catch (NumberFormatException exception) {
-            return null;
-        }
     }
 
     private String normalize(String value) {

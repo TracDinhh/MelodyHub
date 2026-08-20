@@ -5,11 +5,11 @@ import com.melodyHub.dto.response.AdminAnalyticsResponse.DailyCount;
 import com.melodyHub.dto.response.AdminAnalyticsResponse.LabeledCount;
 import com.melodyHub.dto.response.AdminAnalyticsResponse.TopSong;
 import com.melodyHub.dto.response.AdminStatsResponse;
-import com.melodyHub.entity.ArtistRequestStatus;
+import com.melodyHub.entity.ArtistAccessRequestStatus;
 import com.melodyHub.entity.UserRole;
 import com.melodyHub.exception.AuthException;
+import com.melodyHub.repository.ArtistAccessRequestRepository;
 import com.melodyHub.repository.ArtistRepository;
-import com.melodyHub.repository.ArtistRequestRepository;
 import com.melodyHub.repository.ListenHistoryRepository;
 import com.melodyHub.repository.SongRepository;
 import com.melodyHub.repository.UserRepository;
@@ -35,7 +35,7 @@ public class AdminStatsService {
     private final AuthorizationService authorizationService;
     private final UserRepository userRepository;
     private final ArtistRepository artistRepository;
-    private final ArtistRequestRepository artistRequestRepository;
+    private final ArtistAccessRequestRepository artistAccessRequestRepository;
     private final SongRepository songRepository;
     private final ListenHistoryRepository listenHistoryRepository;
 
@@ -44,7 +44,7 @@ public class AdminStatsService {
                 new AuthorizationService(),
                 new UserRepository(),
                 new ArtistRepository(),
-                new ArtistRequestRepository(),
+                new ArtistAccessRequestRepository(),
                 new SongRepository(),
                 new ListenHistoryRepository()
         );
@@ -54,7 +54,7 @@ public class AdminStatsService {
             AuthorizationService authorizationService,
             UserRepository userRepository,
             ArtistRepository artistRepository,
-            ArtistRequestRepository artistRequestRepository,
+            ArtistAccessRequestRepository artistAccessRequestRepository,
             SongRepository songRepository,
             ListenHistoryRepository listenHistoryRepository
     ) {
@@ -62,8 +62,8 @@ public class AdminStatsService {
                 authorizationService, "authorizationService must not be null");
         this.userRepository = Objects.requireNonNull(userRepository, "userRepository must not be null");
         this.artistRepository = Objects.requireNonNull(artistRepository, "artistRepository must not be null");
-        this.artistRequestRepository = Objects.requireNonNull(
-                artistRequestRepository, "artistRequestRepository must not be null");
+        this.artistAccessRequestRepository = Objects.requireNonNull(
+                artistAccessRequestRepository, "artistAccessRequestRepository must not be null");
         this.songRepository = Objects.requireNonNull(songRepository, "songRepository must not be null");
         this.listenHistoryRepository = Objects.requireNonNull(
                 listenHistoryRepository, "listenHistoryRepository must not be null");
@@ -73,16 +73,15 @@ public class AdminStatsService {
         authorizationService.requireRole(token, UserRole.ADMIN);
 
         long listeners = userRepository.countUsers(UserRole.USER, null);
-        long artists = userRepository.countUsers(UserRole.ARTIST, null);
         long admins = userRepository.countUsers(UserRole.ADMIN, null);
+        long artistProfiles = artistRepository.count(null);
 
         return new AdminStatsResponse(
-                listeners + artists + admins,
+                listeners + admins,
                 listeners,
-                artists,
                 admins,
-                artistRepository.count(null),
-                artistRequestRepository.countByStatus(ArtistRequestStatus.PENDING),
+                artistProfiles,
+                artistAccessRequestRepository.countByStatus(ArtistAccessRequestStatus.PENDING),
                 songRepository.count(null, null)
         );
     }
@@ -107,7 +106,7 @@ public class AdminStatsService {
         List<LabeledCount> usersByRole = toLabeledCounts(userRepository.countByRoleGrouped());
         List<LabeledCount> songsByStatus = toLabeledCounts(songRepository.countByStatusGrouped());
         List<LabeledCount> artistRequestFunnel = toLabeledCounts(
-                artistRequestRepository.countByStatusGrouped());
+                artistAccessRequestRepository.countByStatusGrouped());
 
         List<TopSong> topSongs = songRepository.findTopByPlayCount(TOP_SONGS_LIMIT).stream()
                 .map(row -> new TopSong(row.title(), row.slug(), row.playCount()))

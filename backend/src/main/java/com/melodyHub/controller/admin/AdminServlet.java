@@ -1,13 +1,12 @@
 package com.melodyHub.controller.admin;
 
 import com.melodyHub.controller.JsonServlet;
-import com.melodyHub.dto.request.ArtistRequestReviewRequest;
-import com.melodyHub.entity.ArtistRequestStatus;
+import com.melodyHub.entity.ArtistAccessRequestStatus;
 import com.melodyHub.entity.SongStatus;
 import com.melodyHub.entity.UserRole;
 import com.melodyHub.exception.ArtistException;
 import com.melodyHub.exception.AuthException;
-import com.melodyHub.service.admin.AdminArtistRequestService;
+import com.melodyHub.service.admin.AdminArtistAccessRequestService;
 import com.melodyHub.service.admin.AdminSongService;
 import com.melodyHub.service.admin.AdminStatsService;
 import com.melodyHub.service.admin.AdminUserService;
@@ -23,14 +22,14 @@ public class AdminServlet extends JsonServlet {
     private static final int DEFAULT_SIZE = 20;
     private static final int MAX_SIZE = 50;
 
-    private AdminArtistRequestService adminArtistRequestService;
+    private AdminArtistAccessRequestService adminArtistAccessRequestService;
     private AdminUserService adminUserService;
     private AdminStatsService adminStatsService;
     private AdminSongService adminSongService;
 
     @Override
     public void init() throws ServletException {
-        adminArtistRequestService = new AdminArtistRequestService();
+        adminArtistAccessRequestService = new AdminArtistAccessRequestService();
         adminUserService = new AdminUserService();
         adminStatsService = new AdminStatsService();
         adminSongService = new AdminSongService();
@@ -56,8 +55,8 @@ public class AdminServlet extends JsonServlet {
                 );
                 return;
             }
-            if ("/artist-requests".equals(path)) {
-                handleListRequests(request, response);
+            if ("/artist-access-requests".equals(path)) {
+                handleListAccessRequests(request, response);
                 return;
             }
             if ("/users".equals(path)) {
@@ -95,23 +94,23 @@ public class AdminServlet extends JsonServlet {
 
         try {
             String path = getPath(request);
-            Integer approveId = matchAction(path, "approve");
-            if (approveId != null) {
+            Integer accessApproveId = matchAccessAction(path, "approve");
+            if (accessApproveId != null) {
                 writeJson(
                         response,
                         HttpServletResponse.SC_OK,
-                        adminArtistRequestService.approve(getBearerToken(request), approveId)
+                        adminArtistAccessRequestService.approve(getBearerToken(request), accessApproveId)
                 );
                 return;
             }
 
-            Integer rejectId = matchAction(path, "reject");
-            if (rejectId != null) {
+            Integer accessRejectId = matchAccessAction(path, "reject");
+            if (accessRejectId != null) {
                 String note = readReviewNote(request);
                 writeJson(
                         response,
                         HttpServletResponse.SC_OK,
-                        adminArtistRequestService.reject(getBearerToken(request), rejectId, note)
+                        adminArtistAccessRequestService.reject(getBearerToken(request), accessRejectId, note)
                 );
                 return;
             }
@@ -154,7 +153,7 @@ public class AdminServlet extends JsonServlet {
         }
     }
 
-    private void handleListRequests(HttpServletRequest request, HttpServletResponse response)
+    private void handleListAccessRequests(HttpServletRequest request, HttpServletResponse response)
             throws IOException, AuthException, SQLException, InvalidQueryParamException {
         int page = parsePositiveInt(request.getParameter("page"), "page", DEFAULT_PAGE);
         int size = parsePositiveInt(request.getParameter("size"), "size", DEFAULT_SIZE);
@@ -162,11 +161,11 @@ public class AdminServlet extends JsonServlet {
             throw new InvalidQueryParamException("size must not exceed " + MAX_SIZE);
         }
 
-        ArtistRequestStatus status = parseStatus(request.getParameter("status"));
+        ArtistAccessRequestStatus status = parseAccessStatus(request.getParameter("status"));
         writeJson(
                 response,
                 HttpServletResponse.SC_OK,
-                adminArtistRequestService.listRequests(getBearerToken(request), status, page, size)
+                adminArtistAccessRequestService.list(getBearerToken(request), status, page, size)
         );
     }
 
@@ -246,7 +245,7 @@ public class AdminServlet extends JsonServlet {
         try {
             return UserRole.valueOf(value.trim().toUpperCase());
         } catch (IllegalArgumentException exception) {
-            throw new InvalidQueryParamException("role must be USER, ARTIST, or ADMIN");
+            throw new InvalidQueryParamException("role must be USER or ADMIN");
         }
     }
 
@@ -255,24 +254,11 @@ public class AdminServlet extends JsonServlet {
             return null;
         }
         try {
-            ArtistRequestReviewRequest body = objectMapper.readValue(
-                    request.getInputStream(),
-                    ArtistRequestReviewRequest.class
-            );
-            return body == null ? null : body.getReviewNote();
+            var body = objectMapper.readValue(request.getInputStream(), java.util.Map.class);
+            Object note = body == null ? null : body.get("reviewNote");
+            return note == null ? null : note.toString();
         } catch (IOException exception) {
             return null;
-        }
-    }
-
-    private ArtistRequestStatus parseStatus(String value) throws InvalidQueryParamException {
-        if (value == null || value.isBlank()) {
-            return ArtistRequestStatus.PENDING;
-        }
-        try {
-            return ArtistRequestStatus.valueOf(value.trim().toUpperCase());
-        } catch (IllegalArgumentException exception) {
-            throw new InvalidQueryParamException("status must be PENDING, APPROVED, or REJECTED");
         }
     }
 
@@ -329,10 +315,10 @@ public class AdminServlet extends JsonServlet {
     }
 
     /**
-     * Matches /artist-requests/{id}/{action} and returns the numeric id, or null.
+     * Matches /artist-access-requests/{id}/{action} and returns the numeric id, or null.
      */
-    private Integer matchAction(String path, String action) {
-        String prefix = "/artist-requests/";
+    private Integer matchAccessAction(String path, String action) {
+        String prefix = "/artist-access-requests/";
         String suffix = "/" + action;
         if (!path.startsWith(prefix) || !path.endsWith(suffix)) {
             return null;
@@ -350,6 +336,17 @@ public class AdminServlet extends JsonServlet {
         }
     }
 
+    private ArtistAccessRequestStatus parseAccessStatus(String value) throws InvalidQueryParamException {
+        if (value == null || value.isBlank()) {
+            return ArtistAccessRequestStatus.PENDING;
+        }
+        try {
+            return ArtistAccessRequestStatus.valueOf(value.trim().toUpperCase());
+        } catch (IllegalArgumentException exception) {
+            throw new InvalidQueryParamException("status must be PENDING, APPROVED, or REJECTED");
+        }
+    }
+
     private int getStatusCode(AuthException exception) {
         return switch (exception.getCode()) {
             case "MISSING_TOKEN", "INVALID_TOKEN" -> HttpServletResponse.SC_UNAUTHORIZED;
@@ -363,8 +360,12 @@ public class AdminServlet extends JsonServlet {
         return switch (exception.getCode()) {
             case "ARTIST_SLUG_EXISTS",
                     "ARTIST_ALREADY_EXISTS",
-                    "ARTIST_REQUEST_NOT_PENDING" -> HttpServletResponse.SC_CONFLICT;
-            case "ARTIST_REQUEST_NOT_FOUND" -> HttpServletResponse.SC_NOT_FOUND;
+                    "ARTIST_REQUEST_NOT_PENDING",
+                    "REQUEST_NOT_PENDING",
+                    "ALREADY_A_MEMBER" -> HttpServletResponse.SC_CONFLICT;
+            case "ARTIST_REQUEST_NOT_FOUND",
+                    "REQUEST_NOT_FOUND",
+                    "ARTIST_NOT_FOUND" -> HttpServletResponse.SC_NOT_FOUND;
             default -> HttpServletResponse.SC_BAD_REQUEST;
         };
     }

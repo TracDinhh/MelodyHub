@@ -8,7 +8,6 @@ export function useAuth() {
     isLoading,
     isAuthenticated,
     isUser,
-    isArtist,
     isAdmin,
     displayName
   } = storeToRefs(store);
@@ -18,7 +17,6 @@ export function useAuth() {
     isLoading,
     isAuthenticated,
     isUser,
-    isArtist,
     isAdmin,
     displayName,
     login: store.login,

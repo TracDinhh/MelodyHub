@@ -85,11 +85,6 @@ onMounted(load);
         <div class="min-w-0 flex-1">
           <p class="truncate text-base font-black text-white">{{ artist.name }}</p>
           <p class="truncate text-xs text-[#888]">/artist/{{ artist.slug }}</p>
-          <p v-if="artist.linkedUsername" class="mt-1 truncate text-xs text-[#aaa]">
-            Account: <span class="text-[#ddd]">@{{ artist.linkedUsername }}</span>
-            <span class="text-[#666]"> · {{ artist.linkedEmail }}</span>
-          </p>
-          <p v-else class="mt-1 text-xs text-[#666]">No linked account</p>
           <p class="mt-1 text-[11px] text-[#666]">Since {{ formatDate(artist.createdAt) }}</p>
         </div>
       </li>

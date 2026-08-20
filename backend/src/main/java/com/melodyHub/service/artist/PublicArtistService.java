@@ -45,6 +45,21 @@ public class PublicArtistService {
         return artistRepository.findActiveBySlug(slug.trim()).map(ArtistPublicResponse::fromEntity);
     }
 
+    /**
+     * Searches existing active artists by name/slug. Used by the Studio CLAIM
+     * flow so a user can find an existing artist profile to request access to.
+     */
+    public List<ArtistPublicResponse> search(String query) throws SQLException {
+        String normalized = normalize(query);
+        if (normalized == null) {
+            return List.of();
+        }
+        return artistRepository.findPage(normalized, 20, 0)
+                .stream()
+                .map(row -> ArtistPublicResponse.fromEntity(row.artist()))
+                .toList();
+    }
+
     public Optional<PagedResponse<SongResponse>> getSongsBySlug(String slug, int page, int size)
             throws SQLException {
         if (slug == null || slug.isBlank()) {

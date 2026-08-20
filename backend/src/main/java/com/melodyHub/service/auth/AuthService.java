@@ -115,6 +115,7 @@ public class AuthService {
         User current = authorizationService.requireAuthenticated(token);
         String displayName = normalizeOptional(request.getDisplayName());
         String email = normalizeEmail(request.getEmail());
+        String phone = normalizeOptional(request.getPhone());
         String avatarUrl = normalizeOptional(request.getAvatarUrl());
 
         if (displayName != null && displayName.length() > MAX_DISPLAY_NAME_LENGTH) {
@@ -131,7 +132,7 @@ public class AuthService {
             throw new AuthException("EMAIL_EXISTS", "Email already exists");
         }
 
-        User updated = userRepository.updateProfile(current.getId(), displayName, email, avatarUrl)
+        User updated = userRepository.updateProfile(current.getId(), displayName, phone, email, avatarUrl)
                 .orElseThrow(() -> new AuthException("USER_NOT_FOUND", "User was not found"));
 
         return UserResponse.fromEntity(updated);
