@@ -4,6 +4,7 @@ import com.melodyHub.dto.response.ArtistPublicResponse;
 import com.melodyHub.dto.response.PagedResponse;
 import com.melodyHub.dto.response.SongResponse;
 import com.melodyHub.entity.Artist;
+import com.melodyHub.repository.ArtistFollowRepository;
 import com.melodyHub.repository.ArtistRepository;
 import com.melodyHub.repository.SongRepository;
 import com.melodyHub.util.Pagination;
@@ -18,14 +19,21 @@ import java.util.Optional;
 public class PublicArtistService {
     private final ArtistRepository artistRepository;
     private final SongRepository songRepository;
+    private final ArtistFollowRepository followRepository;
 
     public PublicArtistService() {
-        this(new ArtistRepository(), new SongRepository());
+        this(new ArtistRepository(), new SongRepository(), new ArtistFollowRepository());
     }
 
     public PublicArtistService(ArtistRepository artistRepository, SongRepository songRepository) {
+        this(artistRepository, songRepository, new ArtistFollowRepository());
+    }
+
+    public PublicArtistService(ArtistRepository artistRepository, SongRepository songRepository,
+                               ArtistFollowRepository followRepository) {
         this.artistRepository = Objects.requireNonNull(artistRepository, "artistRepository must not be null");
         this.songRepository = Objects.requireNonNull(songRepository, "songRepository must not be null");
+        this.followRepository = Objects.requireNonNull(followRepository, "followRepository must not be null");
     }
 
     public PagedResponse<ArtistPublicResponse> list(int page, int size, String query) throws SQLException {
@@ -39,10 +47,30 @@ public class PublicArtistService {
     }
 
     public Optional<ArtistPublicResponse> getBySlug(String slug) throws SQLException {
+        return getBySlug(slug, null);
+    }
+
+    /**
+     * Resolves an artist by slug. When {@code userId} is present, the response
+     * is enriched with the artist's {@code followerCount} and whether the user
+     * {@code following}s them (anonymous requests leave both null).
+     */
+    public Optional<ArtistPublicResponse> getBySlug(String slug, Integer userId) throws SQLException {
         if (slug == null || slug.isBlank()) {
             return Optional.empty();
         }
-        return artistRepository.findActiveBySlug(slug.trim()).map(ArtistPublicResponse::fromEntity);
+
+        Optional<Artist> artist = artistRepository.findActiveBySlug(slug.trim());
+        if (artist.isEmpty()) {
+            return Optional.empty();
+        }
+
+        ArtistPublicResponse response = ArtistPublicResponse.fromEntity(artist.get());
+        response.setFollowerCount(followRepository.countFollowers(artist.get().getId()));
+        if (userId != null) {
+            response.setFollowing(followRepository.isFollowing(artist.get().getId(), userId));
+        }
+        return Optional.of(response);
     }
 
     /**

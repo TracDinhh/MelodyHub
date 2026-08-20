@@ -1,12 +1,15 @@
 package com.melodyHub.controller.artist;
 
+import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.melodyHub.controller.JsonServlet;
 import com.melodyHub.service.artist.PublicArtistService;
+import com.melodyHub.util.JwtUtil;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.Optional;
 
 /**
  * Public artist browsing. Mapped to /api/artists/* (plural), distinct from the
@@ -42,7 +45,7 @@ public class PublicArtistServlet extends JsonServlet {
 
             String slug = getSlug(path);
             if (slug != null && path.equals("/" + slug)) {
-                handleDetail(response, slug);
+                handleDetail(request, response, slug);
                 return;
             }
 
@@ -72,13 +75,26 @@ public class PublicArtistServlet extends JsonServlet {
                 publicArtistService.list(page, size, request.getParameter("q")));
     }
 
-    private void handleDetail(HttpServletResponse response, String slug) throws IOException, SQLException {
-        var artist = publicArtistService.getBySlug(slug);
+    private void handleDetail(HttpServletRequest request, HttpServletResponse response, String slug)
+            throws IOException, SQLException {
+        var artist = publicArtistService.getBySlug(slug, currentUserId(request).orElse(null));
         if (artist.isPresent()) {
             writeJson(response, HttpServletResponse.SC_OK, artist.get());
             return;
         }
         writeError(response, HttpServletResponse.SC_NOT_FOUND, "ARTIST_NOT_FOUND", "Artist was not found");
+    }
+
+    private Optional<Integer> currentUserId(HttpServletRequest request) {
+        String token = getBearerToken(request);
+        if (token == null) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(JwtUtil.getUserIdFromToken(token));
+        } catch (JWTVerificationException | IllegalArgumentException exception) {
+            return Optional.empty();
+        }
     }
 
     private void handleSongs(HttpServletRequest request, HttpServletResponse response, String slug)

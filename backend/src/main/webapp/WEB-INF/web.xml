@@ -67,6 +67,11 @@
     </servlet>
 
     <servlet>
+        <servlet-name>ArtistFollowServlet</servlet-name>
+        <servlet-class>com.melodyHub.controller.artist.ArtistFollowServlet</servlet-class>
+    </servlet>
+
+    <servlet>
         <servlet-name>PaymentServlet</servlet-name>
         <servlet-class>com.melodyHub.controller.payment.PaymentServlet</servlet-class>
     </servlet>
@@ -134,6 +139,11 @@
     <servlet-mapping>
         <servlet-name>LikeServlet</servlet-name>
         <url-pattern>/api/likes/*</url-pattern>
+    </servlet-mapping>
+
+    <servlet-mapping>
+        <servlet-name>ArtistFollowServlet</servlet-name>
+        <url-pattern>/api/follows/*</url-pattern>
     </servlet-mapping>
 
     <servlet-mapping>
