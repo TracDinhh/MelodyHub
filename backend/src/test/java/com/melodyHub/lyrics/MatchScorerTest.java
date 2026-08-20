@@ -116,6 +116,19 @@ class MatchScorerTest {
         }
 
         @Test
+        @DisplayName("collaboration containing the requested artist gets partial artist points")
+        void collaborationArtist() {
+            LyricsSearchResult r = result(
+                    "Come My Way", "Sơn Tùng M-TP & Tyga", null, 193);
+
+            int score = MatchScorer.score(
+                    r, "Come My Way", "Sơn Tùng MTP", null, 193);
+
+            // 40 title + 20 collaborator artist + 20 duration
+            assertEquals(80, score);
+        }
+
+        @Test
         @DisplayName("wrong title scores only artist points")
         void wrongTitle() {
             LyricsSearchResult r = result("Other Song", "Linkin Park", null, null);
