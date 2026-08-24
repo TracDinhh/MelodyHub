@@ -43,7 +43,8 @@ class ArtistSongServiceTest {
                 180,
                 "{\"lines\":[{\"startTime\":-1,\"text\":\"Too early\"}]}",
                 "SYNCED",
-                List.of(1)
+                List.of(1),
+                null
         );
 
         SongException exception = assertThrows(
@@ -158,7 +159,7 @@ class ArtistSongServiceTest {
         SongException exception = assertThrows(
                 SongException.class,
                 () -> service.updateOwnSong(12, 31, new com.melodyHub.dto.request.SongUpdateRequest(
-                        "New title", null, null, "PLAIN", List.of(1)))
+                        "New title", null, null, "PLAIN", List.of(1), null))
         );
 
         assertEquals("SONG_NOT_EDITABLE", exception.getCode());
@@ -172,7 +173,7 @@ class ArtistSongServiceTest {
         ArtistSongService service = newService(repository);
 
         SongResponse response = service.updateOwnSong(12, 31, new com.melodyHub.dto.request.SongUpdateRequest(
-                "Rejected Song", null, null, "PLAIN", List.of(1)));
+                "Rejected Song", null, null, "PLAIN", List.of(1), null));
 
         assertEquals(SongStatus.REJECTED, response.getStatus());
         assertEquals(List.of(1), repository.genreIds);
@@ -251,7 +252,8 @@ class ArtistSongServiceTest {
                 180,
                 null,
                 "PLAIN",
-                genreIds
+                genreIds,
+                null
         );
     }
 
@@ -316,6 +318,11 @@ class ArtistSongServiceTest {
 
         @Override
         public Song create(Song song, int artistId, List<Integer> genreIds) {
+            return create(song, artistId, genreIds, null);
+        }
+
+        @Override
+        public Song create(Song song, int artistId, List<Integer> genreIds, Integer albumId) {
             this.artistId = artistId;
             this.genreIds = genreIds;
             return created;
@@ -324,6 +331,12 @@ class ArtistSongServiceTest {
         @Override
         public Optional<Song> updateOwn(int artistId, int songId, String title, String coverUrl, String lyrics,
                                         String lyricsType, List<Integer> genreIds) {
+            return updateOwn(artistId, songId, title, coverUrl, lyrics, lyricsType, genreIds, null);
+        }
+
+        @Override
+        public Optional<Song> updateOwn(int artistId, int songId, String title, String coverUrl, String lyrics,
+                                        String lyricsType, List<Integer> genreIds, Integer albumId) {
             this.artistId = artistId;
             this.songId = songId;
             this.genreIds = genreIds;
