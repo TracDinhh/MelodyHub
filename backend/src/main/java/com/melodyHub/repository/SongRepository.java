@@ -991,6 +991,97 @@ public class SongRepository {
         );
     }
 
+    // ==================== ALBUM-SPECIFIC QUERIES ====================
+
+    /**
+     * Counts all songs (any status) in an album.
+     */
+    public int countByAlbum(int albumId) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM songs WHERE album_id = ? AND deleted_at IS NULL";
+        try (var connection = getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, albumId);
+            try (var resultSet = statement.executeQuery()) {
+                return resultSet.next() ? resultSet.getInt(1) : 0;
+            }
+        }
+    }
+
+    /**
+     * Counts only published songs in an album.
+     */
+    public int countPublishedByAlbum(int albumId) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM songs WHERE album_id = ? AND status = 'PUBLISHED' AND deleted_at IS NULL";
+        try (var connection = getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, albumId);
+            try (var resultSet = statement.executeQuery()) {
+                return resultSet.next() ? resultSet.getInt(1) : 0;
+            }
+        }
+    }
+
+    /**
+     * Returns all songs in an album, ordered by track number.
+     */
+    public List<Song> findByAlbum(int albumId) throws SQLException {
+        String sql = "SELECT " + SONG_COLUMNS + """
+                 FROM songs
+                 WHERE album_id = ? AND deleted_at IS NULL
+                 ORDER BY track_number ASC NULLS LAST, created_at ASC
+                """;
+        try (var connection = getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, albumId);
+            try (var resultSet = statement.executeQuery()) {
+                List<Song> songs = new ArrayList<>();
+                while (resultSet.next()) {
+                    songs.add(mapRow(resultSet));
+                }
+                return songs;
+            }
+        }
+    }
+
+    /**
+     * Returns published songs in an album, ordered by track number.
+     */
+    public List<Song> findPublishedByAlbum(int albumId) throws SQLException {
+        String sql = "SELECT " + SONG_COLUMNS + """
+                 FROM songs
+                 WHERE album_id = ? AND status = 'PUBLISHED' AND deleted_at IS NULL
+                 ORDER BY track_number ASC NULLS LAST, created_at ASC
+                """;
+        try (var connection = getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, albumId);
+            try (var resultSet = statement.executeQuery()) {
+                List<Song> songs = new ArrayList<>();
+                while (resultSet.next()) {
+                    songs.add(mapRow(resultSet));
+                }
+                return songs;
+            }
+        }
+    }
+
+    /**
+     * Updates a song's album assignment.
+     */
+    public void updateAlbumId(int songId, Integer albumId) throws SQLException {
+        String sql = "UPDATE songs SET album_id = ?, updated_at = CURRENT_TIMESTAMP(6) WHERE id = ? AND deleted_at IS NULL";
+        try (var connection = getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            if (albumId == null) {
+                statement.setNull(1, java.sql.Types.INTEGER);
+            } else {
+                statement.setInt(1, albumId);
+            }
+            statement.setInt(2, songId);
+            statement.executeUpdate();
+        }
+    }
+
     // ==================== ARTIST-SPECIFIC STATS ====================
 
     /**
