@@ -82,18 +82,13 @@ public class SongRepository {
 
 
     public Song create(Song song, int artistId, List<Integer> genreIds) throws SQLException {
-        String insertSong = """
-                INSERT INTO songs (title, slug, duration_sec, file_path, cover_url, lyrics, lyrics_type, status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                """;
-        String linkArtist = """
-                INSERT INTO song_artists (song_id, artist_id, role, position)
-                VALUES (?, ?, 'MAIN', 0)
-                """;
-        String linkGenre = """
-                INSERT INTO song_genres (song_id, genre_id, position)
-                VALUES (?, ?, ?)
-                """;
+        return create(song, artistId, genreIds, null);
+    }
+
+    public Song create(Song song, int artistId, List<Integer> genreIds, Integer albumId) throws SQLException {
+        String insertSong = "INSERT INTO songs (title, slug, duration_sec, file_path, cover_url, lyrics, lyrics_type, status, album_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String linkArtist = "INSERT INTO song_artists (song_id, artist_id, role, position) VALUES (?, ?, 'MAIN', 0)";
+        String linkGenre = "INSERT INTO song_genres (song_id, genre_id, position) VALUES (?, ?, ?)";
 
         Connection connection = getConnection();
         try {
@@ -109,6 +104,11 @@ public class SongRepository {
                 statement.setString(6, song.getLyrics());
                 statement.setString(7, (song.getLyricsType() == null ? LyricsType.PLAIN : song.getLyricsType()).name());
                 statement.setString(8, (song.getStatus() == null ? SongStatus.DRAFT : song.getStatus()).name());
+                if (albumId != null) {
+                    statement.setInt(9, albumId);
+                } else {
+                    statement.setNull(9, java.sql.Types.INTEGER);
+                }
                 statement.executeUpdate();
 
                 try (var keys = statement.getGeneratedKeys()) {
@@ -311,24 +311,13 @@ public class SongRepository {
     public Optional<Song> updateOwn(int artistId, int songId, String title, String coverUrl, String lyrics,
                                     String lyricsType, List<Integer> genreIds)
             throws SQLException {
-        String sql = """
-                UPDATE songs s
-                SET s.title = ?,
-                    s.cover_url = ?,
-                    s.lyrics = ?,
-                    s.lyrics_type = ?,
-                    s.review_note = NULL,
-                    s.reviewed_by = NULL,
-                    s.reviewed_at = NULL,
-                    s.updated_at = CURRENT_TIMESTAMP(6)
-                WHERE s.id = ?
-                  AND s.deleted_at IS NULL
-                  AND s.status IN ('DRAFT', 'REJECTED')
-                  AND EXISTS (
-                      SELECT 1 FROM song_artists sa
-                      WHERE sa.song_id = s.id AND sa.artist_id = ? AND sa.role = ?
-                  )
-                """;
+        return updateOwn(artistId, songId, title, coverUrl, lyrics, lyricsType, genreIds, null);
+    }
+
+    public Optional<Song> updateOwn(int artistId, int songId, String title, String coverUrl, String lyrics,
+                                    String lyricsType, List<Integer> genreIds, Integer albumId)
+            throws SQLException {
+        String sql = "UPDATE songs s SET s.title = ?, s.cover_url = ?, s.lyrics = ?, s.lyrics_type = ?, s.album_id = ?, s.review_note = NULL, s.reviewed_by = NULL, s.reviewed_at = NULL, s.updated_at = CURRENT_TIMESTAMP(6) WHERE s.id = ? AND s.deleted_at IS NULL AND s.status IN ('DRAFT', 'REJECTED') AND EXISTS (SELECT 1 FROM song_artists sa WHERE sa.song_id = s.id AND sa.artist_id = ? AND sa.role = ?)";
 
         Connection connection = getConnection();
         try {
@@ -339,9 +328,14 @@ public class SongRepository {
                 statement.setString(2, coverUrl);
                 statement.setString(3, lyrics);
                 statement.setString(4, lyricsType);
-                statement.setInt(5, songId);
-                statement.setInt(6, artistId);
-                statement.setString(7, MAIN_ARTIST_ROLE);
+                if (albumId != null) {
+                    statement.setInt(5, albumId);
+                } else {
+                    statement.setNull(5, java.sql.Types.INTEGER);
+                }
+                statement.setInt(6, songId);
+                statement.setInt(7, artistId);
+                statement.setString(8, MAIN_ARTIST_ROLE);
 
                 updated = statement.executeUpdate();
             }

@@ -1,10 +1,11 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { AudioLines, ImagePlus, LoaderCircle, Music2, UploadCloud } from '@lucide/vue';
+import { AudioLines, Disc3, ImagePlus, LoaderCircle, Music2, UploadCloud } from '@lucide/vue';
 import { studioService } from '../../services/studioService';
 import { uploadService } from '../../services/uploadService';
 import { genreService } from '../../services/genreService';
+import { albumService } from '../../services/albumService';
 import { useAuthStore } from '../../stores/auth.store';
 import LyricsEditor from './components/LyricsEditor.vue';
 
@@ -32,6 +33,8 @@ const durationSec = ref(0);
 const audioPreviewUrl = ref('');
 const genres = ref([]);
 const selectedGenres = ref([]);
+const albums = ref([]);
+const selectedAlbumId = ref(null);
 const fieldErrors = reactive({ title: '', slug: '', cover: '', audio: '', genres: '' });
 
 const isSubmitting = ref(false);
@@ -177,7 +180,8 @@ async function submit() {
       durationSec: durationSec.value || 0,
       lyrics: form.lyrics.trim() || null,
       lyricsType: lyricsType.value,
-      genreIds: selectedGenres.value
+      genreIds: selectedGenres.value,
+      albumId: selectedAlbumId.value || null
     });
 
     router.push({ name: 'studio-artist-music', params: { artistId } });
@@ -221,8 +225,18 @@ async function loadArtistProfile() {
   }
 }
 
+async function loadAlbums() {
+  try {
+    const data = await albumService.list(artistId, { page: 1, size: 100 });
+    albums.value = data?.items || [];
+  } catch {
+    albums.value = [];
+  }
+}
+
 onMounted(() => {
   loadGenres();
+  loadAlbums();
   loadArtistProfile();
 });
 
@@ -285,6 +299,27 @@ function formatDuration(seconds) {
             >{{ genre.name }}</button>
           </div>
           <p v-if="fieldErrors.genres" class="mt-1 text-xs text-red-300">{{ fieldErrors.genres }}</p>
+        </div>
+
+        <div>
+          <label class="mb-2 block text-xs font-black text-[#aaa]">
+            Album <span class="font-normal text-[#666]">(optional)</span>
+          </label>
+          <div class="relative">
+            <Disc3 :size="14" class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#71717A]" />
+            <select
+              v-model="selectedAlbumId"
+              class="w-full appearance-none rounded-lg border border-white/10 bg-white/5 py-2.5 pl-9 pr-4 text-sm text-white focus:border-[#16C65A]/60 focus:outline-none"
+            >
+              <option :value="null">No album (Single)</option>
+              <option v-for="album in albums" :key="album.id" :value="album.id">
+                {{ album.title }} ({{ album.songCount }} songs)
+              </option>
+            </select>
+          </div>
+          <p v-if="albums.length > 0" class="mt-1 text-xs text-[#555]">
+            {{ albums.length }} album{{ albums.length === 1 ? '' : 's' }} available
+          </p>
         </div>
 
         <label class="melodyhub-field">

@@ -1,10 +1,11 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { ImagePlus, LoaderCircle, Music2, Save, Send } from '@lucide/vue';
+import { Disc3, ImagePlus, LoaderCircle, Music2, Save, Send } from '@lucide/vue';
 import { studioService } from '../../services/studioService';
 import { uploadService } from '../../services/uploadService';
 import { genreService } from '../../services/genreService';
+import { albumService } from '../../services/albumService';
 import { useAuthStore } from '../../stores/auth.store';
 import LyricsEditor from './components/LyricsEditor.vue';
 
@@ -35,6 +36,8 @@ const status = ref('');
 const reviewNote = ref('');
 const genres = ref([]);
 const selectedGenres = ref([]);
+const albums = ref([]);
+const selectedAlbumId = ref(null);
 const artistName = ref(''); // real artist name for lyrics search
 
 const isEditable = computed(() => status.value === 'DRAFT' || status.value === 'REJECTED');
@@ -44,9 +47,10 @@ async function load() {
   isLoading.value = true;
   error.value = '';
   try {
-    const [song, catalog, profile] = await Promise.all([
+    const [song, catalog, albumData, profile] = await Promise.all([
       studioService.getSong(artistId, songId),
       genreService.listGenres().catch(() => []),
+      albumService.list(artistId, { page: 1, size: 100 }).catch(() => ({ items: [] })),
       studioService.getProfile(artistId).catch(() => null)
     ]);
     artistName.value = profile?.name || '';
@@ -60,6 +64,8 @@ async function load() {
     reviewNote.value = song.reviewNote || '';
     selectedGenres.value = (song.genres || []).map((g) => g.id);
     genres.value = Array.isArray(catalog) ? catalog : (catalog?.items || []);
+    albums.value = albumData?.items || [];
+    selectedAlbumId.value = song.albumId || null;
 
     // For synced songs, load the authoritative lines from song_lyrics and rebuild
     // the editor JSON — songs.lyrics alone is not the source of truth.
@@ -144,7 +150,8 @@ async function save() {
       coverUrl,
       lyrics: form.lyrics.trim() || null,
       lyricsType: lyricsType.value,
-      genreIds: selectedGenres.value
+      genreIds: selectedGenres.value,
+      albumId: selectedAlbumId.value || null
     });
 
     router.push({ name: 'studio-artist-music', params: { artistId } });
@@ -241,6 +248,24 @@ onMounted(load);
             >{{ genre.name }}</button>
           </div>
           <p v-if="fieldErrors.genres" class="mt-1 text-xs text-red-300">{{ fieldErrors.genres }}</p>
+        </div>
+
+        <div v-if="isEditable">
+          <label class="mb-2 block text-xs font-black text-[#aaa]">
+            Album <span class="font-normal text-[#666]">(optional)</span>
+          </label>
+          <div class="relative">
+            <Disc3 :size="14" class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#71717A]" />
+            <select
+              v-model="selectedAlbumId"
+              class="w-full appearance-none rounded-lg border border-white/10 bg-white/5 py-2.5 pl-9 pr-4 text-sm text-white focus:border-[#16C65A]/60 focus:outline-none"
+            >
+              <option :value="null">No album (Single)</option>
+              <option v-for="album in albums" :key="album.id" :value="album.id">
+                {{ album.title }} ({{ album.songCount }} songs)
+              </option>
+            </select>
+          </div>
         </div>
 
         <label class="melodyhub-field">
