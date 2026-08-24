@@ -14,6 +14,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -74,6 +75,11 @@ public class AlbumServlet extends JsonServlet {
             Integer albumId = idAt(path, 0);
             if (albumId != null && segmentCount(path) == 1) {
                 handleDetail(response, artistId, albumId);
+                return;
+            }
+
+            if (albumId != null && segmentCount(path) == 2 && "songs".equals(segment(path, 1))) {
+                handleSongs(response, artistId, albumId);
                 return;
             }
 
@@ -214,6 +220,21 @@ public class AlbumServlet extends JsonServlet {
             return;
         }
         writeJson(response, HttpServletResponse.SC_OK, album.get());
+    }
+
+    private void handleSongs(HttpServletResponse response, int artistId, int albumId)
+            throws IOException, SQLException {
+        Optional<AlbumResponse> album = albumService.getById(artistId, albumId);
+        if (album.isEmpty()) {
+            writeAlbumNotFound(response);
+            return;
+        }
+        try {
+            List<Map<String, Object>> songs = albumService.getSongsInAlbum(artistId, albumId);
+            writeJson(response, HttpServletResponse.SC_OK, songs);
+        } catch (AlbumException e) {
+            writeAlbumError(response, e);
+        }
     }
 
     private void handleCreate(HttpServletRequest request, HttpServletResponse response, int artistId)

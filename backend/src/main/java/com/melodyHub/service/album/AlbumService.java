@@ -163,6 +163,30 @@ public class AlbumService {
         return responses;
     }
 
+    public List<Map<String, Object>> getSongsInAlbum(int artistId, int albumId) throws SQLException, AlbumException {
+        // Verify ownership
+        Optional<Album> album = albumRepository.findOwnedById(artistId, albumId);
+        if (album.isEmpty()) {
+            throw new AlbumException("ALBUM_NOT_FOUND", "Album was not found or you don't have access");
+        }
+
+        List<com.melodyHub.entity.Song> songs = songRepository.findByAlbum(albumId);
+        List<Map<String, Object>> result = new java.util.ArrayList<>(songs.size());
+        for (com.melodyHub.entity.Song song : songs) {
+            Map<String, Object> item = new java.util.LinkedHashMap<>();
+            item.put("id", song.getId());
+            item.put("title", song.getTitle());
+            item.put("slug", song.getSlug());
+            item.put("coverUrl", song.getCoverUrl());
+            item.put("durationSec", song.getDurationSec());
+            item.put("trackNumber", song.getTrackNumber());
+            item.put("status", song.getStatus() != null ? song.getStatus().name() : null);
+            item.put("playCount", song.getPlayCount());
+            result.add(item);
+        }
+        return result;
+    }
+
     private void validateCreateRequest(AlbumCreateRequest request) throws AlbumException {
         if (request == null) {
             throw new AlbumException("INVALID_REQUEST", "Request body is required");

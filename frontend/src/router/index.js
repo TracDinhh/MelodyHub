@@ -258,6 +258,17 @@ const router = createRouter({
       }
     },
     {
+      path: '/studio/artists/:artistId/albums',
+      name: 'studio-artist-albums',
+      component: () => import('../views/studio/ArtistAlbumsView.vue'),
+      meta: {
+        requiresAuth: true,
+        layout: 'studio',
+        title: 'My Albums',
+        breadcrumb: 'Studio / Albums'
+      }
+    },
+    {
       path: '/studio/artists/:artistId/music/new',
       name: 'studio-artist-upload',
       component: () => import('../views/studio/ArtistSongUploadView.vue'),
