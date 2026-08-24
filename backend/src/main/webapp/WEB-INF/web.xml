@@ -96,6 +96,16 @@
         <servlet-class>com.melodyHub.controller.genre.GenreServlet</servlet-class>
     </servlet>
 
+    <servlet>
+        <servlet-name>AlbumServlet</servlet-name>
+        <servlet-class>com.melodyHub.controller.album.AlbumServlet</servlet-class>
+    </servlet>
+
+    <servlet>
+        <servlet-name>PublicAlbumServlet</servlet-name>
+        <servlet-class>com.melodyHub.controller.album.PublicAlbumServlet</servlet-class>
+    </servlet>
+
     <servlet-mapping>
         <servlet-name>AuthServlet</servlet-name>
         <url-pattern>/api/auth/*</url-pattern>
@@ -169,6 +179,16 @@
     <servlet-mapping>
         <servlet-name>GenreServlet</servlet-name>
         <url-pattern>/api/genres/*</url-pattern>
+    </servlet-mapping>
+
+    <servlet-mapping>
+        <servlet-name>AlbumServlet</servlet-name>
+        <url-pattern>/api/studio/albums/*</url-pattern>
+    </servlet-mapping>
+
+    <servlet-mapping>
+        <servlet-name>PublicAlbumServlet</servlet-name>
+        <url-pattern>/api/albums/*</url-pattern>
     </servlet-mapping>
 
     <session-config>

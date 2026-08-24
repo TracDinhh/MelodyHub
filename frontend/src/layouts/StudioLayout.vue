@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
-import { Check, ChevronsUpDown, Headphones, LayoutDashboard, LogOut, Menu, Mic2, Music2, Upload, UserCircle, X } from '@lucide/vue';
+import { Check, ChevronsUpDown, Disc3, Headphones, LayoutDashboard, LogOut, Menu, Mic2, Music2, Upload, UserCircle, X } from '@lucide/vue';
 import { useAuthStore } from '../stores/auth.store';
 import { useStudioStore } from '../stores/studio.store';
 import logoUrl from '../assets/styles/icons/logo.png';
@@ -17,12 +17,13 @@ const selectorOpen = ref(false);
 const artistId = computed(() => Number(route.params.artistId));
 const currentArtist = computed(() => studioStore.findArtist(artistId.value));
 
-const navItems = computed(() => {
+  const navItems = computed(() => {
   const id = artistId.value;
   if (!id) return [];
   return [
     { label: 'Overview', to: { name: 'studio-artist-overview', params: { artistId: id } }, icon: LayoutDashboard },
     { label: 'Music', to: { name: 'studio-artist-music', params: { artistId: id } }, icon: Music2 },
+    { label: 'Albums', to: { name: 'studio-artist-albums', params: { artistId: id } }, icon: Disc3 },
     { label: 'Upload Song', to: { name: 'studio-artist-upload', params: { artistId: id } }, icon: Upload },
     { label: 'Profile', to: { name: 'studio-artist-profile', params: { artistId: id } }, icon: UserCircle }
   ];

@@ -19,4 +19,5 @@ public class SongCreateRequest {
     private String lyrics;
     private String lyricsType; // "PLAIN" or "SYNCED"
     private List<Integer> genreIds; // 1-3 genres chosen from GET /api/genres
+    private Integer albumId;    // optional album assignment
 }

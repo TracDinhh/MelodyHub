@@ -74,7 +74,7 @@ public class ArtistSongService {
         song.setStatus(SongStatus.DRAFT);
 
         try {
-            Song created = songRepository.create(song, artistId, genreIds);
+            Song created = songRepository.create(song, artistId, genreIds, request.getAlbumId());
             // Persist synced lyric lines into song_lyrics so the lyrics API can serve them.
             if (created.getLyricsType() == LyricsType.SYNCED) {
                 persistSyncedLyrics(created.getId(), request.getLyrics());
@@ -161,7 +161,7 @@ public class ArtistSongService {
 
         List<Integer> genreIds = validateGenres(request.getGenreIds());
 
-        Song updated = songRepository.updateOwn(artistId, songId, title.trim(), coverUrl, lyrics, lyricsType, genreIds)
+        Song updated = songRepository.updateOwn(artistId, songId, title.trim(), coverUrl, lyrics, lyricsType, genreIds, request.getAlbumId())
                 .orElseThrow(() -> {
                     SongException notFound = new SongException("SONG_NOT_FOUND", "Song was not found");
                     try {
