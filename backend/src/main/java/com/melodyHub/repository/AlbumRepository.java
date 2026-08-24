@@ -27,13 +27,21 @@ public class AlbumRepository {
             """;
 
     public Optional<Album> findActiveById(int id) throws SQLException {
-        String sql = "SELECT " + ALBUM_COLUMNS + """
-                 FROM albums
-                 WHERE id = ? AND deleted_at IS NULL
-                """;
+        String sql = "SELECT " + ALBUM_COLUMNS + " FROM albums WHERE id = ? AND deleted_at IS NULL";
         try (var connection = DatabaseConfig.getConnection();
              var statement = connection.prepareStatement(sql)) {
             statement.setInt(1, id);
+            try (var resultSet = statement.executeQuery()) {
+                return resultSet.next() ? Optional.of(mapRow(resultSet)) : Optional.empty();
+            }
+        }
+    }
+
+    public Optional<Album> findActiveBySlug(String slug) throws SQLException {
+        String sql = "SELECT " + ALBUM_COLUMNS + " FROM albums WHERE slug = ? AND deleted_at IS NULL";
+        try (var connection = DatabaseConfig.getConnection();
+             var statement = connection.prepareStatement(sql)) {
+            statement.setString(1, slug);
             try (var resultSet = statement.executeQuery()) {
                 return resultSet.next() ? Optional.of(mapRow(resultSet)) : Optional.empty();
             }

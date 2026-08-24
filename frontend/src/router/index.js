@@ -51,6 +51,15 @@ const router = createRouter({
       }
     },
     {
+      path: '/albums/:slug',
+      name: 'album-detail',
+      component: () => import('../views/AlbumDetailView.vue'),
+      meta: {
+        title: 'Album',
+        breadcrumb: 'Home / Albums / Album'
+      }
+    },
+    {
       path: '/podcasts',
       name: 'podcasts',
       component: () => import('../views/HomeView.vue'),

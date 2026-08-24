@@ -302,6 +302,11 @@ public class AlbumServlet extends JsonServlet {
         return segments(path).length;
     }
 
+    private String segment(String path, int index) {
+        String[] parts = segments(path);
+        return index < parts.length ? parts[index] : null;
+    }
+
     /** Parses the path segment at {@code index} as a positive int, or null if absent/invalid. */
     private Integer idAt(String path, int index) {
         String[] parts = segments(path);
